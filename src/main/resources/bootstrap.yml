@@ -1,0 +1,171 @@
+# Tomcat
+server:
+  port: 10013
+# spring配置
+spring:
+  redis:
+    host: 192.168.6.74
+    port: 6379
+    password: 123456
+  datasource:
+    druid:
+      stat-view-servlet:
+        enabled: true
+        loginUsername: admin
+        loginPassword: 123456
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+    dynamic:
+      druid:
+        initial-size: 5
+        min-idle: 5
+        maxActive: 20
+        maxWait: 60000
+        timeBetweenEvictionRunsMillis: 60000
+        minEvictableIdleTimeMillis: 300000
+        validationQuery: SELECT 1 FROM DUAL
+        testWhileIdle: true
+        testOnBorrow: false
+        testOnReturn: false
+        poolPreparedStatements: true
+        maxPoolPreparedStatementPerConnectionSize: 20
+        filters: stat,slf4j
+        connectionProperties: druid.stat.mergeSql\=true;druid.stat.slowSqlMillis\=5000
+      datasource:
+        # 主库数据源
+        master:
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: jdbc:mysql://192.168.6.74:3306/spms_cloud?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+          username: root
+          password: zasechsmserver
+          # 从库数据源
+          # slave:
+          # username:
+          # password:
+          # url:
+          # driver-class-name:
+      # seata: true    # 开启seata代理，开启后默认每个数据源都代理，如果某个不需要代理可单独关闭
+  servlet:
+    multipart:
+      #单个数据大小
+      max-file-size: 500MB
+      #总数据大小
+      max-request-size: 1024MB
+
+# seata配置
+seata:
+  # 默认关闭，如需启用spring.datasource.dynami.seata需要同时开启
+  enabled: false
+  # Seata 应用编号，默认为 ${spring.application.name}
+  application-id: ${spring.application.name}
+  # Seata 事务组编号，用于 TC 集群名
+  tx-service-group: ${spring.application.name}-group
+  # 关闭自动代理
+  enable-auto-data-source-proxy: false
+  # 服务配置项
+  service:
+    # 虚拟组和分组的映射
+    vgroup-mapping:
+      ruoyi-system-group: default
+#  config:
+#    type: nacos
+#    nacos:
+#      serverAddr: 192.168.6.74:8848
+#      group: SEATA_GROUP
+#      namespace: diq
+#  registry:
+#    type: nacos
+#    nacos:
+#      application: seata-server
+#      server-addr: 192.168.6.74:8848
+#      namespace: diq
+
+rocketmq:
+  # 生产者配置
+  producer:
+    isOnOff: on
+    # 发送同一类消息的设置为同一个group，保证唯一
+    groupName: CicadaGroup
+    # 服务地址
+    namesrvAddr:  192.168.6.74:9876
+    # 消息最大长度 默认1024*4(4M)
+    maxMessageSize: 10000
+    # 发送消息超时时间,默认3000
+    sendMsgTimeout: 3000
+    # 发送消息失败重试次数，默认2
+    retryTimesWhenSendFailed: 2
+    # 是否发送消息队列
+    isAsync: false
+    #发送消息的最大线程数，默认1
+    sendMessageThreadPoolNums: 32
+  #消费者
+  consumer:
+    isOnOff: on
+    # 官方建议：确保同一组中的每个消费者订阅相同的主题。
+    groupName: CicadaGroup
+    # 服务地址
+    namesrvAddr:  192.168.6.74:9876
+    # 接收该 Topic 下所有 Tag
+    topics: TopicTest~*;
+    consumeThreadMin: 32
+    consumeThreadMax: 64
+    # 设置一次消费消息的条数，默认为1条
+    consumeMessageBatchMaxSize: 500
+
+# mybatis配置
+mybatis:
+  # 搜索指定包别名
+  typeAliasesPackage: com.spms.system
+  # 配置mapper的扫描，找到所有的mapper.xml映射文件
+  mapperLocations: classpath:mapper/**/*.xml
+
+logging:
+  level:
+    com:
+      spms: debug
+
+# swagger配置
+swagger:
+  title: HSM:SVS:TSA模块接口文档
+  license: Powered By kxy
+  licenseUrl:
+apache:
+  rocketmq:
+    consumer:
+      pushConsumer: TSA
+    producer:
+      producerGroup: TSA
+    namesrvAddr: 192.168.6.74:9876
+    topic: ZAYKTIMESTAMP
+    tag: TIMESTAMPLOG
+    BatchMaxSize: 1024
+    ConsumeThreadMin: 10
+    ConsumeThreadMax: 20
+## Spring
+#spring:
+#  application:
+#    # 应用名称
+#    name: spms-hsm-svs-tsa-manager
+#  profiles:
+#    # 环境配置
+#    active: dev
+#  main:
+#    allow-bean-definition-overriding: true
+#  cloud:
+#    nacos:
+#      discovery:
+#        # 服务注册地址
+#        server-addr: 192.168.6.74:8848
+#        namespace: dmd
+#      config:
+#        # 配置中心地址
+#        server-addr: 192.168.6.74:8848
+#        namespace: dmd
+#        # 配置文件格式
+#        file-extension: yml
+#        # 共享配置
+#        shared-configs:
+#          - application-${spring.profiles.active}.${spring.cloud.nacos.config.file-extension}
+backup-path: /home/develop/backup
+size: 30000
