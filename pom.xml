@@ -9,7 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>spms_dbhsm_manager</artifactId>
+    <artifactId>spms-dbhsm-manager</artifactId>
 
     <dependencies>
         <!-- SpringCloud Alibaba Nacos -->
