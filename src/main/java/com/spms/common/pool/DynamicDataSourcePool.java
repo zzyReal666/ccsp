@@ -30,6 +30,7 @@ public class DynamicDataSourcePool {
      */
     public DynamicDataSourcePool(String userName, String pass, String url, String driverClass) {
         try {
+//            DruidDataSourceFactory.createDataSource()
             //创建对象
             this.pool = new ComboPooledDataSource();
             //设置驱动
