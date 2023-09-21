@@ -1,4 +1,4 @@
-package com.spms.dbInstance.controller;
+package com.spms.dbhsm.dbInstance.controller;
 
 import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.poi.ExcelUtil;
@@ -9,8 +9,8 @@ import com.ccsp.common.core.web.page.TableDataInfo;
 import com.ccsp.common.log.annotation.Log;
 import com.ccsp.common.log.enums.BusinessType;
 import com.ccsp.common.security.annotation.RequiresPermissions;
-import com.spms.dbInstance.domain.DbhsmDbInstance;
-import com.spms.dbInstance.service.IDbhsmDbInstanceService;
+import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
+import com.spms.dbhsm.dbInstance.service.IDbhsmDbInstanceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 

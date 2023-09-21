@@ -1,7 +1,7 @@
-package com.spms.dbInstance.service;
+package com.spms.dbhsm.dbInstance.service;
 
 import com.ccsp.common.core.exception.ZAYKException;
-import com.spms.dbInstance.domain.DbhsmDbInstance;
+import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;

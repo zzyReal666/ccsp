@@ -1,6 +1,6 @@
-package com.spms.dbInstance.mapper;
+package com.spms.dbhsm.dbInstance.mapper;
 
-import com.spms.dbInstance.domain.DbhsmDbInstance;
+import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;

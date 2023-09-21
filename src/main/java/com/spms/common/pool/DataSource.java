@@ -1,7 +1,7 @@
 package com.spms.common.pool;
 
 import com.spms.common.constant.DbConstants;
-import com.spms.dbInstance.domain.DTO.DbInstanceGetConnDTO;
+import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;

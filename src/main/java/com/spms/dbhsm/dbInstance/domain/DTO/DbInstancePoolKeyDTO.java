@@ -1,4 +1,4 @@
-package com.spms.dbInstance.domain.DTO;
+package com.spms.dbhsm.dbInstance.domain.DTO;
 
 
 /**

@@ -1,4 +1,4 @@
-package com.spms.dbInstance.domain;
+package com.spms.dbhsm.dbInstance.domain;
 
 import com.ccsp.common.core.annotation.Excel;
 import com.ccsp.common.core.web.domain.BaseEntity;

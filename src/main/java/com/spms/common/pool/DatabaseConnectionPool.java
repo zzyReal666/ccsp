@@ -1,7 +1,7 @@
 package com.spms.common.pool;
 
 import com.spms.common.constant.DbConstants;
-import com.spms.dbInstance.domain.DTO.DbInstanceGetConnDTO;
+import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
