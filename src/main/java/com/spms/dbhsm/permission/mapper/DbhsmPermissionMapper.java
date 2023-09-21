@@ -1,6 +1,7 @@
-package com.spms.dbhsm.mapper;
+package com.spms.dbhsm.permission.mapper;
 
-import com.spms.dbhsm.domain.DbhsmPermission;
+import com.spms.dbhsm.permission.domain.DbhsmPermission;
+import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;
 
@@ -10,6 +11,7 @@ import java.util.List;
  * @author diq
  * @date 2023-09-20
  */
+@Mapper
 public interface DbhsmPermissionMapper 
 {
     /**
@@ -59,4 +61,11 @@ public interface DbhsmPermissionMapper
      * @return 结果
      */
     public int deleteDbhsmPermissionByPermissionIds(Long[] permissionIds);
+    /**
+     * 批量查询数据库权限
+     *
+     * @param permissionIds 需要删除的数据主键集合
+     * @return 结果
+     */
+    public List<DbhsmPermission> selectDbhsmPermissionByPermissionIds(Long[] permissionIds);
 }

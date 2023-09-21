@@ -1,6 +1,6 @@
-package com.spms.dbhsm.service;
+package com.spms.dbhsm.permission.service;
 
-import com.spms.dbhsm.domain.DbhsmPermission;
+import com.spms.dbhsm.permission.domain.DbhsmPermission;
 
 import java.util.List;
 
@@ -20,6 +20,13 @@ public interface IDbhsmPermissionService
      */
     public DbhsmPermission selectDbhsmPermissionByPermissionId(Long permissionId);
 
+    /**
+     * 查询数据库权限列表
+     *
+     * @param permissionIds 数据库权限id
+     * @return 数据库权限集合
+     */
+    public List<DbhsmPermission> selectDbhsmPermissionByPermissionIds(Long[] permissionIds);
     /**
      * 查询数据库权限列表
      * 
