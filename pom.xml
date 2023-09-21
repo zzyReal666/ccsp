@@ -9,7 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>spms_dbhsm_manager</artifactId>
+    <artifactId>spms-dbhsm-manager</artifactId>
 
     <dependencies>
         <!-- SpringCloud Alibaba Nacos -->
@@ -27,6 +27,32 @@
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
+        </dependency>
+
+        <!--   oracle 数据库依赖     -->
+        <dependency>
+            <groupId>com.oracle.database.jdbc</groupId>
+            <artifactId>ojdbc8</artifactId>
+            <version>21.1.0.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.oracle.database.nls</groupId>
+            <artifactId>orai18n</artifactId>
+            <version>21.1.0.0</version>
+        </dependency>
+
+        <!--   sqlserver 数据库依赖     -->
+        <dependency>
+            <groupId>com.microsoft.sqlserver</groupId>
+            <artifactId>mssql-jdbc</artifactId>
+            <version>10.2.0.jre8</version>
+        </dependency>
+        <!--   sqlserver 数据库依赖     -->
+        <dependency>
+            <groupId>com.microsoft.sqlserver</groupId>
+            <artifactId>mssql-jdbc</artifactId>
+            <version>10.2.0.jre8</version>
         </dependency>
 
         <!-- CCSP Common DataSource -->
@@ -91,6 +117,16 @@
             <artifactId>c3p0</artifactId>
             <version>0.9.1.2</version>
         </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.apereo.cas/cas-server-core-util-api -->
+        <dependency>
+            <groupId>org.apereo.cas</groupId>
+            <artifactId>cas-server-core-util-api</artifactId>
+            <version>7.0.0-RC7</version>
+            <scope>runtime</scope>
+        </dependency>
+
+
     </dependencies>
 
     <build>

@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.spms.dbInstance.mapper.DbhsmDbInstanceMapper">
+
+    <resultMap type="DbhsmDbInstance" id="DbhsmDbInstanceResult">
+        <result property="id"    column="id"    />
+        <result property="databaseType"    column="database_type"    />
+        <result property="databaseIp"    column="database_ip"    />
+        <result property="databasePort"    column="database_port"    />
+        <result property="databaseServerName"    column="database_server_name"    />
+        <result property="databaseExampleType"    column="database_example_type"    />
+        <result property="databaseDba"    column="database_dba"    />
+        <result property="databaseDbaPassword"    column="database_dba_password"    />
+        <result property="passwordServiceIp"    column="password_service_ip"    />
+        <result property="passwordServicePort"    column="password_service_port"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="secretService"    column="secret_service"    />
+        <result property="databaseEdition"    column="database_edition"    />
+        <result property="userCreateMode"    column="user_create_mode"    />
+    </resultMap>
+
+    <sql id="selectDbhsmDbInstanceVo">
+        select id, database_type, database_ip, database_port, database_server_name, database_example_type, database_dba, database_dba_password, password_service_ip, password_service_port, create_time, update_time, secret_service, database_edition, user_create_mode from dbhsm_db_instance
+    </sql>
+
+    <select id="selectDbhsmDbInstanceList" parameterType="DbhsmDbInstance" resultMap="DbhsmDbInstanceResult">
+        <include refid="selectDbhsmDbInstanceVo"/>
+        <where>
+            <if test="databaseType != null  and databaseType != ''"> and database_type = #{databaseType}</if>
+            <if test="databaseIp != null  and databaseIp != ''"> and database_ip = #{databaseIp}</if>
+            <if test="databasePort != null  and databasePort != ''"> and database_port = #{databasePort}</if>
+            <if test="databaseServerName != null  and databaseServerName != ''"> and database_server_name like concat('%', #{databaseServerName}, '%')</if>
+            <if test="databaseExampleType != null  and databaseExampleType != ''"> and database_example_type = #{databaseExampleType}</if>
+            <if test="databaseDba != null  and databaseDba != ''"> and database_dba = #{databaseDba}</if>
+            <if test="databaseDbaPassword != null  and databaseDbaPassword != ''"> and database_dba_password = #{databaseDbaPassword}</if>
+            <if test="passwordServiceIp != null  and passwordServiceIp != ''"> and password_service_ip = #{passwordServiceIp}</if>
+            <if test="passwordServicePort != null  and passwordServicePort != ''"> and password_service_port = #{passwordServicePort}</if>
+            <if test="secretService != null  and secretService != ''"> and secret_service = #{secretService}</if>
+            <if test="databaseEdition != null  and databaseEdition != ''"> and database_edition = #{databaseEdition}</if>
+            <if test="userCreateMode != null "> and user_create_mode = #{userCreateMode}</if>
+        </where>
+    </select>
+
+    <select id="selectDbhsmDbInstanceById" parameterType="Long" resultMap="DbhsmDbInstanceResult">
+        <include refid="selectDbhsmDbInstanceVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertDbhsmDbInstance" parameterType="DbhsmDbInstance" useGeneratedKeys="true" keyProperty="id">
+        insert into dbhsm_db_instance
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="databaseType != null">database_type,</if>
+            <if test="databaseIp != null">database_ip,</if>
+            <if test="databasePort != null">database_port,</if>
+            <if test="databaseServerName != null">database_server_name,</if>
+            <if test="databaseExampleType != null">database_example_type,</if>
+            <if test="databaseDba != null">database_dba,</if>
+            <if test="databaseDbaPassword != null">database_dba_password,</if>
+            <if test="passwordServiceIp != null">password_service_ip,</if>
+            <if test="passwordServicePort != null">password_service_port,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="secretService != null">secret_service,</if>
+            <if test="databaseEdition != null">database_edition,</if>
+            <if test="userCreateMode != null">user_create_mode,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="databaseType != null">#{databaseType},</if>
+            <if test="databaseIp != null">#{databaseIp},</if>
+            <if test="databasePort != null">#{databasePort},</if>
+            <if test="databaseServerName != null">#{databaseServerName},</if>
+            <if test="databaseExampleType != null">#{databaseExampleType},</if>
+            <if test="databaseDba != null">#{databaseDba},</if>
+            <if test="databaseDbaPassword != null">#{databaseDbaPassword},</if>
+            <if test="passwordServiceIp != null">#{passwordServiceIp},</if>
+            <if test="passwordServicePort != null">#{passwordServicePort},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="secretService != null">#{secretService},</if>
+            <if test="databaseEdition != null">#{databaseEdition},</if>
+            <if test="userCreateMode != null">#{userCreateMode},</if>
+         </trim>
+    </insert>
+
+    <update id="updateDbhsmDbInstance" parameterType="DbhsmDbInstance">
+        update dbhsm_db_instance
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="databaseType != null">database_type = #{databaseType},</if>
+            <if test="databaseIp != null">database_ip = #{databaseIp},</if>
+            <if test="databasePort != null">database_port = #{databasePort},</if>
+            <if test="databaseServerName != null">database_server_name = #{databaseServerName},</if>
+            <if test="databaseExampleType != null">database_example_type = #{databaseExampleType},</if>
+            <if test="databaseDba != null">database_dba = #{databaseDba},</if>
+            <if test="databaseDbaPassword != null">database_dba_password = #{databaseDbaPassword},</if>
+            <if test="passwordServiceIp != null">password_service_ip = #{passwordServiceIp},</if>
+            <if test="passwordServicePort != null">password_service_port = #{passwordServicePort},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="secretService != null">secret_service = #{secretService},</if>
+            <if test="databaseEdition != null">database_edition = #{databaseEdition},</if>
+            <if test="userCreateMode != null">user_create_mode = #{userCreateMode},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteDbhsmDbInstanceById" parameterType="Long">
+        delete from dbhsm_db_instance where id = #{id}
+    </delete>
+
+    <delete id="deleteDbhsmDbInstanceByIds" parameterType="String">
+        delete from dbhsm_db_instance where id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>
