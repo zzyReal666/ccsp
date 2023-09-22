@@ -3,7 +3,7 @@
 PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.spms.dbhsm.permissionGroup.mapper.DbhsmPermissionGroupMapper">
-    
+
     <resultMap type="com.spms.dbhsm.permissionGroup.domain.DbhsmPermissionGroup" id="DbhsmPermissionGroupResult">
         <result property="permissionGroupId"    column="permission_group_id"    />
         <result property="permissionGroupName"    column="permission_group_name"    />
@@ -39,8 +39,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </sql>
 
     <select id="checkPermissionGroupNameUnique" parameterType="String" resultMap="DbhsmPermissionGroupResult">
-        <include refid="selectDbhsmPermissionVo"/>
-        <where>  
+        <include refid="selectDbhsmPermissionGroupVo"/>
+        <where>
             <if test="permissionGroupName != null  and permissionGroupName != ''"> and permission_group_name = #{permissionGroupName}</if>
         </where>
     </select>
@@ -57,7 +57,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="status != null  and status != ''"> and a.status = #{status}</if>
         </where>
     </select>
-    
+
     <select id="selectDbhsmPermissionGroupByPermissionGroupId" parameterType="Long" resultMap="DbhsmPermissionGroupResult">
         select a.permission_group_id, a.permission_group_name, a.status, a.create_by, a.create_time, a.update_by, a.update_time,
  b.permission_id as sub_permission_id, b.permission_group_id as sub_permission_group_id, b.create_by as sub_create_by, b.create_time as sub_create_time, b.update_by as sub_update_by, b.update_time as sub_update_time
@@ -65,7 +65,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         left join dbhsm_permission_union_permission_group b on b.permission_group_id = a.permission_group_id
         where a.permission_group_id = #{permissionGroupId}
     </select>
-        
+
     <insert id="insertDbhsmPermissionGroup" parameterType="com.spms.dbhsm.permissionGroup.domain.DbhsmPermissionGroup" useGeneratedKeys="true" keyProperty="permissionGroupId">
         insert into dbhsm_permission_group
         <trim prefix="(" suffix=")" suffixOverrides=",">
@@ -104,14 +104,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </delete>
 
     <delete id="deleteDbhsmPermissionGroupByPermissionGroupIds" parameterType="String">
-        delete from dbhsm_permission_group where permission_group_id in 
+        delete from dbhsm_permission_group where permission_group_id in
         <foreach item="permissionGroupId" collection="array" open="(" separator="," close=")">
             #{permissionGroupId}
         </foreach>
     </delete>
-    
+
     <delete id="deleteDbhsmPermissionUnionPermissionGroupByPermissionGroupIds" parameterType="String">
-        delete from dbhsm_permission_union_permission_group where permission_group_id in 
+        delete from dbhsm_permission_union_permission_group where permission_group_id in
         <foreach item="permissionGroupId" collection="array" open="(" separator="," close=")">
             #{permissionGroupId}
         </foreach>

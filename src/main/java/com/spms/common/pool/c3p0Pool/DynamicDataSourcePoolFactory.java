@@ -1,4 +1,4 @@
-package com.spms.common.pool;
+package com.spms.common.pool.c3p0Pool;
 
 import com.alibaba.druid.support.logging.Log;
 import com.alibaba.druid.support.logging.LogFactory;
@@ -153,7 +153,7 @@ public class DynamicDataSourcePoolFactory {
         //判断数据库连接池是否注册成功
         if (factory.IsBePool(instanceKey)) {
             log.info("Success：Successfully registered a new database connection pool：" + instanceKey);
-            return "<p style='color:#7CD03B'>Success：Successfully registered a new database connection pool：" + instanceKey+"</p>";
+            return "Success：Successfully registered a new database connection pool";
         } else {
             log.info("Error：Failed to register a new database connection pool：" + instanceKey);
             throw new ZAYKException("创建数据库连接池失败！" + instanceKey);

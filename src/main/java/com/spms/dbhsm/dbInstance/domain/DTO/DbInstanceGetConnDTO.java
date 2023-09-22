@@ -1,7 +1,11 @@
 package com.spms.dbhsm.dbInstance.domain.DTO;
 
 import com.ccsp.common.core.web.domain.BaseEntity;
+import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * 数据库实例对象 dbhsm_db_instance
@@ -10,6 +14,9 @@ import lombok.Data;
  * @date 2023-09-19
  */
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class DbInstanceGetConnDTO extends BaseEntity
 {
     /** 数据库类型 */
@@ -34,7 +41,7 @@ public class DbInstanceGetConnDTO extends BaseEntity
     private String databaseDbaPassword;
 
 
-    @Override
+@Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;
@@ -64,7 +71,7 @@ public class DbInstanceGetConnDTO extends BaseEntity
         if (getDatabaseDba() != null ? !getDatabaseDba().equals(instance.getDatabaseDba()) : instance.getDatabaseDba() != null) {
             return false;
         }
-        return getDatabaseDbaPassword() != null ? !getDatabaseDbaPassword().equals(instance.getDatabaseDbaPassword()) : instance.getDatabaseDbaPassword() != null;
+        return getDatabaseDbaPassword() != null ? getDatabaseDbaPassword().equals(instance.getDatabaseDbaPassword()) : instance.getDatabaseDbaPassword() != null;
     }
 
     @Override
@@ -77,5 +84,16 @@ public class DbInstanceGetConnDTO extends BaseEntity
         result = 31 * result + (getDatabaseDba() != null ? getDatabaseDba().hashCode() : 0);
         result = 31 * result + (getDatabaseDbaPassword() != null ? getDatabaseDbaPassword().hashCode() : 0);
         return result;
+    }
+    public static DbInstanceGetConnDTO instanceConvertGetConnDTO(DbhsmDbInstance instance){
+        return DbInstanceGetConnDTO.builder()
+                .databaseType(instance.getDatabaseType())
+                .databaseIp(instance.getDatabaseIp())
+                .databasePort(instance.getDatabasePort())
+                .databaseServerName(instance.getDatabaseServerName())
+                .databaseExampleType(instance.getDatabaseExampleType())
+                .databaseDba(instance.getDatabaseDba())
+                .databaseDbaPassword(instance.getDatabaseDbaPassword())
+                .build();
     }
 }

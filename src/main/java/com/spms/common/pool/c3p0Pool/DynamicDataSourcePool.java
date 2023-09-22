@@ -1,4 +1,4 @@
-package com.spms.common.pool;
+package com.spms.common.pool.c3p0Pool;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 import lombok.extern.slf4j.Slf4j;
@@ -48,7 +48,7 @@ public class DynamicDataSourcePool {
             //获取连接失败后该数据源将申明已断开并永久关闭
             this.pool.setBreakAfterAcquireFailure(false);
             //当连接池用完时客户端调用getConnection()后等待获取新连接的时间，超时后将抛出SQLException,如设为0则无限期等待。单位毫秒。
-            this.pool.setCheckoutTimeout(3000);
+            this.pool.setCheckoutTimeout(60000);
             //每60秒检查所有连接池中的空闲连接
             this.pool.setIdleConnectionTestPeriod(60);
             //初始化时获取10个连接，取值应在minPoolSize与maxPoolSize之间

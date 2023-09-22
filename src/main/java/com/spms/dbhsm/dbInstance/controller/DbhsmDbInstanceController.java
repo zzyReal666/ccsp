@@ -11,10 +11,12 @@ import com.ccsp.common.log.enums.BusinessType;
 import com.ccsp.common.security.annotation.RequiresPermissions;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import com.spms.dbhsm.dbInstance.service.IDbhsmDbInstanceService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
+import java.sql.SQLException;
 import java.util.List;
 
 /**
@@ -23,6 +25,7 @@ import java.util.List;
  * @author spms
  * @date 2023-09-19
  */
+@Slf4j
 @RestController
 @RequestMapping("/dbInstance")
 public class DbhsmDbInstanceController extends BaseController
@@ -75,9 +78,9 @@ public class DbhsmDbInstanceController extends BaseController
     {
         try {
             dbhsmDbInstanceService.insertDbhsmDbInstance(dbhsmDbInstance);
-        }catch (ZAYKException  e){
-            e.printStackTrace();
-            return AjaxResult2.error(e.getMessage());
+        }catch (ZAYKException | SQLException e){
+            log.info("新增数据库实例失败！"+e.getMessage());
+            return AjaxResult2.error("新增数据库实例失败！");
         }
         return AjaxResult2.success();
     }
@@ -90,7 +93,13 @@ public class DbhsmDbInstanceController extends BaseController
     @PutMapping
     public AjaxResult edit(@RequestBody DbhsmDbInstance dbhsmDbInstance)
     {
-        return toAjax(dbhsmDbInstanceService.updateDbhsmDbInstance(dbhsmDbInstance));
+        try {
+            dbhsmDbInstanceService.updateDbhsmDbInstance(dbhsmDbInstance);
+        } catch (Exception e) {
+            log.info("修改数据库实例失败！"+e.getMessage());
+            return AjaxResult.error("修改数据库实例失败！");
+        }
+        return AjaxResult.success();
     }
 
     /**

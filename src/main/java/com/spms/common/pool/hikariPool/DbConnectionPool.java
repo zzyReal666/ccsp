@@ -1,29 +1,28 @@
-package com.spms.common.pool;
+package com.spms.common.pool.hikariPool;
 
 import com.spms.common.constant.DbConstants;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 
-public class DatabaseConnectionPool {
+@Slf4j
+public class DbConnectionPool {
     private static DataSource dataSource;
-    private static final int MAX_CONNECTIONS = 10;
-    public static void initialize(DbInstanceGetConnDTO instance) {
+    private static final int MAX_CONNECTIONS = 1;
+    public static DataSource initialize(DbInstanceGetConnDTO instanceGetConnDTO) {
 
         // 从数据库或其他地方获取以下信息
-        String databaseIp = instance.getDatabaseIp();
-        String databaseType = instance.getDatabaseType();
-        String databasePort = instance.getDatabasePort();
-        String databaseDba = instance.getDatabaseDba();
-        String databaseDbaPassword = instance.getDatabaseDbaPassword();
-        String databaseExampleType = instance.getDatabaseExampleType();
-        String databaseServerName = instance.getDatabaseServerName();
+        String databaseIp = instanceGetConnDTO.getDatabaseIp();
+        String databaseType = instanceGetConnDTO.getDatabaseType();
+        String databasePort = instanceGetConnDTO.getDatabasePort();
+        String databaseDba = instanceGetConnDTO.getDatabaseDba();
+        String databaseDbaPassword = instanceGetConnDTO.getDatabaseDbaPassword();
+        String databaseExampleType = instanceGetConnDTO.getDatabaseExampleType();
+        String databaseServerName = instanceGetConnDTO.getDatabaseServerName();
 
 
         HikariConfig config = new HikariConfig();
@@ -33,9 +32,9 @@ public class DatabaseConnectionPool {
                 break;
             case DbConstants.DB_TYPE_ORACLE:
                 if (DbConstants.DB_EXAMPLE_TYPE_SID.equals(databaseExampleType)) {
-                    config.setJdbcUrl("jdbc:oracle:thin:@//" + databaseIp + ":" + databasePort  + "/" + databaseServerName);
-                } else {
                     config.setJdbcUrl("jdbc:oracle:thin:@" + databaseIp + ":" + databasePort + ":" + databaseServerName);
+                } else {
+                    config.setJdbcUrl("jdbc:oracle:thin:@//" + databaseIp + ":" + databasePort  + "/" + databaseServerName);
                 }
                 break;
             case DbConstants.DB_TYPE_SQLSERVER:
@@ -53,11 +52,29 @@ public class DatabaseConnectionPool {
         // Set the SQL limit for the prepared statement cache ，driver缓存的statement 最大长度
         config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
         config.setMaximumPoolSize(MAX_CONNECTIONS);
-        dataSource = new HikariDataSource(config);
+        try {
+            return new HikariDataSource(config);
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.info("Could not create HikariCP data source");
+            throw new RuntimeException(e.getMessage(), e);
+        }
     }
 
     public static Connection getConnection() throws SQLException {
         return dataSource.getConnection();
+    }
+
+    /**
+     * 关闭数据源及其关联的池。
+     * Shutdown the DataSource and its associated pool.
+     */
+    public static void destroy(javax.sql.DataSource dataSource) {
+        if (null != dataSource) {
+            HikariDataSource hikariDataSource = (HikariDataSource) dataSource;
+            hikariDataSource.close();
+        }
+        DbConnectionPoolFactory.queryPool();
     }
 
     public static void main(String[] args) throws  SQLException {

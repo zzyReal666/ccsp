@@ -1,4 +1,4 @@
-package com.spms.common.pool;
+package com.spms.common.pool.c3p0Pool;
 
 import com.spms.common.constant.DbConstants;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;

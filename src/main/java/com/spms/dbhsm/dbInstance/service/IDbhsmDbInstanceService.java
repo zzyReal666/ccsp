@@ -2,8 +2,8 @@ package com.spms.dbhsm.dbInstance.service;
 
 import com.ccsp.common.core.exception.ZAYKException;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
-import org.apache.ibatis.annotations.Mapper;
 
+import java.sql.SQLException;
 import java.util.List;
 
 /**
@@ -12,7 +12,6 @@ import java.util.List;
  * @author spms
  * @date 2023-09-19
  */
-@Mapper
 public interface IDbhsmDbInstanceService
 {
     /**
@@ -37,7 +36,7 @@ public interface IDbhsmDbInstanceService
      * @param dbhsmDbInstance 数据库实例
      * @return 结果
      */
-    public int insertDbhsmDbInstance(DbhsmDbInstance dbhsmDbInstance) throws ZAYKException;
+    public int insertDbhsmDbInstance(DbhsmDbInstance dbhsmDbInstance) throws ZAYKException, SQLException;
 
     /**
      * 修改数据库实例
@@ -45,7 +44,7 @@ public interface IDbhsmDbInstanceService
      * @param dbhsmDbInstance 数据库实例
      * @return 结果
      */
-    public int updateDbhsmDbInstance(DbhsmDbInstance dbhsmDbInstance);
+    public int updateDbhsmDbInstance(DbhsmDbInstance dbhsmDbInstance) throws ZAYKException, SQLException;
 
     /**
      * 批量删除数据库实例
