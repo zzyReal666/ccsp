@@ -68,4 +68,18 @@ public interface DbhsmPermissionMapper
      * @return 结果
      */
     public List<DbhsmPermission> selectDbhsmPermissionByPermissionIds(Long[] permissionIds);
+
+    /**
+     * 校验权限名是否唯一
+     * @param permissionName
+     * @return
+     */
+    DbhsmPermission checkPermissionNameUnique(String permissionName);
+
+    /**
+     * 校验权限SQL是否唯一
+     * @param permissionSql
+     * @return
+     */
+    DbhsmPermission checkPermissionSqlUnique(String permissionSql);
 }

@@ -3,6 +3,7 @@ package com.spms.dbhsm.permissionGroup.service.impl;
 import com.ccsp.common.core.utils.DateUtils;
 import com.ccsp.common.core.utils.StringUtils;
 import com.ccsp.common.security.utils.SecurityUtils;
+import com.spms.common.constant.DbConstants;
 import com.spms.dbhsm.permission.domain.DbhsmPermission;
 import com.spms.dbhsm.permission.mapper.DbhsmPermissionMapper;
 import com.spms.dbhsm.permissionGroup.domain.DbhsmPermissionGroup;
@@ -48,12 +49,11 @@ public class DbhsmPermissionGroupServiceImpl implements IDbhsmPermissionGroupSer
         if (permissionGroup == null) {
             return new PermissionGroupEditDto();
         }
-        if (StringUtils.isEmpty(permissionGroup.getDbhsmPermissionUnionPermissionGroupList())) {
-            return new PermissionGroupEditDto();
-        }
         PermissionGroupEditDto permissionGroupEditDto = new PermissionGroupEditDto();
         BeanUtils.copyProperties(permissionGroup,permissionGroupEditDto);
-
+        if (StringUtils.isEmpty(permissionGroup.getDbhsmPermissionUnionPermissionGroupList())) {
+            return permissionGroupEditDto;
+        }
 
         Long[] permissionIds = new Long[permissionGroup.getDbhsmPermissionUnionPermissionGroupList().size()];
         for (int i = 0; i < permissionGroup.getDbhsmPermissionUnionPermissionGroupList().size(); i++) {
@@ -133,10 +133,22 @@ public class DbhsmPermissionGroupServiceImpl implements IDbhsmPermissionGroupSer
         return dbhsmPermissionGroupMapper.deleteDbhsmPermissionGroupByPermissionGroupId(permissionGroupId);
     }
 
+    /**
+     * 校验权限组名称是否唯一
+     * @param permissionGroupName
+     * @return
+     */
     @Override
-    public String checkPermissionGroupNameUnique(String permissionGroupName) {
+    public String checkPermissionGroupNameUnique(Long permissionGroupId,String permissionGroupName) {
         DbhsmPermissionGroup dbhsmPermissionGroup = dbhsmPermissionGroupMapper.checkPermissionGroupNameUnique(permissionGroupName);
-         return "";
+        if (StringUtils.isNotNull(dbhsmPermissionGroup)){
+            return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
+        }
+
+        if (permissionGroupId != null && permissionGroupId.intValue() == dbhsmPermissionGroup.getPermissionGroupId().intValue()) {
+            return DbConstants.DBHSM_GLOBLE_UNIQUE;
+        }
+        return DbConstants.DBHSM_GLOBLE_UNIQUE;
     }
 
     /**

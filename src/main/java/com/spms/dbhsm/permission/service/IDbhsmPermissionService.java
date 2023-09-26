@@ -66,4 +66,18 @@ public interface IDbhsmPermissionService
      * @return 结果
      */
     public int deleteDbhsmPermissionByPermissionId(Long permissionId);
+
+    /**
+     * 校验权限名是否唯一
+     * @param permissionName
+     * @return
+     */
+    String checkPermissionNameUnique(Long permissionId,String permissionName);
+
+    /**
+     * 校验权限SQL是否唯一
+     * @param permissionName
+     * @return
+     */
+    String checkPermissionSqlUnique(Long permissionId,String permissionName);
 }

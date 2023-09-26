@@ -66,5 +66,5 @@ public interface IDbhsmPermissionGroupService
      * @param permissionGroupName
      * @return
      */
-    String checkPermissionGroupNameUnique(String permissionGroupName);
+    String checkPermissionGroupNameUnique(Long permissionGroupId,String permissionGroupName);
 }

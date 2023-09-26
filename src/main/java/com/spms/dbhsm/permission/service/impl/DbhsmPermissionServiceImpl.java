@@ -1,7 +1,9 @@
 package com.spms.dbhsm.permission.service.impl;
 
 import com.ccsp.common.core.utils.DateUtils;
+import com.ccsp.common.core.utils.StringUtils;
 import com.ccsp.common.security.utils.SecurityUtils;
+import com.spms.common.constant.DbConstants;
 import com.spms.dbhsm.permission.domain.DbhsmPermission;
 import com.spms.dbhsm.permission.mapper.DbhsmPermissionMapper;
 import com.spms.dbhsm.permission.service.IDbhsmPermissionService;
@@ -100,5 +102,53 @@ public class DbhsmPermissionServiceImpl implements IDbhsmPermissionService {
     @Override
     public int deleteDbhsmPermissionByPermissionId(Long permissionId) {
         return dbhsmPermissionMapper.deleteDbhsmPermissionByPermissionId(permissionId);
+    }
+
+    /**
+     * 校验权限名是否唯一
+     * @param permissionName
+     * @return
+     */
+    @Override
+    public String checkPermissionNameUnique(Long permissionId,String permissionName) {
+        DbhsmPermission dbhsmPermission = dbhsmPermissionMapper.checkPermissionNameUnique(permissionName);
+        if (dbhsmPermission == null) {
+            return DbConstants.DBHSM_GLOBLE_UNIQUE;
+        }
+        if (StringUtils.isEmpty(dbhsmPermission.getPermissionName())){
+            return DbConstants.DBHSM_GLOBLE_UNIQUE;
+        }
+
+        //有值的情况，如果是修改，允许有一条
+        if (permissionId != null && permissionId.intValue() == dbhsmPermission.getPermissionId().intValue()) {
+            return DbConstants.DBHSM_GLOBLE_UNIQUE;
+        }
+        return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
+    }
+
+    /**
+     * 校验权限SQL是否唯一
+     * @param permissionSql
+     * @return
+     */
+    @Override
+    public String checkPermissionSqlUnique(Long permissionId,String permissionSql) {
+        DbhsmPermission dbhsmPermission = new DbhsmPermission();
+        dbhsmPermission.setPermissionSql(permissionSql);
+        List<DbhsmPermission> dbhsmPermissionList =  dbhsmPermissionMapper.selectDbhsmPermissionList(dbhsmPermission);
+        if (StringUtils.isEmpty(dbhsmPermissionList)) {
+            return DbConstants.DBHSM_GLOBLE_UNIQUE;
+        }
+
+        if (dbhsmPermissionList.size() > 1) {
+            //至少两条
+            return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
+        }
+
+        //只有一条
+        if (permissionId != null && permissionId.intValue() == dbhsmPermissionList.get(0).getPermissionId().intValue()) {
+            return DbConstants.DBHSM_GLOBLE_UNIQUE;
+        }
+        return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
     }
 }
