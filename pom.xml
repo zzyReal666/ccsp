@@ -117,16 +117,13 @@
             <artifactId>c3p0</artifactId>
             <version>0.9.1.2</version>
         </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.apereo.cas/cas-server-core-util-api -->
         <dependency>
-            <groupId>org.apereo.cas</groupId>
-            <artifactId>cas-server-core-util-api</artifactId>
-            <version>7.0.0-RC7</version>
-            <scope>runtime</scope>
+            <groupId>com.zayk.common</groupId>
+            <artifactId>ccsp-common-kmip</artifactId>
+            <version>3.5.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/src/main/resources/libs/ccsp-common-kmip-3.5.0.jar</systemPath>
         </dependency>
-
-
     </dependencies>
 
     <build>

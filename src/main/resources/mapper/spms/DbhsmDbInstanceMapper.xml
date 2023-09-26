@@ -4,7 +4,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.spms.dbhsm.dbInstance.mapper.DbhsmDbInstanceMapper">
 
-    <resultMap type="DbhsmDbInstance" id="DbhsmDbInstanceResult">
+    <resultMap type="com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance" id="DbhsmDbInstanceResult">
         <result property="id"    column="id"    />
         <result property="databaseType"    column="database_type"    />
         <result property="databaseIp"    column="database_ip"    />
@@ -29,7 +29,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         select id, database_type, database_ip, database_port, database_server_name, database_example_type, database_dba, database_dba_password, password_service_ip, password_service_port, create_time, update_time, secret_service, database_edition, user_create_mode from dbhsm_db_instance
     </sql>
 
-    <select id="selectDbhsmDbInstanceList" parameterType="DbhsmDbInstance" resultMap="DbhsmDbInstanceResult">
+    <select id="selectDbhsmDbInstanceList" parameterType="com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance" resultMap="DbhsmDbInstanceResult">
         <include refid="selectDbhsmDbInstanceVo"/>
         <where>
             <if test="databaseType != null  and databaseType != ''"> and database_type = #{databaseType}</if>
@@ -64,7 +64,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where ui.user_id = #{id}
     </select>
 
-    <insert id="insertDbhsmDbInstance" parameterType="DbhsmDbInstance" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertDbhsmDbInstance" parameterType="com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance" useGeneratedKeys="true" keyProperty="id">
         insert into dbhsm_db_instance
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="databaseType != null">database_type,</if>
@@ -100,7 +100,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
          </trim>
     </insert>
 
-    <update id="updateDbhsmDbInstance" parameterType="DbhsmDbInstance">
+    <update id="updateDbhsmDbInstance" parameterType="com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance">
         update dbhsm_db_instance
         <trim prefix="SET" suffixOverrides=",">
             <if test="databaseType != null">database_type = #{databaseType},</if>

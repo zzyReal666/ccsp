@@ -33,6 +33,7 @@ public class DbhsmPermissionGroup extends BaseEntity
 
     /** 权限和权限组关联信息 */
     private List<DbhsmPermission> dbhsmPermissionList;
+
     private List<Long> permissionIds;
 
     /** 权限和权限组关联信息 */

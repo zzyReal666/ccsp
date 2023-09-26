@@ -6,6 +6,7 @@ import com.ccsp.common.core.web.domain.AjaxResult;
 import com.ccsp.common.core.web.page.TableDataInfo;
 import com.ccsp.common.log.annotation.Log;
 import com.ccsp.common.log.enums.BusinessType;
+import com.spms.common.constant.DbConstants;
 import com.spms.dbhsm.permission.domain.DbhsmPermission;
 import com.spms.dbhsm.permission.service.IDbhsmPermissionService;
 import io.swagger.annotations.Api;
@@ -66,6 +67,12 @@ public class DbhsmPermissionController extends BaseController
     @PostMapping
     public AjaxResult add(@RequestBody DbhsmPermission dbhsmPermission)
     {
+        if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(dbhsmPermissionService.checkPermissionNameUnique(null,dbhsmPermission.getPermissionName()))) {
+            return AjaxResult.error("权限名称已存在");
+        }
+        if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(dbhsmPermissionService.checkPermissionSqlUnique(null,dbhsmPermission.getPermissionName()))) {
+            return AjaxResult.error("权限sql已存在");
+        }
         return toAjax(dbhsmPermissionService.insertDbhsmPermission(dbhsmPermission));
     }
 
@@ -89,6 +96,12 @@ public class DbhsmPermissionController extends BaseController
     @PutMapping
     public AjaxResult edit(@RequestBody DbhsmPermission dbhsmPermission)
     {
+        if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(dbhsmPermissionService.checkPermissionNameUnique(dbhsmPermission.getPermissionId(),dbhsmPermission.getPermissionName()))) {
+            return AjaxResult.error("权限名称已存在");
+        }
+        if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(dbhsmPermissionService.checkPermissionSqlUnique(dbhsmPermission.getPermissionId(),dbhsmPermission.getPermissionName()))) {
+            return AjaxResult.error("权限sql已存在");
+        }
         return toAjax(dbhsmPermissionService.updateDbhsmPermission(dbhsmPermission));
     }
 

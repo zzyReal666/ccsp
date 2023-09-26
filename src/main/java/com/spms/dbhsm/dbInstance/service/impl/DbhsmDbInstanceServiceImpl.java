@@ -45,23 +45,27 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         }).start();
     }
     public  void initDbConnectionPool()  {
-        List<DbhsmDbInstance> dbhsmDbInstanceList = dbhsmDbInstanceMapper.selectDbhsmDbInstanceList(null);
-        if(CollectionUtils.isEmpty(dbhsmDbInstanceList)){
-            log.info("数据库实例列表为空，无需初始化数据库连接池");
-            return;
-        }
-        for(DbhsmDbInstance dbhsmDbInstance:dbhsmDbInstanceList){
-            DbInstancePoolKeyDTO instanceKey = new DbInstancePoolKeyDTO();
-            BeanUtils.copyProperties(dbhsmDbInstance,instanceKey);
-            DbInstanceGetConnDTO instanceGetConnDTO = new DbInstanceGetConnDTO();
-            BeanUtils.copyProperties(dbhsmDbInstance,instanceGetConnDTO);
-            try {
-                DbConnectionPoolFactory.buildDataSourcePool(instanceGetConnDTO);
-            } catch (Exception e) {
-                e.printStackTrace();
-                log.info("初始化数据库连接池失败:{}",e.getMessage());
+        try {
+            List<DbhsmDbInstance> dbhsmDbInstanceList = dbhsmDbInstanceMapper.selectDbhsmDbInstanceList(null);
+            if (CollectionUtils.isEmpty(dbhsmDbInstanceList)) {
+                log.info("数据库实例列表为空，无需初始化数据库连接池");
+                return;
             }
-            log.info("初始化数据库连接池成功");
+            for (DbhsmDbInstance dbhsmDbInstance : dbhsmDbInstanceList) {
+                DbInstancePoolKeyDTO instanceKey = new DbInstancePoolKeyDTO();
+                BeanUtils.copyProperties(dbhsmDbInstance, instanceKey);
+                DbInstanceGetConnDTO instanceGetConnDTO = new DbInstanceGetConnDTO();
+                BeanUtils.copyProperties(dbhsmDbInstance, instanceGetConnDTO);
+                try {
+                    DbConnectionPoolFactory.buildDataSourcePool(instanceGetConnDTO);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    log.info("初始化数据库连接池失败:{}", e.getMessage());
+                }
+                log.info("初始化数据库连接池成功");
+            }
+        }catch (Exception e){
+
         }
     }
     /**
@@ -106,12 +110,12 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         //数据类型为oracle
         if(DbConstants.DB_TYPE_ORACLE.equals(dbhsmDbInstance.getDatabaseType())) {
             //数据库实例唯一性判断
-            if (DbConstants.DATABASE_INSTANCE_NOT_UNIQUE.equals(checkDBOracleInstanceUnique(dbhsmDbInstance))) {
+            if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(checkDBOracleInstanceUnique(dbhsmDbInstance))) {
                 throw new ZAYKException("数据库实例已存在");
             }
         }else if(DbConstants.DB_TYPE_SQLSERVER.equals(dbhsmDbInstance.getDatabaseType())){
             //数据库实例唯一性判断
-            if (DbConstants.DATABASE_INSTANCE_NOT_UNIQUE.equals(checkDBSqlServerUnique(dbhsmDbInstance))) {
+            if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(checkDBSqlServerUnique(dbhsmDbInstance))) {
                 throw new ZAYKException("数据库实例已存在");
             }
             dbhsmDbInstance.setDatabaseExampleType("-");
@@ -133,9 +137,9 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         instance.setDatabaseExampleType(dbhsmDbInstance.getDatabaseExampleType());
         List<DbhsmDbInstance> infoList = dbhsmDbInstanceMapper.selectDbhsmDbInstanceList(instance);
         if (CollectionUtils.isEmpty(infoList)) {
-            return DbConstants.DATABASE_INSTANCE_UNIQUE;
+            return DbConstants.DBHSM_GLOBLE_UNIQUE;
         }
-        return DbConstants.DATABASE_INSTANCE_NOT_UNIQUE;
+        return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
     }
 
     public String checkDBSqlServerUnique(DbhsmDbInstance dbhsmDbInstance) {
@@ -145,9 +149,9 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         instance.setDatabaseServerName(dbhsmDbInstance.getDatabaseServerName());
         List<DbhsmDbInstance> sqlServerList = dbhsmDbInstanceMapper.selectDbhsmDbInstanceList(instance);
         if (sqlServerList.size() > 0) {
-            return DbConstants.DATABASE_INSTANCE_NOT_UNIQUE;
+            return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
         }
-        return DbConstants.DATABASE_INSTANCE_UNIQUE;
+        return DbConstants.DBHSM_GLOBLE_UNIQUE;
     }
 
     /**
@@ -160,12 +164,12 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
     @Transactional(rollbackFor = Exception.class)
     public int updateDbhsmDbInstance(DbhsmDbInstance dbhsmDbInstance) throws ZAYKException, SQLException {
         if(DbConstants.DB_TYPE_ORACLE.equals(dbhsmDbInstance.getDatabaseType())) {
-            if (DbConstants.DATABASE_INSTANCE_NOT_UNIQUE.equals(editCheckDBOracleInstanceUnique(dbhsmDbInstance))) {
+            if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(editCheckDBOracleInstanceUnique(dbhsmDbInstance))) {
                 throw new ZAYKException("修改失败，数据库实例" + dbhsmDbInstance.getDatabaseIp() + ":" + dbhsmDbInstance.getDatabasePort() +  dbhsmDbInstance.getDatabaseServerName() + "已存在");
             }
         }else if(DbConstants.DB_TYPE_SQLSERVER.equals(dbhsmDbInstance.getDatabaseType())){
             //数据库实例唯一性判断
-            if (DbConstants.DATABASE_INSTANCE_NOT_UNIQUE.equals(editCheckDBSqlServerUnique(dbhsmDbInstance))) {
+            if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(editCheckDBSqlServerUnique(dbhsmDbInstance))) {
                 throw new ZAYKException("修改失败，数据库实例" + dbhsmDbInstance.getDatabaseIp() + ":" + dbhsmDbInstance.getDatabasePort() +  dbhsmDbInstance.getDatabaseServerName() + "已存在");
             }
         }
@@ -196,10 +200,10 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         List<DbhsmDbInstance> infoList = dbhsmDbInstanceMapper.selectDbhsmDbInstanceList(instance);
         if (!CollectionUtils.isEmpty(infoList)) {
             if (!dbhsmDbInstance.getId().equals(infoList.get(0).getId())) {
-                return DbConstants.DATABASE_INSTANCE_NOT_UNIQUE;
+                return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
             }
         }
-        return DbConstants.DATABASE_INSTANCE_UNIQUE;
+        return DbConstants.DBHSM_GLOBLE_UNIQUE;
     }
 
     public String editCheckDBSqlServerUnique(DbhsmDbInstance dbhsmDbInstance) {
@@ -209,10 +213,10 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         List<DbhsmDbInstance> sqlServerList = dbhsmDbInstanceMapper.selectDbhsmDbInstanceList(instance);
         if (sqlServerList.size() > 0) {
             if (!dbhsmDbInstance.getId().equals(sqlServerList.get(0).getId())) {
-                return DbConstants.DATABASE_INSTANCE_NOT_UNIQUE;
+                return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
             }
         }
-        return DbConstants.DATABASE_INSTANCE_UNIQUE;
+        return DbConstants.DBHSM_GLOBLE_UNIQUE;
     }
 
     /**

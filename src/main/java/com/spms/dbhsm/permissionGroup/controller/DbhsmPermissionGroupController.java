@@ -7,6 +7,7 @@ import com.ccsp.common.core.web.page.TableDataInfo;
 import com.ccsp.common.log.annotation.Log;
 import com.ccsp.common.log.enums.BusinessType;
 import com.ccsp.common.security.annotation.RequiresPermissions;
+import com.spms.common.constant.DbConstants;
 import com.spms.dbhsm.permissionGroup.domain.DbhsmPermissionGroup;
 import com.spms.dbhsm.permissionGroup.service.IDbhsmPermissionGroupService;
 import io.swagger.annotations.Api;
@@ -83,10 +84,9 @@ public class DbhsmPermissionGroupController extends BaseController
     @PostMapping
     public AjaxResult add(@RequestBody DbhsmPermissionGroup dbhsmPermissionGroup)
     {
-//        if (ConstantUtil.PERMISSION_GROUP_NAME_NOT_UNIQUE.equals(dbhsmPermissionGroupService.checkPermissionGroupNameUnique(dbhsmPermissionGroup.getPermissionGroupName()))) {
-//            return AjaxResult.error(500, "权限组名称已存在");
-//        }
-
+        if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(dbhsmPermissionGroupService.checkPermissionGroupNameUnique(null,dbhsmPermissionGroup.getPermissionGroupName()))) {
+            return AjaxResult.error("权限组名称已存在");
+        }
         return toAjax(dbhsmPermissionGroupService.insertDbhsmPermissionGroup(dbhsmPermissionGroup));
     }
 
@@ -98,6 +98,9 @@ public class DbhsmPermissionGroupController extends BaseController
     @PutMapping
     public AjaxResult edit(@RequestBody DbhsmPermissionGroup dbhsmPermissionGroup)
     {
+        if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(dbhsmPermissionGroupService.checkPermissionGroupNameUnique(dbhsmPermissionGroup.getPermissionGroupId(),dbhsmPermissionGroup.getPermissionGroupName()))) {
+            return AjaxResult.error("权限组名称已存在");
+        }
         return toAjax(dbhsmPermissionGroupService.updateDbhsmPermissionGroup(dbhsmPermissionGroup));
     }
 

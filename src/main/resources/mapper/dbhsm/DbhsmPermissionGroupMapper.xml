@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.spms.dbhsm.permissionGroup.mapper.DbhsmPermissionGroupMapper">
+    
+    <resultMap type="com.spms.dbhsm.permissionGroup.domain.DbhsmPermissionGroup" id="DbhsmPermissionGroupResult">
+        <result property="permissionGroupId"    column="permission_group_id"    />
+        <result property="permissionGroupName"    column="permission_group_name"    />
+        <result property="status"    column="status"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <collection property="dbhsmPermissionList" javaType="java.util.List" resultMap="DbhsmPermissionResult"/>
+        <collection property="dbhsmPermissionUnionPermissionGroupList" javaType="java.util.List" resultMap="DbhsmPermissionUnionPermissionGroupResult"/>
+    </resultMap>
+
+    <resultMap type="com.spms.dbhsm.permissionGroup.domain.DbhsmPermissionUnionPermissionGroup" id="DbhsmPermissionUnionPermissionGroupResult">
+        <result property="permissionId"    column="sub_permission_id"    />
+        <result property="permissionGroupId"    column="sub_permission_group_id"    />
+        <result property="createBy"    column="sub_create_by"    />
+        <result property="createTime"    column="sub_create_time"    />
+        <result property="updateBy"    column="sub_update_by"    />
+        <result property="updateTime"    column="sub_update_time"    />
+    </resultMap>
+
+    <resultMap type="com.spms.dbhsm.permission.domain.DbhsmPermission" id="DbhsmPermissionResult">
+        <result property="permissionId"    column="sub_permission_id"    />
+        <result property="permissionName"    column="permission_Name"    />
+        <result property="createBy"    column="sub_create_by"    />
+        <result property="createTime"    column="sub_create_time"    />
+        <result property="updateBy"    column="sub_update_by"    />
+        <result property="updateTime"    column="sub_update_time"    />
+    </resultMap>
+
+    <sql id="selectDbhsmPermissionGroupVo">
+        select permission_group_id, permission_group_name, status, create_by, create_time, update_by, update_time from dbhsm_permission_group
+    </sql>
+
+    <select id="checkPermissionGroupNameUnique" parameterType="String" resultMap="DbhsmPermissionGroupResult">
+        <include refid="selectDbhsmPermissionGroupVo"/>
+        <where>  
+            <if test="permissionGroupName != null  and permissionGroupName != ''"> and permission_group_name = #{permissionGroupName}</if>
+        </where>
+    </select>
+
+    <select id="selectDbhsmPermissionGroupList" parameterType="com.spms.dbhsm.permissionGroup.domain.DbhsmPermissionGroup" resultMap="DbhsmPermissionGroupResult">
+        select a.permission_group_id, a.permission_group_name, a.status, a.create_by, a.create_time, a.update_by, a.update_time,
+        b.permission_id as sub_permission_id, b.permission_group_id as sub_permission_group_id, b.create_by as sub_create_by, b.create_time as sub_create_time, b.update_by as sub_update_by, b.update_time as sub_update_time,
+        c.permission_name
+        from dbhsm_permission_group a
+        left join dbhsm_permission_union_permission_group b on b.permission_group_id = a.permission_group_id
+        left join dbhsm_permission c on c.permission_id = b.permission_id
+        <where>
+            <if test="permissionGroupName != null  and permissionGroupName != ''"> and a.permission_group_name like concat('%', #{permissionGroupName}, '%')</if>
+            <if test="status != null  and status != ''"> and a.status = #{status}</if>
+        </where>
+    </select>
+    
+    <select id="selectDbhsmPermissionGroupByPermissionGroupId" parameterType="Long" resultMap="DbhsmPermissionGroupResult">
+        select a.permission_group_id, a.permission_group_name, a.status, a.create_by, a.create_time, a.update_by, a.update_time,
+ b.permission_id as sub_permission_id, b.permission_group_id as sub_permission_group_id, b.create_by as sub_create_by, b.create_time as sub_create_time, b.update_by as sub_update_by, b.update_time as sub_update_time
+        from dbhsm_permission_group a
+        left join dbhsm_permission_union_permission_group b on b.permission_group_id = a.permission_group_id
+        where a.permission_group_id = #{permissionGroupId}
+    </select>
+        
+    <insert id="insertDbhsmPermissionGroup" parameterType="com.spms.dbhsm.permissionGroup.domain.DbhsmPermissionGroup" useGeneratedKeys="true" keyProperty="permissionGroupId">
+        insert into dbhsm_permission_group
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="permissionGroupName != null and permissionGroupName != ''">permission_group_name,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="permissionGroupName != null and permissionGroupName != ''">#{permissionGroupName},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateDbhsmPermissionGroup" parameterType="com.spms.dbhsm.permissionGroup.domain.DbhsmPermissionGroup">
+        update dbhsm_permission_group
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="permissionGroupName != null and permissionGroupName != ''">permission_group_name = #{permissionGroupName},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where permission_group_id = #{permissionGroupId}
+    </update>
+
+    <delete id="deleteDbhsmPermissionGroupByPermissionGroupId" parameterType="Long">
+        delete from dbhsm_permission_group where permission_group_id = #{permissionGroupId}
+    </delete>
+
+    <delete id="deleteDbhsmPermissionGroupByPermissionGroupIds" parameterType="String">
+        delete from dbhsm_permission_group where permission_group_id in 
+        <foreach item="permissionGroupId" collection="array" open="(" separator="," close=")">
+            #{permissionGroupId}
+        </foreach>
+    </delete>
+    
+    <delete id="deleteDbhsmPermissionUnionPermissionGroupByPermissionGroupIds" parameterType="String">
+        delete from dbhsm_permission_union_permission_group where permission_group_id in 
+        <foreach item="permissionGroupId" collection="array" open="(" separator="," close=")">
+            #{permissionGroupId}
+        </foreach>
+    </delete>
+
+    <delete id="deleteDbhsmPermissionUnionPermissionGroupByPermissionGroupId" parameterType="Long">
+        delete from dbhsm_permission_union_permission_group where permission_group_id = #{permissionGroupId}
+    </delete>
+
+    <insert id="batchDbhsmPermissionUnionPermissionGroup">
+        insert into dbhsm_permission_union_permission_group( permission_id, permission_group_id, create_by, create_time, update_by, update_time) values
+		<foreach item="item" index="index" collection="list" separator=",">
+            ( #{item.permissionId}, #{item.permissionGroupId}, #{item.createBy}, #{item.createTime}, #{item.updateBy}, #{item.updateTime})
+        </foreach>
+    </insert>
+</mapper>
