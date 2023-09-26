@@ -1,6 +1,7 @@
 package com.spms.dbhsm.dbInstance.mapper;
 
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
+import com.spms.dbhsm.dbInstance.domain.VO.InstanceServerNameVO;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;
@@ -61,4 +62,8 @@ public interface DbhsmDbInstanceMapper
      * @return 结果
      */
     public int deleteDbhsmDbInstanceByIds(Long[] ids);
+
+    List<InstanceServerNameVO> listDbInstanceSelect(InstanceServerNameVO instanceServerNameVO);
+
+    DbhsmDbInstance selectDbhsmDbInstanceByUserId(Long id);
 }

@@ -2,6 +2,7 @@ package com.spms.dbhsm.dbInstance.service;
 
 import com.ccsp.common.core.exception.ZAYKException;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
+import com.spms.dbhsm.dbInstance.domain.VO.InstanceServerNameVO;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -21,6 +22,14 @@ public interface IDbhsmDbInstanceService
      * @return 数据库实例
      */
     public DbhsmDbInstance selectDbhsmDbInstanceById(Long id);
+
+    /**
+     * 查询数据库实例用户侧边栏使用
+     *
+     * @param
+     * @return 数据库实例
+     */
+    List<InstanceServerNameVO> listDbInstanceSelect(InstanceServerNameVO instanceServerNameVO);
 
     /**
      * 查询数据库实例列表

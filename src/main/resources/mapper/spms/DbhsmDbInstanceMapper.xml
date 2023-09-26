@@ -21,7 +21,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="databaseEdition"    column="database_edition"    />
         <result property="userCreateMode"    column="user_create_mode"    />
     </resultMap>
-
+    <resultMap id="InstanceServerNameResultVO" type="com.spms.dbhsm.dbInstance.domain.VO.InstanceServerNameVO">
+        <result column="id" property="id"/>
+        <result column="label" property="label"/>
+    </resultMap>
     <sql id="selectDbhsmDbInstanceVo">
         select id, database_type, database_ip, database_port, database_server_name, database_example_type, database_dba, database_dba_password, password_service_ip, password_service_port, create_time, update_time, secret_service, database_edition, user_create_mode from dbhsm_db_instance
     </sql>
@@ -47,6 +50,18 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <select id="selectDbhsmDbInstanceById" parameterType="Long" resultMap="DbhsmDbInstanceResult">
         <include refid="selectDbhsmDbInstanceVo"/>
         where id = #{id}
+    </select>
+
+    <select id="listDbInstanceSelect" resultMap="InstanceServerNameResultVO">
+        select id,database_server_name label
+        from dbhsm_db_instance
+    </select>
+    <select id="selectDbhsmDbInstanceByUserId" parameterType="Long" resultMap="DbhsmDbInstanceResult">
+        select database_type,database_ip,database_port,database_server_name,database_example_type,database_dba,database_dba_password
+        from dbhsm_db_instance i
+        left join dbhsm_user_db_instance ui
+        on i.id = ui.instance_id
+        where ui.user_id = #{id}
     </select>
 
     <insert id="insertDbhsmDbInstance" parameterType="DbhsmDbInstance" useGeneratedKeys="true" keyProperty="id">

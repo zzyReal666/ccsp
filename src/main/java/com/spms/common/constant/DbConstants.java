@@ -21,4 +21,8 @@ public class DbConstants {
     //
     /** Oracle 数据库实例类型 1 SID取值 ":" , 2 服务名取值 "/"  */
     public static final String DB_EXAMPLE_TYPE_SID = "1";
+
+    /**是否为web端创建的用户0：是 1：否 */
+    public static final Integer IS_SELF_BUILT = 0;
+    public static final Integer IS_NOT_SELF_BUILT = 1;
 }

@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.spms.dbhsm.dbUser.mapper.DbhsmDbUsersMapper">
+
+    <resultMap type="DbhsmDbUser" id="DbhsmDbUsersResult">
+        <result property="id"    column="id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="permissionGroupId"    column="permission_group_id"    />
+        <result property="databaseInstanceId"    column="database_instance_id"    />
+        <result property="userName"    column="user_name"    />
+        <result property="password"    column="password"    />
+        <result property="created"    column="created"    />
+        <result property="common"    column="common"    />
+        <result property="oracleMaintained"    column="oracle_maintained"    />
+        <result property="inherited"    column="inherited"    />
+        <result property="defaultCollation"    column="default_collation"    />
+        <result property="implicit"    column="implicit"    />
+        <result property="allShard"    column="all_shard"    />
+        <result property="secretService"    column="secret_service"    />
+        <result property="isSelfBuilt"    column="is_self_built"    />
+        <result property="userRole"    column="user_role"    />
+        <result property="tableSpace"    column="table_space"    />
+        <result property="encLibapiPath"    column="enc_libapi_path"    />
+    </resultMap>
+
+    <sql id="selectDbhsmDbUsersVo">
+        select id, user_id, permission_group_id, database_instance_id, user_name, password, created, common, oracle_maintained, inherited, default_collation, implicit, all_shard, secret_service, is_self_built, user_role, table_space, enc_libapi_path from dbhsm_db_user
+    </sql>
+
+    <select id="selectDbhsmDbUsersList" parameterType="DbhsmDbUser" resultMap="DbhsmDbUsersResult">
+        <include refid="selectDbhsmDbUsersVo"/>
+        <where>
+            <if test="userName != null  and userName != ''"> and user_name like concat('%', #{userName}, '%')</if>
+        </where>
+    </select>
+
+    <select id="selectDbhsmDbUsersById" parameterType="Long" resultMap="DbhsmDbUsersResult">
+        <include refid="selectDbhsmDbUsersVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertDbhsmDbUsers" parameterType="DbhsmDbUser" useGeneratedKeys="true" keyProperty="id">
+        insert into dbhsm_db_user
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="permissionGroupId != null">permission_group_id,</if>
+            <if test="databaseInstanceId != null">database_instance_id,</if>
+            <if test="userName != null and userName != ''">user_name,</if>
+            <if test="password != null and password != ''">password,</if>
+            <if test="created != null">created,</if>
+            <if test="common != null">common,</if>
+            <if test="oracleMaintained != null">oracle_maintained,</if>
+            <if test="inherited != null">inherited,</if>
+            <if test="defaultCollation != null">default_collation,</if>
+            <if test="implicit != null">implicit,</if>
+            <if test="allShard != null">all_shard,</if>
+            <if test="secretService != null">secret_service,</if>
+            <if test="isSelfBuilt != null">is_self_built,</if>
+            <if test="userRole != null">user_role,</if>
+            <if test="tableSpace != null">table_space,</if>
+            <if test="encLibapiPath != null">enc_libapi_path,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="permissionGroupId != null">#{permissionGroupId},</if>
+            <if test="databaseInstanceId != null">#{databaseInstanceId},</if>
+            <if test="userName != null and userName != ''">#{userName},</if>
+            <if test="password != null and password != ''">#{password},</if>
+            <if test="created != null">#{created},</if>
+            <if test="common != null">#{common},</if>
+            <if test="oracleMaintained != null">#{oracleMaintained},</if>
+            <if test="inherited != null">#{inherited},</if>
+            <if test="defaultCollation != null">#{defaultCollation},</if>
+            <if test="implicit != null">#{implicit},</if>
+            <if test="allShard != null">#{allShard},</if>
+            <if test="secretService != null">#{secretService},</if>
+            <if test="isSelfBuilt != null">#{isSelfBuilt},</if>
+            <if test="userRole != null">#{userRole},</if>
+            <if test="tableSpace != null">#{tableSpace},</if>
+            <if test="encLibapiPath != null">#{encLibapiPath},</if>
+         </trim>
+    </insert>
+
+    <update id="updateDbhsmDbUsers" parameterType="DbhsmDbUser">
+        update dbhsm_db_user
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="permissionGroupId != null">permission_group_id = #{permissionGroupId},</if>
+            <if test="databaseInstanceId != null">database_instance_id = #{databaseInstanceId},</if>
+            <if test="userName != null and userName != ''">user_name = #{userName},</if>
+            <if test="password != null and password != ''">password = #{password},</if>
+            <if test="created != null">created = #{created},</if>
+            <if test="common != null">common = #{common},</if>
+            <if test="oracleMaintained != null">oracle_maintained = #{oracleMaintained},</if>
+            <if test="inherited != null">inherited = #{inherited},</if>
+            <if test="defaultCollation != null">default_collation = #{defaultCollation},</if>
+            <if test="implicit != null">implicit = #{implicit},</if>
+            <if test="allShard != null">all_shard = #{allShard},</if>
+            <if test="secretService != null">secret_service = #{secretService},</if>
+            <if test="isSelfBuilt != null">is_self_built = #{isSelfBuilt},</if>
+            <if test="userRole != null">user_role = #{userRole},</if>
+            <if test="tableSpace != null">table_space = #{tableSpace},</if>
+            <if test="encLibapiPath != null">enc_libapi_path = #{encLibapiPath},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteDbhsmDbUsersById" parameterType="Long">
+        delete from dbhsm_db_user where id = #{id}
+    </delete>
+
+    <delete id="deleteDbhsmDbUsersByIds" parameterType="String">
+        delete from dbhsm_db_user where id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

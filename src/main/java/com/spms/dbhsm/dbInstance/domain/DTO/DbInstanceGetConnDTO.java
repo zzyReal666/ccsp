@@ -1,6 +1,5 @@
 package com.spms.dbhsm.dbInstance.domain.DTO;
 
-import com.ccsp.common.core.web.domain.BaseEntity;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,7 +16,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class DbInstanceGetConnDTO extends BaseEntity
+public class DbInstanceGetConnDTO
 {
     /** 数据库类型 */
     private String databaseType;
@@ -40,6 +39,8 @@ public class DbInstanceGetConnDTO extends BaseEntity
     /** 数据库DBA密码 */
     private String databaseDbaPassword;
 
+    /** 密码服务 */
+    private String secretService;
 
 @Override
     public boolean equals(Object o) {

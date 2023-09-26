@@ -115,7 +115,7 @@ rocketmq:
 # mybatis配置
 mybatis:
   # 搜索指定包别名
-  typeAliasesPackage: com.spms.dbInstance
+  typeAliasesPackage: com.spms
   # 配置mapper的扫描，找到所有的mapper.xml映射文件
   mapperLocations: classpath:mapper/**/*.xml
 

@@ -7,6 +7,7 @@ import com.spms.common.pool.hikariPool.DbConnectionPoolFactory;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstancePoolKeyDTO;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
+import com.spms.dbhsm.dbInstance.domain.VO.InstanceServerNameVO;
 import com.spms.dbhsm.dbInstance.mapper.DbhsmDbInstanceMapper;
 import com.spms.dbhsm.dbInstance.service.IDbhsmDbInstanceService;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +29,7 @@ import java.util.List;
  */
 @Service
 @Slf4j
-public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService/*,ApplicationRunner*/
+public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
 {
     @Autowired
     private DbhsmDbInstanceMapper dbhsmDbInstanceMapper;
@@ -73,6 +74,11 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService/*,App
     public DbhsmDbInstance selectDbhsmDbInstanceById(Long id)
     {
         return dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
+    }
+
+    @Override
+    public List<InstanceServerNameVO> listDbInstanceSelect(InstanceServerNameVO instanceServerNameVO) {
+        return dbhsmDbInstanceMapper.listDbInstanceSelect(instanceServerNameVO);
     }
 
     /**

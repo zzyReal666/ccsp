@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.spms.dbhsm.dbUser.mapper.DbhsmUserPermissionGroupMapper">
+
+    <resultMap type="DbhsmUserPermissionGroup" id="DbhsmUserPermissionGroupResult">
+        <result property="userId"    column="user_id"    />
+        <result property="permissionGroupId"    column="permission_group_id"    />
+    </resultMap>
+
+    <sql id="selectDbhsmUserPermissionGroupVo">
+        select user_id, permission_group_id from dbhsm_user_permission_group
+    </sql>
+
+    <select id="selectDbhsmUserPermissionGroupList" parameterType="DbhsmUserPermissionGroup" resultMap="DbhsmUserPermissionGroupResult">
+        <include refid="selectDbhsmUserPermissionGroupVo"/>
+        <where>
+        </where>
+    </select>
+
+    <select id="selectDbhsmUserPermissionGroupByUserId" parameterType="Long" resultMap="DbhsmUserPermissionGroupResult">
+        <include refid="selectDbhsmUserPermissionGroupVo"/>
+        where user_id = #{userId}
+    </select>
+
+    <insert id="insertDbhsmUserPermissionGroup" parameterType="DbhsmUserPermissionGroup">
+        insert into dbhsm_user_permission_group
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="permissionGroupId != null">permission_group_id,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="permissionGroupId != null">#{permissionGroupId},</if>
+         </trim>
+    </insert>
+
+    <update id="updateDbhsmUserPermissionGroup" parameterType="DbhsmUserPermissionGroup">
+        update dbhsm_user_permission_group
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="permissionGroupId != null">permission_group_id = #{permissionGroupId},</if>
+        </trim>
+        where user_id = #{userId}
+    </update>
+
+    <delete id="deleteDbhsmUserPermissionGroupByUserId" parameterType="Long">
+        delete from dbhsm_user_permission_group where user_id = #{userId}
+    </delete>
+
+    <delete id="deleteDbhsmUserPermissionGroupByUserIds" parameterType="String">
+        delete from dbhsm_user_permission_group where user_id in
+        <foreach item="userId" collection="array" open="(" separator="," close=")">
+            #{userId}
+        </foreach>
+    </delete>
+</mapper>

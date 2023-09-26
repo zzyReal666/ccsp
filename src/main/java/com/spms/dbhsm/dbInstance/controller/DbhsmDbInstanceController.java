@@ -5,11 +5,12 @@ import com.ccsp.common.core.utils.poi.ExcelUtil;
 import com.ccsp.common.core.web.controller.BaseController;
 import com.ccsp.common.core.web.domain.AjaxResult;
 import com.ccsp.common.core.web.domain.AjaxResult2;
-import com.ccsp.common.core.web.page.TableDataInfo;
+import com.ccsp.common.core.web.page.TableDataInfo2;
 import com.ccsp.common.log.annotation.Log;
 import com.ccsp.common.log.enums.BusinessType;
 import com.ccsp.common.security.annotation.RequiresPermissions;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
+import com.spms.dbhsm.dbInstance.domain.VO.InstanceServerNameVO;
 import com.spms.dbhsm.dbInstance.service.IDbhsmDbInstanceService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,11 +39,20 @@ public class DbhsmDbInstanceController extends BaseController
      */
     @RequiresPermissions("dbhsm:dbInstance:list")
     @GetMapping("/list")
-    public TableDataInfo list(DbhsmDbInstance dbhsmDbInstance)
+    public AjaxResult2<TableDataInfo2<DbhsmDbInstance>> list(DbhsmDbInstance dbhsmDbInstance)
     {
         startPage();
         List<DbhsmDbInstance> list = dbhsmDbInstanceService.selectDbhsmDbInstanceList(dbhsmDbInstance);
-        return getDataTable(list);
+        return getDataList(list);
+    }
+    /**
+     * 查询数据库实例列表用户侧边栏使用
+     */
+    @RequiresPermissions("dbhsm:dbInstance:list")
+    @GetMapping("/listDbInstanceSelect")
+    public AjaxResult2 listDbInstanceSelect(InstanceServerNameVO instanceServerNameVO)
+    {
+       return AjaxResult2.success(dbhsmDbInstanceService.listDbInstanceSelect(instanceServerNameVO));
     }
 
     /**

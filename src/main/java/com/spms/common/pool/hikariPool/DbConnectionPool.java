@@ -14,8 +14,6 @@ public class DbConnectionPool {
     private static DataSource dataSource;
     private static final int MAX_CONNECTIONS = 1;
     public static DataSource initialize(DbInstanceGetConnDTO instanceGetConnDTO) {
-
-        // 从数据库或其他地方获取以下信息
         String databaseIp = instanceGetConnDTO.getDatabaseIp();
         String databaseType = instanceGetConnDTO.getDatabaseType();
         String databasePort = instanceGetConnDTO.getDatabasePort();
@@ -23,7 +21,6 @@ public class DbConnectionPool {
         String databaseDbaPassword = instanceGetConnDTO.getDatabaseDbaPassword();
         String databaseExampleType = instanceGetConnDTO.getDatabaseExampleType();
         String databaseServerName = instanceGetConnDTO.getDatabaseServerName();
-
 
         HikariConfig config = new HikariConfig();
         switch (databaseType) {

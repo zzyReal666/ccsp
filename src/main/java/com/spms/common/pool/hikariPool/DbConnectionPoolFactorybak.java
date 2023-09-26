@@ -27,7 +27,7 @@ import java.util.Hashtable;
  * @author
  * Funciton:该类是连接池的管理类
  */
-public class DbConnectionPoolFactory {
+public class DbConnectionPoolFactorybak {
     private static final Log log = LogFactory.getLog(DynamicDataSourcePool.class);
     private static Hashtable<DbInstancePoolKeyDTO, javax.sql.DataSource> hashtable = null;
     private static DbConnectionPoolFactory dataSourcePoolFactory;
@@ -126,7 +126,7 @@ public class DbConnectionPoolFactory {
 
         buildDataSourcePool(instance);
 
-        return DbConnectionPoolFactory.getInstance().getDynamicDataSourcePool(dbInstancekey).getConnection();
+        return DbConnectionPoolFactory.getInstance().getDbConnectionPool(dbInstancekey).getConnection();
     }
     /**
      * DbhsmDbInstance 转DbInstancePoolKeyDTO
