@@ -4,7 +4,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.spms.dbhsm.dbUser.mapper.DbhsmUserDbInstanceMapper">
 
-    <resultMap type="DbhsmUserDbInstance" id="DbhsmUserDbInstanceResult">
+    <resultMap type="com.spms.dbhsm.dbUser.domain.DbhsmUserDbInstance" id="DbhsmUserDbInstanceResult">
         <result property="userId"    column="user_id"    />
         <result property="instanceId"    column="instance_id"    />
     </resultMap>
@@ -13,7 +13,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         select user_id, instance_id from dbhsm_user_db_instance
     </sql>
 
-    <select id="selectDbhsmUserDbInstanceList" parameterType="DbhsmUserDbInstance" resultMap="DbhsmUserDbInstanceResult">
+    <select id="selectDbhsmUserDbInstanceList" parameterType="com.spms.dbhsm.dbUser.domain.DbhsmUserDbInstance" resultMap="DbhsmUserDbInstanceResult">
         <include refid="selectDbhsmUserDbInstanceVo"/>
         <where>
         </where>
@@ -24,7 +24,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where user_id = #{userId}
     </select>
 
-    <insert id="insertDbhsmUserDbInstance" parameterType="DbhsmUserDbInstance">
+    <insert id="insertDbhsmUserDbInstance" parameterType="com.spms.dbhsm.dbUser.domain.DbhsmUserDbInstance">
         insert into dbhsm_user_db_instance
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="userId != null">user_id,</if>
@@ -36,7 +36,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
          </trim>
     </insert>
 
-    <update id="updateDbhsmUserDbInstance" parameterType="DbhsmUserDbInstance">
+    <update id="updateDbhsmUserDbInstance" parameterType="com.spms.dbhsm.dbUser.domain.DbhsmUserDbInstance">
         update dbhsm_user_db_instance
         <trim prefix="SET" suffixOverrides=",">
             <if test="instanceId != null">instance_id = #{instanceId},</if>

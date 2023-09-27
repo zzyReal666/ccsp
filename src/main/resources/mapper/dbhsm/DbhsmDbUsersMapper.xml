@@ -4,7 +4,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.spms.dbhsm.dbUser.mapper.DbhsmDbUsersMapper">
 
-    <resultMap type="DbhsmDbUser" id="DbhsmDbUsersResult">
+    <resultMap type="com.spms.dbhsm.dbUser.domain.DbhsmDbUser" id="DbhsmDbUsersResult">
         <result property="id"    column="id"    />
         <result property="userId"    column="user_id"    />
         <result property="permissionGroupId"    column="permission_group_id"    />
@@ -29,7 +29,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         select id, user_id, permission_group_id, database_instance_id, user_name, password, created, common, oracle_maintained, inherited, default_collation, implicit, all_shard, secret_service, is_self_built, user_role, table_space, enc_libapi_path from dbhsm_db_user
     </sql>
 
-    <select id="selectDbhsmDbUsersList" parameterType="DbhsmDbUser" resultMap="DbhsmDbUsersResult">
+    <select id="selectDbhsmDbUsersList" parameterType="com.spms.dbhsm.dbUser.domain.DbhsmDbUser" resultMap="DbhsmDbUsersResult">
         <include refid="selectDbhsmDbUsersVo"/>
         <where>
             <if test="userName != null  and userName != ''"> and user_name like concat('%', #{userName}, '%')</if>
@@ -41,7 +41,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where id = #{id}
     </select>
 
-    <insert id="insertDbhsmDbUsers" parameterType="DbhsmDbUser" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertDbhsmDbUsers" parameterType="com.spms.dbhsm.dbUser.domain.DbhsmDbUser" useGeneratedKeys="true" keyProperty="id">
         insert into dbhsm_db_user
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="userId != null">user_id,</if>
@@ -83,7 +83,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
          </trim>
     </insert>
 
-    <update id="updateDbhsmDbUsers" parameterType="DbhsmDbUser">
+    <update id="updateDbhsmDbUsers" parameterType="com.spms.dbhsm.dbUser.domain.DbhsmDbUser">
         update dbhsm_db_user
         <trim prefix="SET" suffixOverrides=",">
             <if test="userId != null">user_id = #{userId},</if>

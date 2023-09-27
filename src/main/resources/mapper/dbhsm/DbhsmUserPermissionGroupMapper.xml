@@ -4,7 +4,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.spms.dbhsm.dbUser.mapper.DbhsmUserPermissionGroupMapper">
 
-    <resultMap type="DbhsmUserPermissionGroup" id="DbhsmUserPermissionGroupResult">
+    <resultMap type="com.spms.dbhsm.dbUser.domain.DbhsmUserPermissionGroup" id="DbhsmUserPermissionGroupResult">
         <result property="userId"    column="user_id"    />
         <result property="permissionGroupId"    column="permission_group_id"    />
     </resultMap>
@@ -13,7 +13,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         select user_id, permission_group_id from dbhsm_user_permission_group
     </sql>
 
-    <select id="selectDbhsmUserPermissionGroupList" parameterType="DbhsmUserPermissionGroup" resultMap="DbhsmUserPermissionGroupResult">
+    <select id="selectDbhsmUserPermissionGroupList" parameterType="com.spms.dbhsm.dbUser.domain.DbhsmUserPermissionGroup" resultMap="DbhsmUserPermissionGroupResult">
         <include refid="selectDbhsmUserPermissionGroupVo"/>
         <where>
         </where>
@@ -24,7 +24,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where user_id = #{userId}
     </select>
 
-    <insert id="insertDbhsmUserPermissionGroup" parameterType="DbhsmUserPermissionGroup">
+    <insert id="insertDbhsmUserPermissionGroup" parameterType="com.spms.dbhsm.dbUser.domain.DbhsmUserPermissionGroup">
         insert into dbhsm_user_permission_group
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="userId != null">user_id,</if>
@@ -36,7 +36,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
          </trim>
     </insert>
 
-    <update id="updateDbhsmUserPermissionGroup" parameterType="DbhsmUserPermissionGroup">
+    <update id="updateDbhsmUserPermissionGroup" parameterType="com.spms.dbhsm.dbUser.domain.DbhsmUserPermissionGroup">
         update dbhsm_user_permission_group
         <trim prefix="SET" suffixOverrides=",">
             <if test="permissionGroupId != null">permission_group_id = #{permissionGroupId},</if>
