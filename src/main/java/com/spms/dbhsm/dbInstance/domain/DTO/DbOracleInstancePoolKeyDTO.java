@@ -29,40 +29,38 @@ public class DbOracleInstancePoolKeyDTO extends DbInstancePoolKeyDTO
     /** 实例类型 */
     private String databaseExampleType;
 
+    /** 数据库DBA */
+    private String databaseDba;
+
     public DbOracleInstancePoolKeyDTO() {}
 
-    public DbOracleInstancePoolKeyDTO(String databaseType, String databaseIp, String databasePort, String databaseServerName, String databaseExampleType) {
+    public DbOracleInstancePoolKeyDTO(String databaseType, String databaseIp, String databasePort, String databaseServerName, String databaseExampleType, String databaseDba) {
         this.databaseType = databaseType;
         this.databaseIp = databaseIp;
         this.databasePort = databasePort;
         this.databaseServerName = databaseServerName;
         this.databaseExampleType = databaseExampleType;
+        this.databaseDba = databaseDba;
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof DbOracleInstancePoolKeyDTO)) {
-            return false;
-        }
+        if (this == o) return true;
+        if (!(o instanceof DbOracleInstancePoolKeyDTO)) return false;
 
         DbOracleInstancePoolKeyDTO that = (DbOracleInstancePoolKeyDTO) o;
 
-        if (getDatabaseType() != null ? !getDatabaseType().equals(that.getDatabaseType()) : that.getDatabaseType() != null) {
+        if (getDatabaseType() != null ? !getDatabaseType().equals(that.getDatabaseType()) : that.getDatabaseType() != null)
             return false;
-        }
-        if (getDatabaseIp() != null ? !getDatabaseIp().equals(that.getDatabaseIp()) : that.getDatabaseIp() != null) {
+        if (getDatabaseIp() != null ? !getDatabaseIp().equals(that.getDatabaseIp()) : that.getDatabaseIp() != null)
             return false;
-        }
-        if (getDatabasePort() != null ? !getDatabasePort().equals(that.getDatabasePort()) : that.getDatabasePort() != null) {
+        if (getDatabasePort() != null ? !getDatabasePort().equals(that.getDatabasePort()) : that.getDatabasePort() != null)
             return false;
-        }
-        if (getDatabaseServerName() != null ? !getDatabaseServerName().equals(that.getDatabaseServerName()) : that.getDatabaseServerName() != null) {
+        if (getDatabaseServerName() != null ? !getDatabaseServerName().equals(that.getDatabaseServerName()) : that.getDatabaseServerName() != null)
             return false;
-        }
-        return getDatabaseExampleType() != null ? getDatabaseExampleType().equals(that.getDatabaseExampleType()) : that.getDatabaseExampleType() == null;
+        if (getDatabaseExampleType() != null ? !getDatabaseExampleType().equals(that.getDatabaseExampleType()) : that.getDatabaseExampleType() != null)
+            return false;
+        return getDatabaseDba() != null ? getDatabaseDba().equals(that.getDatabaseDba()) : that.getDatabaseDba() == null;
     }
 
     @Override
@@ -72,6 +70,7 @@ public class DbOracleInstancePoolKeyDTO extends DbInstancePoolKeyDTO
         result = 31 * result + (getDatabasePort() != null ? getDatabasePort().hashCode() : 0);
         result = 31 * result + (getDatabaseServerName() != null ? getDatabaseServerName().hashCode() : 0);
         result = 31 * result + (getDatabaseExampleType() != null ? getDatabaseExampleType().hashCode() : 0);
+        result = 31 * result + (getDatabaseDba() != null ? getDatabaseDba().hashCode() : 0);
         return result;
     }
 

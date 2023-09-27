@@ -1,6 +1,7 @@
 package com.spms.dbhsm.dbUser.controller;
 
 import com.ccsp.common.core.exception.ZAYKException;
+import com.ccsp.common.core.utils.StringUtils;
 import com.ccsp.common.core.utils.poi.ExcelUtil;
 import com.ccsp.common.core.web.controller.BaseController;
 import com.ccsp.common.core.web.domain.AjaxResult;
@@ -9,6 +10,7 @@ import com.ccsp.common.core.web.page.TableDataInfo2;
 import com.ccsp.common.log.annotation.Log;
 import com.ccsp.common.log.enums.BusinessType;
 import com.ccsp.common.security.annotation.RequiresPermissions;
+import com.spms.common.PageHelperUtil;
 import com.spms.dbhsm.dbUser.domain.DbhsmDbUser;
 import com.spms.dbhsm.dbUser.domain.VO.DbhsmDbUserVO;
 import com.spms.dbhsm.dbUser.service.IDbhsmDbUsersService;
@@ -39,7 +41,6 @@ public class DbhsmDbUsersController extends BaseController {
     @RequiresPermissions("dbUser:dbuser:list")
     @GetMapping("/list")
     public AjaxResult2<TableDataInfo2<DbhsmDbUserVO>> list(DbhsmDbUser dbhsmDbUser) {
-        startPage();
         List<DbhsmDbUser> list = dbhsmDbUsersService.selectDbhsmDbUsersList(dbhsmDbUser);
         List<DbhsmDbUserVO> listVos = new ArrayList<>();
         list.forEach(dbUser -> {
@@ -47,7 +48,18 @@ public class DbhsmDbUsersController extends BaseController {
             BeanUtils.copyProperties(dbUser, dbhsmDbUserVO);
             listVos.add(dbhsmDbUserVO);
         });
-        return getDataList(listVos);
+        //根据条件查询
+        List<DbhsmDbUserVO> userVOList = queryUserList(listVos,dbhsmDbUser.getUserName());
+        //分页
+        List<DbhsmDbUserVO> userResult= PageHelperUtil.pageHelper(userVOList);
+        return getDataList(listVos,userResult,userVOList);
+    }
+
+    private List<DbhsmDbUserVO> queryUserList(List<DbhsmDbUserVO> listVos, String userName) {
+        if(StringUtils.isNotEmpty(userName)) {
+            listVos.forEach(user -> user.getUserName().equals(userName));
+        }
+        return listVos;
     }
 
     /**

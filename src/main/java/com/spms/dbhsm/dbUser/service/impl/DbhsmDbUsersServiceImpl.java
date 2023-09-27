@@ -118,17 +118,16 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                         dbUser.setDbInstanceGetConnDTO(connDTO);
                         dbUser.setIsSelfBuilt(DbConstants.IS_NOT_SELF_BUILT);
                         //遍历数据库中的用户，如果和查询出的用户名一致说明为web端创建，设置其is_self_built属性值为0
-                        dbhsmDbUsers.stream()
-                                .filter(user -> dbUser.getUserName().equals(user.getUserName().toUpperCase()))
-                                .findFirst()
-                                .ifPresent(user -> {
-                                    dbUser.setIsSelfBuilt(DbConstants.IS_SELF_BUILT);
-                                    DbhsmPermissionGroup permissionGroup = dbhsmPermissionGroupMapper.selectDbhsmPermissionGroupByPermissionGroupId(user.getPermissionGroupId());
-                                    PermissionGroupForUserDto permissionGroupForUser = new PermissionGroupForUserDto();
-                                    BeanUtils.copyProperties(permissionGroup, permissionGroupForUser);
-                                    dbUser.setPermissionGroupForUserDto(permissionGroupForUser);
-                                    dbUser.setId(user.getId());
-                                });
+                        for (DbhsmDbUser user : dbhsmDbUsers) {
+                            if (dbUser.getUserName().equals(user.getUserName().toUpperCase())) {
+                                dbUser.setIsSelfBuilt(DbConstants.IS_SELF_BUILT);
+                                DbhsmPermissionGroup permissionGroup = dbhsmPermissionGroupMapper.selectDbhsmPermissionGroupByPermissionGroupId(user.getPermissionGroupId());
+                                PermissionGroupForUserDto permissionGroupForUser = new PermissionGroupForUserDto();
+                                BeanUtils.copyProperties(permissionGroup, permissionGroupForUser);
+                                dbUser.setPermissionGroupForUserDto(permissionGroupForUser);
+                                dbUser.setId(user.getId());
+                            }
+                        }
                         dbhsmDbUsersResult.add(dbUser);
                     }
                 }
@@ -169,7 +168,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
      * @return 结果
      */
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = SQLException.class)
     public int insertDbhsmDbUsers(DbhsmDbUser dbhsmDbUser) throws ZAYKException, SQLException {
         Connection conn = null;
         Connection userConn = null;
@@ -292,7 +291,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 }
             }
         }
-        return executeUpdate;
+        return executeUpdate == 0 ? 1 : executeUpdate;
     }
 
     /**

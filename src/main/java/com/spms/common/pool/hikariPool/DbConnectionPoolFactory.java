@@ -103,13 +103,15 @@ public class DbConnectionPoolFactory {
     /**
      * 获取数据库连接
      *
-     * @param  instanceGetConnDTO 从池中获取不同数据库连接使用
+     * @param  instance 从池中获取不同数据库连接使用
      * @return
      */
     public Connection getConnection(DbhsmDbInstance instance) throws ZAYKException, SQLException {
         DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
         BeanUtils.copyProperties(instance,connDTO);
-        return getConnection(connDTO);
+        Connection connection = getConnection(connDTO);
+        connection.setAutoCommit(false);
+        return connection;
     }
 
     public Connection getConnection(DbInstanceGetConnDTO instanceGetConnDTO) throws ZAYKException, SQLException {
@@ -130,7 +132,9 @@ public class DbConnectionPoolFactory {
         if (!DbConnectionPoolFactory.getInstance().IsBePool(dbInstancekey)) {
             buildDataSourcePool(instanceGetConnDTO,dbInstancekey);
         }
-        return DbConnectionPoolFactory.getInstance().getDbConnectionPool(dbInstancekey).getConnection();
+        Connection connection = DbConnectionPoolFactory.getInstance().getDbConnectionPool(dbInstancekey).getConnection();
+        connection.setAutoCommit(false);
+        return connection;
     }
 
 

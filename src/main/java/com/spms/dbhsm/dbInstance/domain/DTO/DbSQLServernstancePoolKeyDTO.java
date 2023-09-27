@@ -26,37 +26,36 @@ public class DbSQLServernstancePoolKeyDTO extends DbInstancePoolKeyDTO
     /** 数据库服务名 */
     private String databaseServerName;
 
+    /** 数据库DBA */
+    private String databaseDba;
+
     public DbSQLServernstancePoolKeyDTO() {
     }
 
-    public DbSQLServernstancePoolKeyDTO(String databaseType, String databaseIp, String databasePort, String databaseServerName) {
+    public DbSQLServernstancePoolKeyDTO(String databaseType, String databaseIp, String databasePort, String databaseServerName, String databaseDba) {
         this.databaseType = databaseType;
         this.databaseIp = databaseIp;
         this.databasePort = databasePort;
         this.databaseServerName = databaseServerName;
+        this.databaseDba = databaseDba;
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof DbSQLServernstancePoolKeyDTO)) {
-            return false;
-        }
+        if (this == o) return true;
+        if (!(o instanceof DbSQLServernstancePoolKeyDTO)) return false;
 
         DbSQLServernstancePoolKeyDTO that = (DbSQLServernstancePoolKeyDTO) o;
 
-        if (getDatabaseType() != null ? !getDatabaseType().equals(that.getDatabaseType()) : that.getDatabaseType() != null) {
+        if (getDatabaseType() != null ? !getDatabaseType().equals(that.getDatabaseType()) : that.getDatabaseType() != null)
             return false;
-        }
-        if (getDatabaseIp() != null ? !getDatabaseIp().equals(that.getDatabaseIp()) : that.getDatabaseIp() != null) {
+        if (getDatabaseIp() != null ? !getDatabaseIp().equals(that.getDatabaseIp()) : that.getDatabaseIp() != null)
             return false;
-        }
-        if (getDatabasePort() != null ? !getDatabasePort().equals(that.getDatabasePort()) : that.getDatabasePort() != null) {
+        if (getDatabasePort() != null ? !getDatabasePort().equals(that.getDatabasePort()) : that.getDatabasePort() != null)
             return false;
-        }
-        return getDatabaseServerName() != null ? getDatabaseServerName().equals(that.getDatabaseServerName()) : that.getDatabaseServerName() == null;
+        if (getDatabaseServerName() != null ? !getDatabaseServerName().equals(that.getDatabaseServerName()) : that.getDatabaseServerName() != null)
+            return false;
+        return getDatabaseDba() != null ? getDatabaseDba().equals(that.getDatabaseDba()) : that.getDatabaseDba() == null;
     }
 
     @Override
@@ -65,6 +64,7 @@ public class DbSQLServernstancePoolKeyDTO extends DbInstancePoolKeyDTO
         result = 31 * result + (getDatabaseIp() != null ? getDatabaseIp().hashCode() : 0);
         result = 31 * result + (getDatabasePort() != null ? getDatabasePort().hashCode() : 0);
         result = 31 * result + (getDatabaseServerName() != null ? getDatabaseServerName().hashCode() : 0);
+        result = 31 * result + (getDatabaseDba() != null ? getDatabaseDba().hashCode() : 0);
         return result;
     }
 
