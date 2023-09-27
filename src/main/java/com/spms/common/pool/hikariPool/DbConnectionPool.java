@@ -35,7 +35,7 @@ public class DbConnectionPool {
                 }
                 break;
             case DbConstants.DB_TYPE_SQLSERVER:
-                config.setJdbcUrl("jdbc:sqlserver://" + databaseIp + ":" + databasePort + ";databaseName=" + databaseServerName);
+                config.setJdbcUrl("jdbc:sqlserver://" + databaseIp + ":" + databasePort + ";databaseName=" + databaseServerName + ";encrypt=false;integratedSecurity=false;");
                 break;
             default:
                 throw new IllegalArgumentException("Unsupported database type: " + databaseType);

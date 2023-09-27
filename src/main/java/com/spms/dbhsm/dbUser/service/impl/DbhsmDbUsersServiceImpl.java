@@ -76,6 +76,9 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         Connection conn = null;
         //查询所有的数据库实例
         DbhsmDbInstance dbhsmDbInstance = new DbhsmDbInstance();
+        if(dbhsmDbUser.getDatabaseInstanceId() != null){
+            dbhsmDbInstance.setId(dbhsmDbUser.getDatabaseInstanceId());
+        }
         List<DbhsmDbInstance> instancesList = dbhsmDbInstanceMapper.selectDbhsmDbInstanceList(dbhsmDbInstance);
         //查询通过web界面创建的所有用户,用于区分哪些属于通过web创建的用户
         List<DbhsmDbUser> dbhsmDbUsers = dbhsmDbUsersMapper.selectDbhsmDbUsersList(dbhsmDbUser);
