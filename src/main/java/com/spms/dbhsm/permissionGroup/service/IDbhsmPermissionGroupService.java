@@ -1,5 +1,6 @@
 package com.spms.dbhsm.permissionGroup.service;
 
+import com.spms.common.SelectOption;
 import com.spms.dbhsm.permissionGroup.domain.DbhsmPermissionGroup;
 import com.spms.dbhsm.permissionGroup.domain.dto.PermissionGroupEditDto;
 
@@ -67,4 +68,6 @@ public interface IDbhsmPermissionGroupService
      * @return
      */
     String checkPermissionGroupNameUnique(Long permissionGroupId,String permissionGroupName);
+
+    List<SelectOption> selectDbhsmPermissionGroupOption();
 }

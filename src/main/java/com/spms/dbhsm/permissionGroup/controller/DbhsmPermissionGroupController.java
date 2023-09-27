@@ -3,10 +3,12 @@ package com.spms.dbhsm.permissionGroup.controller;
 import com.ccsp.common.core.utils.poi.ExcelUtil;
 import com.ccsp.common.core.web.controller.BaseController;
 import com.ccsp.common.core.web.domain.AjaxResult;
+import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.ccsp.common.core.web.page.TableDataInfo;
 import com.ccsp.common.log.annotation.Log;
 import com.ccsp.common.log.enums.BusinessType;
 import com.ccsp.common.security.annotation.RequiresPermissions;
+import com.spms.common.SelectOption;
 import com.spms.common.constant.DbConstants;
 import com.spms.dbhsm.permissionGroup.domain.DbhsmPermissionGroup;
 import com.spms.dbhsm.permissionGroup.service.IDbhsmPermissionGroupService;
@@ -19,7 +21,7 @@ import java.util.List;
 
 /**
  * 数据库权限组信息Controller
- * 
+ *
  * @author diq
  * @date 2023-09-20
  */
@@ -41,6 +43,16 @@ public class DbhsmPermissionGroupController extends BaseController
         startPage();
         List<DbhsmPermissionGroup> list = dbhsmPermissionGroupService.selectDbhsmPermissionGroupList(dbhsmPermissionGroup);
         return getDataTable(list);
+    }
+    /**
+     * 查询数据库权限组信息列表
+     */
+    @RequiresPermissions("permissionGroup:permissionGroup:list")
+    @GetMapping("/listPermissionGroupOption")
+    public AjaxResult2 listPermissionGroupOption()
+    {
+        List<SelectOption> list = dbhsmPermissionGroupService.selectDbhsmPermissionGroupOption();
+        return AjaxResult2.success(list);
     }
 
     /**

@@ -2,6 +2,7 @@ package com.spms.dbhsm.dbInstance.service.impl;
 
 import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.DateUtils;
+import com.spms.common.SelectOption;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.pool.hikariPool.DbConnectionPoolFactory;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
@@ -16,10 +17,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.ObjectUtils;
 
 import javax.annotation.PostConstruct;
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 数据库实例Service业务层处理
@@ -252,5 +259,56 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         return dbhsmDbInstanceMapper.deleteDbhsmDbInstanceById(id);
     }
 
-
+    @Override
+    public List<SelectOption>  getDbTablespace(Long id) {
+        Connection conn = null;
+        Statement stmt = null;
+        ResultSet resultSet = null;
+        int i =0;
+        List<SelectOption>  tablespaceList = new ArrayList<>();
+        DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
+        if (!ObjectUtils.isEmpty(instance)) {
+            //创建数据库连接
+            DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
+            BeanUtils.copyProperties(instance,connDTO);
+            try {
+                conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
+                if (Optional.ofNullable(conn).isPresent()) {
+                    stmt = conn.createStatement();
+                    resultSet = stmt.executeQuery("select tablespace_name from dba_data_files");
+                    while (resultSet.next()) {
+                        SelectOption option = new SelectOption();
+                        option.setId(i++);
+                        option.setLabel(resultSet.getString("tablespace_name"));
+                        tablespaceList.add(option);
+                    }
+                }
+            }catch (SQLException | ZAYKException e) {
+                e.printStackTrace();
+            }finally {
+                if (stmt != null) {
+                    try {
+                        stmt.close();
+                    }catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (conn != null) {
+                    try {
+                        conn.close();
+                    }catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (resultSet != null){
+                    try {
+                        resultSet.close();
+                    }catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+        return tablespaceList;
+    }
 }

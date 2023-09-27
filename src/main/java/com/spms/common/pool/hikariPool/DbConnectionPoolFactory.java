@@ -106,6 +106,11 @@ public class DbConnectionPoolFactory {
      * @param  instanceGetConnDTO 从池中获取不同数据库连接使用
      * @return
      */
+    public Connection getConnection(DbhsmDbInstance instance) throws ZAYKException, SQLException {
+        DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
+        BeanUtils.copyProperties(instance,connDTO);
+        return getConnection(connDTO);
+    }
 
     public Connection getConnection(DbInstanceGetConnDTO instanceGetConnDTO) throws ZAYKException, SQLException {
         DbInstancePoolKeyDTO dbInstancekey = new DbInstancePoolKeyDTO();

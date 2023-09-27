@@ -62,4 +62,11 @@ public class DbConstants {
     public static final String AUTHENTICATION = "Authentication";
     //KMIP 响应状态
     public static final String SUCCESS_STR = "Success";
+
+    /**获取用户创建模式 0：创建CDB容器中的公共用户 1：创建无容器数据库用户*/
+    public static final int USER_CREATE_MODE_CDB =1;
+    /** web端创建的用户标记*/
+    public static final Integer CREATED_ON_WEB_SEDE = 0;
+    /**标记为创建的是普通用户*/
+    public static final Integer ORDINARY_USERS = 1;
 }

@@ -3,6 +3,7 @@ package com.spms.dbhsm.permissionGroup.service.impl;
 import com.ccsp.common.core.utils.DateUtils;
 import com.ccsp.common.core.utils.StringUtils;
 import com.ccsp.common.security.utils.SecurityUtils;
+import com.spms.common.SelectOption;
 import com.spms.common.constant.DbConstants;
 import com.spms.dbhsm.permission.domain.DbhsmPermission;
 import com.spms.dbhsm.permission.mapper.DbhsmPermissionMapper;
@@ -149,6 +150,11 @@ public class DbhsmPermissionGroupServiceImpl implements IDbhsmPermissionGroupSer
             return DbConstants.DBHSM_GLOBLE_UNIQUE;
         }
         return DbConstants.DBHSM_GLOBLE_UNIQUE;
+    }
+
+    @Override
+    public List<SelectOption> selectDbhsmPermissionGroupOption() {
+        return dbhsmPermissionGroupMapper.selectDbhsmPermissionGroupOption();
     }
 
     /**

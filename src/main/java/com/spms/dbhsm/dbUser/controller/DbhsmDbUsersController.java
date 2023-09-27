@@ -1,5 +1,6 @@
 package com.spms.dbhsm.dbUser.controller;
 
+import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.poi.ExcelUtil;
 import com.ccsp.common.core.web.controller.BaseController;
 import com.ccsp.common.core.web.domain.AjaxResult;
@@ -16,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,8 +29,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/dbuser")
-public class DbhsmDbUsersController extends BaseController
-{
+public class DbhsmDbUsersController extends BaseController {
     @Autowired
     private IDbhsmDbUsersService dbhsmDbUsersService;
 
@@ -37,12 +38,11 @@ public class DbhsmDbUsersController extends BaseController
      */
     @RequiresPermissions("dbUser:dbuser:list")
     @GetMapping("/list")
-    public AjaxResult2<TableDataInfo2<DbhsmDbUserVO>> list(DbhsmDbUser dbhsmDbUser)
-    {
+    public AjaxResult2<TableDataInfo2<DbhsmDbUserVO>> list(DbhsmDbUser dbhsmDbUser) {
         startPage();
         List<DbhsmDbUser> list = dbhsmDbUsersService.selectDbhsmDbUsersList(dbhsmDbUser);
         List<DbhsmDbUserVO> listVos = new ArrayList<>();
-        list.forEach(dbUser ->{
+        list.forEach(dbUser -> {
             DbhsmDbUserVO dbhsmDbUserVO = new DbhsmDbUserVO();
             BeanUtils.copyProperties(dbUser, dbhsmDbUserVO);
             listVos.add(dbhsmDbUserVO);
@@ -56,8 +56,7 @@ public class DbhsmDbUsersController extends BaseController
     @RequiresPermissions("dbUser:dbuser:export")
     @Log(title = "数据库用户", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
-    public void export(HttpServletResponse response, DbhsmDbUser dbhsmDbUser)
-    {
+    public void export(HttpServletResponse response, DbhsmDbUser dbhsmDbUser) {
         List<DbhsmDbUser> list = dbhsmDbUsersService.selectDbhsmDbUsersList(dbhsmDbUser);
         ExcelUtil<DbhsmDbUser> util = new ExcelUtil<DbhsmDbUser>(DbhsmDbUser.class);
         util.exportExcel(response, list, "数据库用户数据");
@@ -68,8 +67,7 @@ public class DbhsmDbUsersController extends BaseController
      */
     @RequiresPermissions("dbUser:dbuser:query")
     @GetMapping(value = "/{id}")
-    public AjaxResult getInfo(@PathVariable("id") Long id)
-    {
+    public AjaxResult getInfo(@PathVariable("id") Long id) {
         return AjaxResult.success(dbhsmDbUsersService.selectDbhsmDbUsersById(id));
     }
 
@@ -79,9 +77,15 @@ public class DbhsmDbUsersController extends BaseController
     @RequiresPermissions("dbUser:dbuser:add")
     @Log(title = "数据库用户", businessType = BusinessType.INSERT)
     @PostMapping
-    public AjaxResult add(@RequestBody DbhsmDbUser dbhsmDbUser)
-    {
-        return toAjax(dbhsmDbUsersService.insertDbhsmDbUsers(dbhsmDbUser));
+    public AjaxResult add(@RequestBody DbhsmDbUser dbhsmDbUser) {
+        int i = 0;
+        try {
+            i = dbhsmDbUsersService.insertDbhsmDbUsers(dbhsmDbUser);
+        } catch (ZAYKException | SQLException e) {
+            e.printStackTrace();
+            return AjaxResult.error(e.getMessage().contains("ORA") ? e.getMessage().split(":")[1] +": "+e.getMessage().split(":")[2] : e.getMessage());
+        }
+        return toAjax(i);
     }
 
     /**
@@ -90,8 +94,7 @@ public class DbhsmDbUsersController extends BaseController
     @RequiresPermissions("dbUser:dbuser:edit")
     @Log(title = "数据库用户", businessType = BusinessType.UPDATE)
     @PutMapping
-    public AjaxResult edit(@RequestBody DbhsmDbUser dbhsmDbUser)
-    {
+    public AjaxResult edit(@RequestBody DbhsmDbUser dbhsmDbUser) {
         return toAjax(dbhsmDbUsersService.updateDbhsmDbUsers(dbhsmDbUser));
     }
 
@@ -100,9 +103,8 @@ public class DbhsmDbUsersController extends BaseController
      */
     @RequiresPermissions("dbUser:dbuser:remove")
     @Log(title = "数据库用户", businessType = BusinessType.DELETE)
-	@DeleteMapping("/{ids}")
-    public AjaxResult remove(@PathVariable Long[] ids)
-    {
+    @DeleteMapping("/{ids}")
+    public AjaxResult remove(@PathVariable Long[] ids) {
         return toAjax(dbhsmDbUsersService.deleteDbhsmDbUsersByIds(ids));
     }
 }

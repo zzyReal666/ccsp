@@ -1,6 +1,7 @@
 package com.spms.dbhsm.dbInstance.service;
 
 import com.ccsp.common.core.exception.ZAYKException;
+import com.spms.common.SelectOption;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import com.spms.dbhsm.dbInstance.domain.VO.InstanceServerNameVO;
 
@@ -70,4 +71,6 @@ public interface IDbhsmDbInstanceService
      * @return 结果
      */
     public int deleteDbhsmDbInstanceById(Long id);
+
+    List<SelectOption>  getDbTablespace(Long id);
 }

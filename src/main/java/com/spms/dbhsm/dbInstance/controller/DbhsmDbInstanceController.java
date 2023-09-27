@@ -46,6 +46,19 @@ public class DbhsmDbInstanceController extends BaseController
         return getDataList(list);
     }
     /**
+     * 查询数据库实例列表
+     */
+    @RequiresPermissions("dbhsm:dbInstance:list")
+    @GetMapping("/getSecretServiceAndDbSpace")
+    public AjaxResult getSecretServiceAndDbSpace(Long id)
+    {
+        AjaxResult ajax = new AjaxResult();
+        DbhsmDbInstance instance = dbhsmDbInstanceService.selectDbhsmDbInstanceById(id);
+        ajax.put("secretService",instance.getSecretService());
+        ajax.put("dbTableSpace",dbhsmDbInstanceService.getDbTablespace(id));
+        return ajax;
+    }
+    /**
      * 查询数据库实例列表用户侧边栏使用
      */
     @RequiresPermissions("dbhsm:dbInstance:list")

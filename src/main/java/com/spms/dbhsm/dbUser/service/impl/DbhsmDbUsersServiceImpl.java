@@ -2,6 +2,7 @@ package com.spms.dbhsm.dbUser.service.impl;
 
 import com.ccsp.common.core.exception.ZAYKException;
 import com.spms.common.constant.DbConstants;
+import com.spms.common.dbTool.ProcedureUtil;
 import com.spms.common.pool.hikariPool.DbConnectionPoolFactory;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
@@ -17,12 +18,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.ObjectUtils;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,7 +49,8 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
     private DbhsmPermissionGroupMapper dbhsmPermissionGroupMapper;
 
     @Autowired
-    DbhsmUserDbInstanceMapper  dbhsmUserDbInstanceMapper;
+    DbhsmUserDbInstanceMapper dbhsmUserDbInstanceMapper;
+
     /**
      * 查询数据库用户
      *
@@ -88,7 +93,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
             try {
                 //创建数据库连接
                 DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
-                BeanUtils.copyProperties(instance,connDTO);
+                BeanUtils.copyProperties(instance, connDTO);
                 conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
                 if (Optional.ofNullable(conn).isPresent()) {
                     //查询数据库实例用户列表
@@ -120,7 +125,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                                     dbUser.setIsSelfBuilt(DbConstants.IS_SELF_BUILT);
                                     DbhsmPermissionGroup permissionGroup = dbhsmPermissionGroupMapper.selectDbhsmPermissionGroupByPermissionGroupId(user.getPermissionGroupId());
                                     PermissionGroupForUserDto permissionGroupForUser = new PermissionGroupForUserDto();
-                                    BeanUtils.copyProperties(permissionGroup,permissionGroupForUser);
+                                    BeanUtils.copyProperties(permissionGroup, permissionGroupForUser);
                                     dbUser.setPermissionGroupForUserDto(permissionGroupForUser);
                                     dbUser.setId(user.getId());
                                 });
@@ -164,8 +169,130 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
      * @return 结果
      */
     @Override
-    public int insertDbhsmDbUsers(DbhsmDbUser dbhsmDbUser) {
-        return dbhsmDbUsersMapper.insertDbhsmDbUsers(dbhsmDbUser);
+    @Transactional(rollbackFor = Exception.class)
+    public int insertDbhsmDbUsers(DbhsmDbUser dbhsmDbUser) throws ZAYKException, SQLException {
+        Connection conn = null;
+        Connection userConn = null;
+        PreparedStatement preparedStatement = null;
+        PreparedStatement userStatement = null;
+        int executeUpdate = 0;
+        String username, password, tableSpace, sql;
+        //根据实例id获取数据库实例
+        DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(dbhsmDbUser.getDatabaseInstanceId());
+        if (instance == null) {
+            log.info("数据库实例不存在！");
+            return 0;
+        }
+        //标记为web端创建的用户
+        dbhsmDbUser.setIsSelfBuilt(DbConstants.CREATED_ON_WEB_SEDE);
+        //标记为创建的是普通用户
+        dbhsmDbUser.setUserRole(DbConstants.ORDINARY_USERS);
+        dbhsmDbUser.setCreated(new Date());
+        int result = dbhsmDbUsersMapper.insertDbhsmDbUsers(dbhsmDbUser);
+        if (result != 1) {
+            log.error("创建用户失败!");
+            throw new ZAYKException("创建用户失败!");
+        }
+        username = dbhsmDbUser.getUserName();
+        password = dbhsmDbUser.getPassword();
+        tableSpace = dbhsmDbUser.getTableSpace();
+        Long permissionGroupId = dbhsmDbUser.getPermissionGroupId();
+        try {
+            //根据实例获取数据库连接
+            conn = DbConnectionPoolFactory.getInstance().getConnection(instance);
+            if (Optional.ofNullable(conn).isPresent()) {
+                //获取用户创建模式 0：创建无容器数据库用户 1：创建CDB容器中的公共用户
+                int userCreateMode = instance.getUserCreateMode();
+                if (userCreateMode == DbConstants.USER_CREATE_MODE_CDB) {
+                    sql = "CREATE USER c##" + username + " IDENTIFIED BY " + password + " DEFAULT tablespace users";
+                } else {
+                    sql = "CREATE USER " + username + " IDENTIFIED BY " + password + " DEFAULT TABLESPACE \"" + tableSpace + "\" TEMPORARY TABLESPACE \"TEMP\"";
+                }
+                preparedStatement = conn.prepareStatement(sql);
+                preparedStatement.executeUpdate();
+                //根据权限组id查询权限组对应的所有权限SQL：
+                List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
+                //赋权
+                for (int i = 0; i < permissionsSqlList.size(); i++) {
+                    if (!(permissionsSqlList.get(i).toLowerCase().startsWith("grant") && !(permissionsSqlList.get(i).toLowerCase().startsWith("revoke")))) {
+                        log.info("不支持的授权SQL:" + permissionsSqlList.get(i));
+                        throw new ZAYKException("不支持的授权SQL:" + permissionsSqlList.get(i));
+                    }
+                    if (permissionsSqlList.get(i).toLowerCase().startsWith("grant")) {
+                        sql = permissionsSqlList.get(i).trim() + " to " + username;
+                    } else {
+                        sql = permissionsSqlList.get(i).trim() + " from " + username;
+                    }
+                    preparedStatement = conn.prepareStatement(sql);
+                    executeUpdate = preparedStatement.executeUpdate();
+                }
+                //加密
+                ProcedureUtil.cOciTransStringEncrypt(conn, username);
+                //FPE加密
+                ProcedureUtil.cOciTransFPEEncrypt(conn, username);
+                //解密
+                ProcedureUtil.cOciTransStringDecryptP(conn, username);
+                ProcedureUtil.cOciTransStringDecryptF(conn, username);
+                ProcedureUtil.cOciTransFpeDecryptF(conn, username);
+                //FPE解密
+                ProcedureUtil.cOciTransFPEDecrypt(conn, username);
+                conn.setAutoCommit(false);
+                conn.commit();
+                //使用新增的用户创建连接
+                DbInstanceGetConnDTO getConnDTO = new DbInstanceGetConnDTO();
+                BeanUtils.copyProperties(instance, getConnDTO);
+                getConnDTO.setDatabaseDba(username);
+                getConnDTO.setDatabaseDbaPassword(password);
+                userConn = DbConnectionPoolFactory.getInstance().getConnection(getConnDTO);
+                if (ObjectUtils.isEmpty(userConn)) {
+                    throw new ZAYKException("使用新用户创建连接异常");
+                }
+                log.info("使用新用户创建连接成功");
+                //赋执行库文件liboraextapi的权限
+                sql = "CREATE OR REPLACE LIBRARY liboraextapi AS '" + tableSpace + "'";
+                log.info("赋执行库文件liboraextapi的权限sql: {}", sql);
+                userStatement = userConn.prepareStatement(sql);
+                userStatement.execute();
+                userConn.commit();
+            }
+        } catch (ZAYKException e) {
+            e.printStackTrace();
+            throw new ZAYKException(e.getErrMsg());
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new SQLException(e);
+        } finally {
+            //释放资源
+            if (userStatement != null) {
+                try {
+                    userStatement.close();
+                } catch (SQLException throwables) {
+                    throwables.printStackTrace();
+                }
+            }
+            if (userConn != null) {
+                try {
+                    userConn.close();
+                } catch (SQLException throwables) {
+                    throwables.printStackTrace();
+                }
+            }
+            if (preparedStatement != null) {
+                try {
+                    preparedStatement.close();
+                } catch (SQLException throwables) {
+                    throwables.printStackTrace();
+                }
+            }
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException throwables) {
+                    throwables.printStackTrace();
+                }
+            }
+        }
+        return executeUpdate;
     }
 
     /**
