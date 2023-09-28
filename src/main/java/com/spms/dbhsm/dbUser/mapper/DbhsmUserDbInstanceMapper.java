@@ -1,5 +1,6 @@
 package com.spms.dbhsm.dbUser.mapper;
 
+import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import com.spms.dbhsm.dbUser.domain.DbhsmUserDbInstance;
 import org.apache.ibatis.annotations.Mapper;
 
@@ -61,4 +62,6 @@ public interface DbhsmUserDbInstanceMapper
      * @return 结果
      */
     public int deleteDbhsmUserDbInstanceByUserIds(Long[] userIds);
+
+    DbhsmDbInstance selectInstanceByUserId(Long id);
 }

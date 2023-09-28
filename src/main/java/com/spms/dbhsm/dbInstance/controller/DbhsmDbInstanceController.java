@@ -9,10 +9,12 @@ import com.ccsp.common.core.web.page.TableDataInfo2;
 import com.ccsp.common.log.annotation.Log;
 import com.ccsp.common.log.enums.BusinessType;
 import com.ccsp.common.security.annotation.RequiresPermissions;
+import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import com.spms.dbhsm.dbInstance.domain.VO.InstanceServerNameVO;
 import com.spms.dbhsm.dbInstance.service.IDbhsmDbInstanceService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -54,7 +56,9 @@ public class DbhsmDbInstanceController extends BaseController
     {
         AjaxResult ajax = new AjaxResult();
         DbhsmDbInstance instance = dbhsmDbInstanceService.selectDbhsmDbInstanceById(id);
-        ajax.put("secretService",instance.getSecretService());
+        DbInstanceGetConnDTO instanceGetConnDTO = new DbInstanceGetConnDTO();
+        BeanUtils.copyProperties(instance,instanceGetConnDTO);
+        ajax.put("instance",instanceGetConnDTO);
         ajax.put("dbTableSpace",dbhsmDbInstanceService.getDbTablespace(id));
         return ajax;
     }

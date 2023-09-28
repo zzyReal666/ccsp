@@ -25,6 +25,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -267,47 +268,51 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         int i =0;
         List<SelectOption>  tablespaceList = new ArrayList<>();
         DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
-        if (!ObjectUtils.isEmpty(instance)) {
-            //创建数据库连接
-            DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
-            BeanUtils.copyProperties(instance,connDTO);
-            try {
-                conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
-                if (Optional.ofNullable(conn).isPresent()) {
-                    stmt = conn.createStatement();
-                    resultSet = stmt.executeQuery("select tablespace_name from dba_data_files");
-                    while (resultSet.next()) {
-                        SelectOption option = new SelectOption();
-                        option.setId(i++);
-                        option.setLabel(resultSet.getString("tablespace_name"));
-                        tablespaceList.add(option);
+        if(DbConstants.DB_TYPE_ORACLE.equals(instance.getDatabaseType())) {
+            if (!ObjectUtils.isEmpty(instance)) {
+                //创建数据库连接
+                DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
+                BeanUtils.copyProperties(instance, connDTO);
+                try {
+                    conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
+                    if (Optional.ofNullable(conn).isPresent()) {
+                        stmt = conn.createStatement();
+                        resultSet = stmt.executeQuery("select tablespace_name from dba_data_files");
+                        while (resultSet.next()) {
+                            SelectOption option = new SelectOption();
+                            option.setId(i++);
+                            option.setLabel(resultSet.getString("tablespace_name"));
+                            tablespaceList.add(option);
+                        }
                     }
-                }
-            }catch (SQLException | ZAYKException e) {
-                e.printStackTrace();
-            }finally {
-                if (stmt != null) {
-                    try {
-                        stmt.close();
-                    }catch (SQLException e) {
-                        e.printStackTrace();
+                } catch (SQLException | ZAYKException e) {
+                    e.printStackTrace();
+                } finally {
+                    if (stmt != null) {
+                        try {
+                            stmt.close();
+                        } catch (SQLException e) {
+                            e.printStackTrace();
+                        }
                     }
-                }
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    }catch (SQLException e) {
-                        e.printStackTrace();
+                    if (conn != null) {
+                        try {
+                            conn.close();
+                        } catch (SQLException e) {
+                            e.printStackTrace();
+                        }
                     }
-                }
-                if (resultSet != null){
-                    try {
-                        resultSet.close();
-                    }catch (SQLException e) {
-                        e.printStackTrace();
+                    if (resultSet != null) {
+                        try {
+                            resultSet.close();
+                        } catch (SQLException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
             }
+        }else {
+            return Collections.emptyList();
         }
         return tablespaceList;
     }

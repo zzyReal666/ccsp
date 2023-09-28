@@ -9,6 +9,15 @@ package com.spms.common.constant;
  */
 public class DbConstants {
 
+    public static final String DB_SQL_SQLSERVER_USER_QUERY = "select name,principal_id,create_date from sys.database_principals u " +
+            "where u.type_desc != 'APPLICATION_ROLE' and u.type_desc != 'DATABASE_ROLE' " +
+            "and u.name != 'dbo' and u.name != 'guest'  and u.name != 'INFORMATION_SCHEMA' " +
+            "and u.name != 'sys' ";
+    public static final String DB_SQL_ORACLE_USER_QUERY = "select  * from all_users where INHERITED='NO'";
+    /**数据库驱动*/
+    public static final String DB_ORACLE_CLASS_NAME =  "oracle.jdbc.driver.OracleDriver";
+    public static final String DB_SQLSERVER_CLASS_NAME =  "com.microsoft.sqlserver.jdbc.SQLServerDataSource";
+    public static final String DB_MYSQL_CLASS_NAME =  "com.mysql.cj.jdbc.Driver";
     //密码卡类型
     public static String cryptoCardType = "cryptoCardType";
     //三未信安

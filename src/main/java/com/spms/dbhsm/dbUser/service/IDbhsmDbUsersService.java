@@ -1,5 +1,6 @@
 package com.spms.dbhsm.dbUser.service;
 
+import com.ccsp.common.core.exception.DBHsmException;
 import com.ccsp.common.core.exception.ZAYKException;
 import com.spms.dbhsm.dbUser.domain.DbhsmDbUser;
 
@@ -37,7 +38,7 @@ public interface IDbhsmDbUsersService
      * @param dbhsmDbUser 数据库用户
      * @return 结果
      */
-    public int insertDbhsmDbUsers(DbhsmDbUser dbhsmDbUser) throws ZAYKException, SQLException;
+    public int insertDbhsmDbUsers(DbhsmDbUser dbhsmDbUser) throws ZAYKException, SQLException, DBHsmException;
 
     /**
      * 修改数据库用户
@@ -53,7 +54,7 @@ public interface IDbhsmDbUsersService
      * @param ids 需要删除的数据库用户主键集合
      * @return 结果
      */
-    public int deleteDbhsmDbUsersByIds(Long[] ids);
+    public int deleteDbhsmDbUsersByIds(Long[] ids) throws SQLException, ZAYKException;
 
     /**
      * 删除数据库用户信息

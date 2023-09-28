@@ -23,6 +23,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <include refid="selectDbhsmUserDbInstanceVo"/>
         where user_id = #{userId}
     </select>
+    <select id="selectInstanceByUserId" resultType="com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance">
+
+    </select>
 
     <insert id="insertDbhsmUserDbInstance" parameterType="com.spms.dbhsm.dbUser.domain.DbhsmUserDbInstance">
         insert into dbhsm_user_db_instance
