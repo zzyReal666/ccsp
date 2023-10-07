@@ -1,5 +1,8 @@
 package com.spms.common.constant;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * @project ccsp
  * @description 数据库加密网关常量类
@@ -40,13 +43,23 @@ public class DbConstants {
     public static final int HSM_CARD_ZASEC_SC30 = 11 ;
 
     public static final String DB_TYPE_ORACLE = "0";
+    public static final String DB_TYPE_ORACLE_DESC = "Oracle";
     public static final String DB_TYPE_SQLSERVER = "1";
+    public static final String DB_TYPE_SQLSERVER_DESC = "SQL Server";
     public static final String DB_TYPE_MYSQL = "2";
+    public static final String DB_TYPE_MYSQL_DESC = "MySql";
+    public static final String DB_COLUMN_NAME = "columnName";
+
+    /** 加密状态  1未加密 2已加密 3已解密 */
+    public static final Integer NOT_ENCRYPTED = 1;
+    public static final Integer ENCRYPTED = 2;
 
     /**
      * 是否唯一返回码
      */
+    /* 存在  */
     public static final String DBHSM_GLOBLE_UNIQUE = "0";
+    /* 不存在  */
     public static final String DBHSM_GLOBLE_NOT_UNIQUE = "1";
 
     //
@@ -78,4 +91,86 @@ public class DbConstants {
     public static final Integer CREATED_ON_WEB_SEDE = 0;
     /**标记为创建的是普通用户*/
     public static final Integer ORDINARY_USERS = 1;
+
+    /** 查询表 */
+    public static final String DB_SQL_SQLSERVER_TABLE_QUERY = "select name from sysobjects where xtype='U'" ;
+
+
+    /**
+     *  是否建立加密规则 1：是 0：否
+     * */
+    public static final Integer ESTABLISH_RULES_YES = 1;
+    /** 加密算法 */
+    public static final int SGD_SM4 = 0;
+    public static final int SGD_SM4_FPE_10 = 10;
+    public static final int SGD_SM4_FPE_62 = 62;
+
+    /*****************  数据库字段类型  ********************/
+    public static int DATA_TYPE_INT = 0x00000001;
+    public static int DATA_TYPE_INT64 = 0x00000002;
+    public static int DATA_TYPE_NUMBER = 0x00000004;
+    public static int DATA_TYPE_CHAR = 0x00000008;
+    public static int DATA_TYPE_VARCHAR = 0x00000010;
+    public static int DATA_TYPE_VARCHAR2 = 0x00000020;
+    public static int DATA_TYPE_DATE = 0x00000040;
+    public static int DATA_TYPE_TIMESTAMP = 0x00000080;
+    public static int DATA_TYPE_RAW = 0x00000100;
+
+    /*****************  策略版本  ********************/
+    public static int POLICY_VERSION = 0x1;
+
+    /*****************  策略模式  ********************/
+    public static int POLICY_TYPE_PUSH = 0x0100;
+    public static int POLICY_TYPE_PULL = 0x0200;
+
+    /*****************  策略类型  ********************/
+    public static int POLICY_TYPE_ENC_DEC = 0x1;
+    public static int POLICY_TYPE_SIGN_VERIFY = 0x2;
+    public static int POLICY_TYPE_MAC = 0x4;
+
+    /*****************  策略处理方式  ********************/
+    public static int POLICY_TYPE_DB = 0x1000;
+    public static int POLICY_TYPE_FILE = 0x2000;
+
+    /*****************  数据库类型  ********************/
+    public static int DB_TYPE_ORACLE_api = 0x10;
+    public static int DB_TYPE_MSSQL_api = 0x20;
+    public static int DB_TYPE_MYSQL_api = 0x30;
+    public static int DB_TYPE_MARIADB_api = 0x40;
+    public static int DB_TYPE_POSTGRESQL_api = 0x50;
+    public static int DB_TYPE_DB2_api = 0x60;
+
+    public static int SGD_SM4_ECB = 0x00000401;
+    public static int SGD_SM4_CBC = 0x00000402;
+    public static int SGD_SM4_CFB = 0x00000404;
+    public static int SGD_SM4_OFB = 0x00000408;
+    public static int SGD_SM4_MAC = 0x00000410;
+    public static int SGD_SM4_CTR = 0x00000420;
+
+    public static int SGD_SM3 = 0x00000001;
+    public static int SGD_SHA1 = 0x00000002;
+    public static int SGD_SHA256 = 0x00000004;
+    public static Map<String, Integer> mapStrToInt = new HashMap();
+
+    static {
+        mapStrToInt.put("INT", DATA_TYPE_INT);
+        mapStrToInt.put("INT64", DATA_TYPE_INT64);
+        mapStrToInt.put("NUMBER", DATA_TYPE_NUMBER);
+        mapStrToInt.put("CHAR", DATA_TYPE_CHAR);
+        mapStrToInt.put("VARCHAR", DATA_TYPE_VARCHAR);
+        mapStrToInt.put("VARCHAR2", DATA_TYPE_VARCHAR2);
+        mapStrToInt.put("DATE", DATA_TYPE_DATE);
+        mapStrToInt.put("TIMESTAMP", DATA_TYPE_TIMESTAMP);
+        mapStrToInt.put("RAW", DATA_TYPE_RAW);
+
+
+    }
+
+    public static int getColumnTypeToInt(String type) {
+        type = type.toUpperCase();
+        if (mapStrToInt.containsKey(type)) {
+            return mapStrToInt.get(type);
+        }
+        return 0;
+    }
 }
