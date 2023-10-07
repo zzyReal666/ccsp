@@ -1,6 +1,5 @@
 package com.spms.dbhsm.dbUser.service;
 
-import com.ccsp.common.core.exception.DBHsmException;
 import com.ccsp.common.core.exception.ZAYKException;
 import com.spms.dbhsm.dbUser.domain.DbhsmDbUser;
 
@@ -38,7 +37,7 @@ public interface IDbhsmDbUsersService
      * @param dbhsmDbUser 数据库用户
      * @return 结果
      */
-    public int insertDbhsmDbUsers(DbhsmDbUser dbhsmDbUser) throws ZAYKException, SQLException, DBHsmException;
+    public int insertDbhsmDbUsers(DbhsmDbUser dbhsmDbUser) throws ZAYKException, SQLException;
 
     /**
      * 修改数据库用户

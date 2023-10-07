@@ -1,6 +1,5 @@
 package com.spms.dbhsm.dbUser.controller;
 
-import com.ccsp.common.core.exception.DBHsmException;
 import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.StringUtils;
 import com.ccsp.common.core.utils.poi.ExcelUtil;
@@ -94,7 +93,7 @@ public class DbhsmDbUsersController extends BaseController {
         int i = 0;
         try {
             i = dbhsmDbUsersService.insertDbhsmDbUsers(dbhsmDbUser);
-        } catch (ZAYKException | SQLException | DBHsmException e) {
+        } catch (ZAYKException | SQLException  e) {
             e.printStackTrace();
             return AjaxResult.error(e.getMessage().contains("ORA") ? e.getMessage().split(":")[1] +": "+e.getMessage().split(":")[2] : e.getMessage());
         }

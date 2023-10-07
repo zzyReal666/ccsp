@@ -1,6 +1,5 @@
 package com.spms.dbhsm.dbUser.service.impl;
 
-import com.ccsp.common.core.exception.DBHsmException;
 import com.ccsp.common.core.exception.ZAYKException;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.dbTool.ProcedureUtil;
@@ -206,7 +205,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
      * @return 结果
      */
     @Override
-    public int insertDbhsmDbUsers(DbhsmDbUser dbhsmDbUser) throws ZAYKException, SQLException, DBHsmException {
+    public int insertDbhsmDbUsers(DbhsmDbUser dbhsmDbUser) throws ZAYKException, SQLException {
         //根据实例id获取数据库实例
         DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(dbhsmDbUser.getDatabaseInstanceId());
         if (instance == null) {
@@ -225,7 +224,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         }
     }
 
-    int insertSqlServerlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException ,DBHsmException{
+    int insertSqlServerlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException {
         String sqlCreateLoginName, sqlCreateUser, sqlEmpowerment;
         String username;
         String password;
@@ -323,7 +322,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         return 1;
     }
 
-    int insertOracleUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException, SQLException,DBHsmException {
+    int insertOracleUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException, SQLException {
         Connection conn = null;
         Connection userConn = null;
         PreparedStatement preparedStatement = null;
