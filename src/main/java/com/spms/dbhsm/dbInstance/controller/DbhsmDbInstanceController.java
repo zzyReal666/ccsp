@@ -107,7 +107,7 @@ public class DbhsmDbInstanceController extends BaseController
             dbhsmDbInstanceService.insertDbhsmDbInstance(dbhsmDbInstance);
         }catch (ZAYKException | SQLException e){
             log.info("新增数据库实例失败！"+e.getMessage());
-            return AjaxResult2.error("新增数据库实例失败！");
+            return AjaxResult2.error("新增数据库实例失败！"+e.getMessage());
         }
         return AjaxResult2.success();
     }
@@ -124,7 +124,7 @@ public class DbhsmDbInstanceController extends BaseController
             dbhsmDbInstanceService.updateDbhsmDbInstance(dbhsmDbInstance);
         } catch (Exception e) {
             log.info("修改数据库实例失败！"+e.getMessage());
-            return AjaxResult.error("修改数据库实例失败！");
+            return AjaxResult.error("修改数据库实例失败！"+e.getMessage());
         }
         return AjaxResult.success();
     }

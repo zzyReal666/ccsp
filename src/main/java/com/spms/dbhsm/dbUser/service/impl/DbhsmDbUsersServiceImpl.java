@@ -29,10 +29,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 数据库用户Service业务层处理
@@ -151,7 +149,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 }
             }
         }
-        return dbhsmDbUsersResult;
+        return dbhsmDbUsersResult.stream().sorted(Comparator.comparing(DbhsmDbUser::getCreated).reversed()).collect(Collectors.toList());
     }
 
     private DbhsmDbUser getDbUser(ResultSet resultSet, DbhsmDbInstance instance, DbInstanceGetConnDTO connDTO, List<DbhsmDbUser> dbhsmDbUsers) throws SQLException, ZAYKException {

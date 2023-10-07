@@ -168,8 +168,6 @@ public class DbConnectionPoolFactorybak {
 
         }
         BeanUtils.copyProperties(instanceGetConnDTO,instanceKey);
-        log.info("创建数据库连接池之前查看池中连接：");
-        queryPool();
         if (!DbConnectionPoolFactory.getInstance().IsBePool(instanceKey)) {
             //生成连接池
              dataSource = DataSource.getDataSource(instanceGetConnDTO);

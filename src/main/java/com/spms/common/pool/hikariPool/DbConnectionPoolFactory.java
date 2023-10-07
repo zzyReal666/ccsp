@@ -201,7 +201,7 @@ public class DbConnectionPoolFactory {
         //判断各个数据不为空
         if (StringUtils.isBlank(instanceGetConnDTO.getDatabaseIp()) || StringUtils.isBlank(instanceGetConnDTO.getDatabasePort())
                 || StringUtils.isBlank(instanceGetConnDTO.getDatabaseDba()) || StringUtils.isBlank(instanceGetConnDTO.getDatabaseDbaPassword())
-                || StringUtils.isBlank(instanceGetConnDTO.getDatabaseType()) || StringUtils.isBlank(instanceGetConnDTO.getDatabaseExampleType())
+                || StringUtils.isBlank(instanceGetConnDTO.getDatabaseType()) || (StringUtils.isBlank(instanceGetConnDTO.getDatabaseExampleType())  && DbConstants.DB_TYPE_ORACLE.equals(instanceGetConnDTO.getDatabaseType()))
                 || StringUtils.isBlank(instanceGetConnDTO.getDatabaseServerName())) {
             log.info("Error：Database configuration in the support library is incomplete");
             throw new ZAYKException("数据库配置不完整，请检查数据库配置");
