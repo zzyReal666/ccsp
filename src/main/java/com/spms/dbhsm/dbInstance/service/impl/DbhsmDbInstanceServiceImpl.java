@@ -70,8 +70,9 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
                     e.printStackTrace();
                     log.info("初始化数据库连接池失败:{}", e.getMessage());
                 }
-                log.info("初始化数据库连接池成功");
             }
+            DbConnectionPoolFactory.queryPool();
+            log.info("初始化数据库连接池成功");
         }catch (Exception e){
 
         }
@@ -134,6 +135,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         DbInstanceGetConnDTO  dbInstanceGetConnDTO = new DbInstanceGetConnDTO();
         BeanUtils.copyProperties(dbhsmDbInstance,dbInstanceGetConnDTO);
         DbConnectionPoolFactory.buildDataSourcePool(dbInstanceGetConnDTO);
+        DbConnectionPoolFactory.queryPool();
         return i;
     }
 
@@ -194,6 +196,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         DbInstanceGetConnDTO  dbInstanceGetConnDTO = new DbInstanceGetConnDTO();
         BeanUtils.copyProperties(dbhsmDbInstance,dbInstanceGetConnDTO);
         DbConnectionPoolFactory.buildDataSourcePool(dbInstanceGetConnDTO);
+        DbConnectionPoolFactory.queryPool();
         return i;
     }
 

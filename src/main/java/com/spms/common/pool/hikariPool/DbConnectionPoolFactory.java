@@ -151,7 +151,6 @@ public class DbConnectionPoolFactory {
         factory.bind(instanceKey, dataSourcePool);
         //判断数据库连接池是否注册成功
         if (factory.IsBePool(instanceKey)) {
-            queryPool();
             log.info("Success：Successfully registered a new database connection pool：" + instanceKey);
             return "Success：Successfully registered a new database connection pool";
         } else {
@@ -174,8 +173,6 @@ public class DbConnectionPoolFactory {
 
         }
         BeanUtils.copyProperties(instanceGetConnDTO,instanceKey);
-        log.info("创建数据库连接池之前查看池中连接：");
-        queryPool();
         checkGetConnIsEmpty(instanceGetConnDTO);
         DbConnectionPoolFactory factory = DbConnectionPoolFactory.getInstance();
         if (factory.IsBePool(instanceKey)) {
@@ -187,7 +184,6 @@ public class DbConnectionPoolFactory {
         factory.bind(instanceKey, dataSourcePool);
         //判断数据库连接池是否注册成功
         if (factory.IsBePool(instanceKey)) {
-            queryPool();
             log.info("Success：Successfully registered a new database connection pool：" + instanceKey);
             return "Success：Successfully registered a new database connection pool";
         } else {
@@ -233,17 +229,17 @@ public class DbConnectionPoolFactory {
         return instanceKey;
     }
 
-    //遍历连接池
-    static void queryPool() {
+    /**遍历连接池*/
+    public static void queryPool() {
         if (CollectionUtils.isEmpty(hashtable)) {
             log.info("Warning：The database connection pool is empty");
             return;
         }
         Enumeration<DbInstancePoolKeyDTO> keys = hashtable.keys();
+        log.info("遍历连接池:");
         while (keys.hasMoreElements()) {
             DbInstancePoolKeyDTO key = keys.nextElement();
             javax.sql.DataSource value = hashtable.get(key);
-            log.info("遍历连接池:");
             log.info("Key: " + key + ", Value: " + value);
         }
     }

@@ -78,43 +78,6 @@ public class DbConnectionPool {
         DbConnectionPoolFactory.queryPool();
     }
 
-    public static void main0(String[] args) throws SQLException {
-        Connection con = null;
-        DataSource ds = getDataSource();
-        con = ds.getConnection();
-        //HikariConfig config = new HikariConfig();
-        //config.setJdbcUrl("jdbc:sqlserver://192.168.7.177:1433;databaseName=dbtest");
-        //config.setUsername("sa");
-        //config.setPassword("12345678");
-        //
-        //HikariDataSource ds = new HikariDataSource(config);
-
-        String usernameToDelete = "test1";
-
-        try (Connection conn = ds.getConnection()) {
-            Statement stmt = conn.createStatement();
-            stmt.execute("DROP USER " + usernameToDelete);
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            //ds.close();
-        }
-    }
-
-    public static DataSource getDataSource() {
-        HikariConfig config = new HikariConfig();
-        config.setMaximumPoolSize(10);
-        config.setDataSourceClassName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-        config.addDataSourceProperty("serverName", "192.168.7.177");
-        config.addDataSourceProperty("port", "1433");
-        config.addDataSourceProperty("databaseName", "dbtest");
-        config.addDataSourceProperty("user", "sa");
-        config.addDataSourceProperty("password", "12345678");
-
-        return new HikariDataSource(config);  //pass in HikariConfig to HikariDataSource
-
-    }
-
     public static void main(String[] args) throws SQLException, ZAYKException {
 
         DbInstanceGetConnDTO instance = new DbInstanceGetConnDTO();
@@ -183,23 +146,4 @@ public class DbConnectionPool {
         }
     }
 
-
-    public static Connection connSQLServer() {
-        final String DRIVER_CLASS = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
-        final String DATABASE_URL = "jdbc:sqlserver://192.168.7.177:1433;DatabaseName=dbtest;encrypt=false;integratedSecurity=false;";
-        final String DATABASE_USRE = "sa";
-        final String DATABASE_PASSWORD = "12345678";
-
-        try {
-            Class.forName(DRIVER_CLASS);
-            Connection connection = DriverManager.getConnection(DATABASE_URL, DATABASE_USRE, DATABASE_PASSWORD);
-            return connection;
-        } catch (Exception e) {
-
-// TODO: handle exception
-            e.printStackTrace();
-            return null;
-
-        }
-    }
 }
