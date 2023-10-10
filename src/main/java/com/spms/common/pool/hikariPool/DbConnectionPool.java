@@ -22,12 +22,11 @@ public class DbConnectionPool {
         String databasePort = instanceGetConnDTO.getDatabasePort();
         String databaseDba = instanceGetConnDTO.getDatabaseDba();
         String databaseDbaPassword = instanceGetConnDTO.getDatabaseDbaPassword();
-        String databaseExampleType = instanceGetConnDTO.getDatabaseExampleType();
         String databaseServerName = instanceGetConnDTO.getDatabaseServerName();
-        String className;
         HikariConfig config = new HikariConfig();
         switch (databaseType) {
             case DbConstants.DB_TYPE_ORACLE:
+                String databaseExampleType = instanceGetConnDTO.getDatabaseExampleType();
                 if (DbConstants.DB_EXAMPLE_TYPE_SID.equals(databaseExampleType)) {
                     config.setJdbcUrl("jdbc:oracle:thin:@" + databaseIp + ":" + databasePort + ":" + databaseServerName);
                 } else {

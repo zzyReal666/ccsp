@@ -1,5 +1,6 @@
 package com.spms.dbhsm.secretKey.controller;
 
+import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.StringUtils;
 import com.ccsp.common.core.utils.poi.ExcelUtil;
 import com.ccsp.common.core.web.controller.BaseController;
@@ -19,7 +20,7 @@ import java.util.List;
 
 /**
  * 数据库密钥Controller
- * 
+ *
  * @author ccsp
  * @date 2023-09-22
  */
@@ -110,6 +111,13 @@ public class DbhsmSecretKeyManageController extends BaseController
 	@DeleteMapping("/{ids}")
     public AjaxResult remove(@PathVariable Long[] ids)
     {
-        return toAjax(dbhsmSecretKeyManageService.deleteDbhsmSecretKeyManageByIds(ids));
+        int i = 0;
+        try {
+            i = dbhsmSecretKeyManageService.deleteDbhsmSecretKeyManageByIds(ids);
+        } catch (ZAYKException e) {
+            e.printStackTrace();
+            return AjaxResult.error("null".equals(e.getMessage()) ? "删除失败":e.getMessage());
+        }
+        return toAjax(i);
     }
 }

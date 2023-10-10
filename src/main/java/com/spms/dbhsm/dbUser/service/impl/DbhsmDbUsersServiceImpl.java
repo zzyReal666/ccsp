@@ -1,6 +1,12 @@
 package com.spms.dbhsm.dbUser.service.impl;
 
+import com.ccsp.common.core.constant.SecurityConstants;
 import com.ccsp.common.core.exception.ZAYKException;
+import com.ccsp.common.core.utils.StringUtils;
+import com.ccsp.common.core.utils.tree.EleTreeWrapper;
+import com.ccsp.common.core.web.domain.AjaxResult2;
+import com.ccsp.system.api.systemApi.RemoteDicDataService;
+import com.ccsp.system.api.systemApi.domain.SysDictData;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.dbTool.ProcedureUtil;
 import com.spms.common.pool.hikariPool.DbConnectionPoolFactory;
@@ -9,12 +15,12 @@ import com.spms.dbhsm.dbInstance.domain.DTO.DbOracleInstancePoolKeyDTO;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import com.spms.dbhsm.dbInstance.mapper.DbhsmDbInstanceMapper;
 import com.spms.dbhsm.dbUser.domain.DbhsmDbUser;
-import com.spms.dbhsm.dbUser.domain.DbhsmUserDbInstance;
 import com.spms.dbhsm.dbUser.domain.DbhsmUserPermissionGroup;
 import com.spms.dbhsm.dbUser.mapper.DbhsmDbUsersMapper;
-import com.spms.dbhsm.dbUser.mapper.DbhsmUserDbInstanceMapper;
 import com.spms.dbhsm.dbUser.mapper.DbhsmUserPermissionGroupMapper;
 import com.spms.dbhsm.dbUser.service.IDbhsmDbUsersService;
+import com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns;
+import com.spms.dbhsm.encryptcolumns.mapper.DbhsmEncryptColumnsMapper;
 import com.spms.dbhsm.permissionGroup.domain.DbhsmPermissionGroup;
 import com.spms.dbhsm.permissionGroup.domain.dto.PermissionGroupForUserDto;
 import com.spms.dbhsm.permissionGroup.mapper.DbhsmPermissionGroupMapper;
@@ -23,12 +29,14 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.ParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -51,11 +59,16 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
     private DbhsmPermissionGroupMapper dbhsmPermissionGroupMapper;
 
     @Autowired
-    DbhsmUserDbInstanceMapper dbhsmUserDbInstanceMapper;
-
-    @Autowired
     DbhsmUserPermissionGroupMapper dbhsmUserPermissionGroupMapper;
 
+    @Autowired
+    DbhsmEncryptColumnsMapper dbhsmEncryptColumnsMapper;
+
+    @Autowired
+    RemoteDicDataService remoteDicDataService;
+
+    @Autowired
+    private DbhsmDbInstanceMapper instanceMapper;
     /**
      * 查询数据库用户
      *
@@ -84,12 +97,15 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         if (dbhsmDbUser.getDatabaseInstanceId() != null) {
             dbhsmDbInstance.setId(dbhsmDbUser.getDatabaseInstanceId());
         }
+        if(dbhsmDbUser.getDatabaseType() != null){
+            dbhsmDbInstance.setDatabaseType(dbhsmDbUser.getDatabaseType());
+        }
         List<DbhsmDbInstance> instancesList = dbhsmDbInstanceMapper.selectDbhsmDbInstanceList(dbhsmDbInstance);
         //查询通过web界面创建的所有用户,用于区分哪些属于通过web创建的用户
         List<DbhsmDbUser> dbhsmDbUsers = dbhsmDbUsersMapper.selectDbhsmDbUsersList(dbhsmDbUser);
         //根据用户与数据库实例的对应关系表，把实例DbInstanceGetConnDTO赋值给用户。
         dbhsmDbUsers.forEach(dbUser -> {
-            DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceByUserId(dbUser.getId());
+            DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(dbUser.getDatabaseInstanceId());
             if (instance != null) {
                 DbInstanceGetConnDTO getConnDTO = new DbInstanceGetConnDTO();
                 BeanUtils.copyProperties(instance, getConnDTO);
@@ -107,12 +123,18 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                     //查询数据库实例用户列表
                     String sql = "";
                     String dbType = instance.getDatabaseType();
-                    if (dbType.equals(DbConstants.DB_TYPE_ORACLE)) {
-                        sql = DbConstants.DB_SQL_ORACLE_USER_QUERY;
-                    } else if (dbType.equals(DbConstants.DB_TYPE_SQLSERVER)) {
-                        sql = DbConstants.DB_SQL_SQLSERVER_USER_QUERY;
-                    } else {
-                        throw new ZAYKException("数据库类型不支持");
+                    switch (dbType){
+                        case DbConstants.DB_TYPE_ORACLE:
+                            sql = DbConstants.DB_SQL_ORACLE_USER_QUERY;
+                            break;
+                        case DbConstants.DB_TYPE_SQLSERVER:
+                            sql = DbConstants.DB_SQL_SQLSERVER_USER_QUERY;
+                            break;
+                        case  DbConstants.DB_TYPE_MYSQL:
+                            sql = DbConstants.DB_SQL_MYSQL_USER_QUERY;
+                            break;
+                        default:
+                            throw new ZAYKException("暂不支持的数据库类型");
                     }
                     preparedStatement = conn.prepareStatement(sql);
                     resultSet = preparedStatement.executeQuery();
@@ -122,7 +144,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                         dbhsmDbUsersResult.add(dbUser);
                     }
                 }
-            } catch (ZAYKException | SQLException e) {
+            } catch (ZAYKException | SQLException | ParseException e) {
                 e.printStackTrace();
                 log.info("获取数据库连接失败！" + e.getMessage());
             }
@@ -149,28 +171,34 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 }
             }
         }
-        return dbhsmDbUsersResult.stream().sorted(Comparator.comparing(DbhsmDbUser::getCreated).reversed()).collect(Collectors.toList());
+        return dbhsmDbUsersResult.stream().sorted(Comparator.comparing(DbhsmDbUser::getIsSelfBuilt)).collect(Collectors.toList());
     }
 
-    private DbhsmDbUser getDbUser(ResultSet resultSet, DbhsmDbInstance instance, DbInstanceGetConnDTO connDTO, List<DbhsmDbUser> dbhsmDbUsers) throws SQLException, ZAYKException {
+    private DbhsmDbUser getDbUser(ResultSet resultSet, DbhsmDbInstance instance, DbInstanceGetConnDTO connDTO, List<DbhsmDbUser> dbhsmDbUsers) throws SQLException, ZAYKException, ParseException {
         DbhsmDbUser dbUser = new DbhsmDbUser();
         String dbType = instance.getDatabaseType();
-        if (dbType.equals(DbConstants.DB_TYPE_ORACLE)) {
-            dbUser.setUserName(resultSet.getString("userName"));
-            dbUser.setUserId(resultSet.getString("user_id"));
-            dbUser.setCreated(resultSet.getDate("created"));
-            dbUser.setCommon(resultSet.getString("common"));
-            dbUser.setAllShard(resultSet.getString("all_shard"));
-            dbUser.setDefaultCollation(resultSet.getString("default_collation"));
-            dbUser.setInherited(resultSet.getString("inherited"));
-            dbUser.setOracleMaintained(resultSet.getString("oracle_maintained"));
-            dbUser.setImplicit(resultSet.getString("implicit"));
-        } else if (dbType.equals(DbConstants.DB_TYPE_SQLSERVER)) {
-            dbUser.setUserName(resultSet.getString("name"));
-            dbUser.setUserId(resultSet.getString("principal_id"));
-            dbUser.setCreated(resultSet.getDate("create_date"));
-        } else {
-            throw new ZAYKException("数据库类型不支持");
+        switch (dbType) {
+            case DbConstants.DB_TYPE_ORACLE:
+                dbUser.setUserName(resultSet.getString("userName"));
+                dbUser.setUserId(resultSet.getString("user_id"));
+                dbUser.setCreated(resultSet.getDate("created"));
+                dbUser.setCommon(resultSet.getString("common"));
+                dbUser.setAllShard(resultSet.getString("all_shard"));
+                dbUser.setDefaultCollation(resultSet.getString("default_collation"));
+                dbUser.setInherited(resultSet.getString("inherited"));
+                dbUser.setOracleMaintained(resultSet.getString("oracle_maintained"));
+                dbUser.setImplicit(resultSet.getString("implicit"));
+                break;
+            case DbConstants.DB_TYPE_SQLSERVER:
+                dbUser.setUserName(resultSet.getString("name"));
+                dbUser.setUserId(resultSet.getString("principal_id"));
+                dbUser.setCreated(resultSet.getDate("create_date"));
+                break;
+            case DbConstants.DB_TYPE_MYSQL:
+                dbUser.setUserName(resultSet.getString("User"));
+                break;
+            default:
+                throw new ZAYKException("数据库类型不支持");
         }
         dbUser.setSecretService(instance.getSecretService());
         dbUser.setPermissionGroupForUserDto(new PermissionGroupForUserDto());
@@ -216,10 +244,84 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 return insertOracleUser(dbhsmDbUser, instance);
             case DbConstants.DB_TYPE_SQLSERVER:
                 return insertSqlServerlUser(dbhsmDbUser, instance);
+            case DbConstants.DB_TYPE_MYSQL:
+                return insertMysqlUser(dbhsmDbUser, instance);
             default:
                 log.info("数据库类型不支持！");
                 throw new ZAYKException("数据库类型不支持！");
         }
+    }
+
+    int insertMysqlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException {
+        String sqlCreateUser,username, password, sql;
+        PreparedStatement preparedStatement = null;
+        Connection connection = null;
+        Long permissionGroupId = dbhsmDbUser.getPermissionGroupId();
+        int executeUpdate = 0;
+        //根据实例获取数据库连接
+        try {
+            connection = DbConnectionPoolFactory.getInstance().getConnection(instance);
+            if (Optional.ofNullable(connection).isPresent()) {
+                username = dbhsmDbUser.getUserName();
+                password = dbhsmDbUser.getPassword();
+                //创建用户sql
+                sqlCreateUser = "CREATE USER '" + username + "' @'%' IDENTIFIED BY '" + password + "'";
+                preparedStatement = connection.prepareStatement(sqlCreateUser);
+                boolean execute = preparedStatement.execute();
+                if(!execute){
+                    int result = insertDbUsers(dbhsmDbUser);
+                    if (result != 1) {
+                        log.error("创建用户失败!");
+                        throw new ZAYKException("创建用户失败!");
+                    }
+                }
+                //根据权限组id查询权限组对应的所有权限SQL：
+                List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
+                //赋权
+                for (int i = 0; i < permissionsSqlList.size(); i++) {
+                    if (!(permissionsSqlList.get(i).toLowerCase().startsWith("grant") && !(permissionsSqlList.get(i).toLowerCase().startsWith("revoke")))) {
+                        log.info("不支持的授权SQL:" + permissionsSqlList.get(i));
+                        throw new ZAYKException("不支持的授权SQL:" + permissionsSqlList.get(i));
+                    }
+                    sql = permissionsSqlList.get(i).trim() + " on " + instance.getDatabaseServerName() + ".* to '" + username + "'@'%'";
+                    preparedStatement = connection.prepareStatement(sql);
+                    preparedStatement.executeUpdate();
+                }
+                sql ="FLUSH PRIVILEGES;";
+                preparedStatement = connection.prepareStatement(sql);
+                executeUpdate = preparedStatement.executeUpdate();
+                //try {
+                //    //创建加解密方法
+                //
+                //
+                //} catch (SQLException e) {
+                //    e.printStackTrace();
+                //}
+
+            }
+        } catch (SQLException e) {
+            log.error(e.getMessage());
+            e.printStackTrace();
+            throw new ZAYKException(e.getMessage());
+        } finally {
+            //释放资源
+            if (preparedStatement != null) {
+                try {
+                    preparedStatement.close();
+                } catch (SQLException throwables) {
+                    throwables.printStackTrace();
+                }
+            }
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException throwables) {
+                    throwables.printStackTrace();
+                }
+            }
+        }
+        return 1;
+
     }
 
     int insertSqlServerlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException {
@@ -393,11 +495,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 userStatement = userConn.prepareStatement(sql);
                 userStatement.execute();
                 userConn.commit();
-                //释放用户资源（userConn、userStatement）销毁用户连接池
-                DbOracleInstancePoolKeyDTO instancePoolKeyDTO = new DbOracleInstancePoolKeyDTO();
-                BeanUtils.copyProperties(instance, instancePoolKeyDTO);
-                instancePoolKeyDTO.setDatabaseDba(username);
-                DbConnectionPoolFactory.getInstance().unbind(instancePoolKeyDTO);
+                destroyUserConnPool(instance, username);
             }
         } catch (ZAYKException e) {
             e.printStackTrace();
@@ -425,6 +523,14 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         return executeUpdate == 0 ? 1 : executeUpdate;
     }
 
+    private void destroyUserConnPool(DbhsmDbInstance instance, String username) {
+        //释放用户资源（userConn、userStatement）销毁用户连接池
+        DbOracleInstancePoolKeyDTO instancePoolKeyDTO = new DbOracleInstancePoolKeyDTO();
+        BeanUtils.copyProperties(instance, instancePoolKeyDTO);
+        instancePoolKeyDTO.setDatabaseDba(username);
+        DbConnectionPoolFactory.getInstance().unbind(instancePoolKeyDTO);
+    }
+
     private int insertDbUsers(DbhsmDbUser dbhsmDbUser) {
         //标记为web端创建的用户
         dbhsmDbUser.setIsSelfBuilt(DbConstants.CREATED_ON_WEB_SEDE);
@@ -432,11 +538,6 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         dbhsmDbUser.setUserRole(DbConstants.ORDINARY_USERS);
         dbhsmDbUser.setCreated(new Date());
         dbhsmDbUsersMapper.insertDbhsmDbUsers(dbhsmDbUser);
-        //增加用户实例关联关系
-        DbhsmUserDbInstance dbhsmUserDbInstance = new DbhsmUserDbInstance();
-        dbhsmUserDbInstance.setUserId(dbhsmDbUser.getId());
-        dbhsmUserDbInstance.setInstanceId(dbhsmDbUser.getDatabaseInstanceId());
-        dbhsmUserDbInstanceMapper.insertDbhsmUserDbInstance(dbhsmUserDbInstance);
         //新增用户与权限组对应关系
         DbhsmUserPermissionGroup permissionGroup = new DbhsmUserPermissionGroup();
         permissionGroup.setUserId(dbhsmDbUser.getId());
@@ -473,11 +574,13 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
             //根据用户id查询用户
             DbhsmDbUser dbhsmDbUser = dbhsmDbUsersMapper.selectDbhsmDbUsersById(id);
             //根据用户id查询用户在哪个实例下
-            DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceByUserId(id);
+            DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(dbhsmDbUser.getDatabaseInstanceId());
             //删除用户
             if (ObjectUtils.isEmpty(instance)) {
                 throw new ZAYKException("删除数据库用户失败,该用户所属实例不存在");
             }
+            //判断用户下的表是否已有加密列配置
+            checkEncColConf(dbhsmDbUser.getUserName(), instance.getId());
             resultSet = deleteDbhsmDbUsersById(id);
             if (resultSet != 1) {
                 throw new ZAYKException("删除数据库用户失败");
@@ -491,8 +594,12 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                     sql = "drop user " + userName;
                     if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
                         sql += " cascade";
+                        //销毁用户连接池
+                        destroyUserConnPool(instance,userName);
                     } else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
                         sql += ";drop login " + userName;
+                    } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
+                        sql = "drop user '" + userName + "'@'%'";
                     }
                     log.info("删除数据库用户执行SQL:{}", sql);
                     preparedStatement = connection.prepareStatement(sql);
@@ -516,6 +623,28 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         return resultSet;
     }
 
+    private void checkEncColConf(String userName, Long instanceId) throws ZAYKException {
+        DbhsmEncryptColumns encryptColumns = new DbhsmEncryptColumns();
+        encryptColumns.setDbUserName(userName);
+        encryptColumns.setDbInstanceId(instanceId);
+        List<DbhsmEncryptColumns> encryptColumnsList = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsList(encryptColumns);
+        if(!CollectionUtils.isEmpty(encryptColumnsList)){
+            String dbUserNameStr = encryptColumnsList.stream().map(DbhsmEncryptColumns::getDbTable).distinct().collect(Collectors.joining(","));
+            throw new ZAYKException("该用户下的表:"+dbUserNameStr+"已配置加密列，不允许删除！");
+        }
+    }
+
+    public static void main(String[] args) {
+        DbhsmEncryptColumns encryptColumns = new DbhsmEncryptColumns();
+        encryptColumns.setDbUserName("dbhsm_user");
+        DbhsmEncryptColumns encryptColumns2 = new DbhsmEncryptColumns();
+        encryptColumns2.setDbUserName("dbhsm_user");
+        List<DbhsmEncryptColumns> list =new ArrayList<>();
+        list.add(encryptColumns);
+        //list.add(encryptColumns2);
+        String collect = list.stream().map(DbhsmEncryptColumns::getDbUserName).collect(Collectors.joining(","));
+        System.out.println(collect);
+    }
     /**
      * 删除数据库用户信息
      *
@@ -524,10 +653,53 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
      */
     @Override
     public int deleteDbhsmDbUsersById(Long id) {
-        //删除用户与实例关系
-        dbhsmUserDbInstanceMapper.deleteDbhsmUserDbInstanceByUserId(id);
         //删除用户与权限组关系
         dbhsmUserPermissionGroupMapper.deleteDbhsmUserPermissionGroupByUserId(id);
         return dbhsmDbUsersMapper.deleteDbhsmDbUsersById(id);
+    }
+
+    @Override
+    public AjaxResult2 treeData() {
+        List<DbhsmDbUser> usersList = new ArrayList<>();
+        SysDictData sysDictData;
+        DbhsmDbUser user;
+        String tableName;
+        Connection conn = null;
+        List<Map<String, Object>> instancetTrees = new ArrayList<Map<String, Object>>();
+        List<SysDictData> dbTypeDictData = remoteDicDataService.romoteDictType(DbConstants.DBHSM_DB_TYPE, SecurityConstants.INNER).getData();
+
+        for (int i = 0; i < dbTypeDictData.size(); i++) {
+            sysDictData = dbTypeDictData.get(i);
+            try {
+                Map<String, Object> dbTypeMap = new HashMap<String, Object>();
+                dbTypeMap.put("id", sysDictData.getDictCode());
+                dbTypeMap.put("pId", "0");
+                dbTypeMap.put("title", sysDictData.getDictLabel());
+                dbTypeMap.put("level", 1);
+                dbTypeMap.put("dbType", sysDictData.getDictValue());
+                instancetTrees.add(dbTypeMap);
+
+                List<DbhsmDbInstance> instanceList = instanceMapper.selectDbhsmDbInstanceList(new DbhsmDbInstance());
+                for (int j = 0; j < instanceList.size(); j++) {
+                    DbhsmDbInstance instance = instanceList.get(j);
+                    if(sysDictData.getDictValue().equals(instance.getDatabaseType())){
+                        Map<String, Object> instanceMap = new HashMap<String, Object>();
+                        instanceMap.put("id", instance.getId());
+                        instanceMap.put("pId", sysDictData.getDictCode());
+                        instanceMap.put("title", instance.getDatabaseServerName());
+                        instanceMap.put("level", 2);
+                        instancetTrees.add(instanceMap);
+                    }
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (StringUtils.isEmpty(instancetTrees)) {
+            return AjaxResult2.success();
+        }
+        return AjaxResult2.success(EleTreeWrapper.getInstance().getTree(instancetTrees, "pId", "id"));
     }
 }

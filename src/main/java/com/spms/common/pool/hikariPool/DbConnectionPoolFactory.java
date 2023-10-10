@@ -4,10 +4,7 @@ import com.alibaba.druid.support.logging.Log;
 import com.alibaba.druid.support.logging.LogFactory;
 import com.ccsp.common.core.exception.ZAYKException;
 import com.spms.common.constant.DbConstants;
-import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
-import com.spms.dbhsm.dbInstance.domain.DTO.DbInstancePoolKeyDTO;
-import com.spms.dbhsm.dbInstance.domain.DTO.DbOracleInstancePoolKeyDTO;
-import com.spms.dbhsm.dbInstance.domain.DTO.DbSQLServernstancePoolKeyDTO;
+import com.spms.dbhsm.dbInstance.domain.DTO.*;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -120,14 +117,7 @@ public class DbConnectionPoolFactory {
             return null;
         }
         String databaseType = instanceGetConnDTO.getDatabaseType();
-        if (instanceGetConnDTO.getDatabaseType().equals(DbConstants.DB_TYPE_ORACLE)) {
-            dbInstancekey = new DbOracleInstancePoolKeyDTO();
-        } else if (databaseType.equals(DbConstants.DB_TYPE_SQLSERVER)) {
-            dbInstancekey = new DbSQLServernstancePoolKeyDTO();
-        } else if (databaseType.equals(DbConstants.DB_TYPE_MYSQL)) {
-
-        }
-
+        dbInstancekey = getDbInstancePoolKeyDTO(dbInstancekey, databaseType);
         BeanUtils.copyProperties(instanceGetConnDTO, dbInstancekey);
         if (!DbConnectionPoolFactory.getInstance().IsBePool(dbInstancekey)) {
             buildDataSourcePool(instanceGetConnDTO,dbInstancekey);
@@ -135,6 +125,19 @@ public class DbConnectionPoolFactory {
         Connection connection = DbConnectionPoolFactory.getInstance().getDbConnectionPool(dbInstancekey).getConnection();
         connection.setAutoCommit(false);
         return connection;
+    }
+
+    private static DbInstancePoolKeyDTO getDbInstancePoolKeyDTO(DbInstancePoolKeyDTO dbInstancekey, String databaseType) {
+        if (databaseType.equals(DbConstants.DB_TYPE_ORACLE)) {
+            dbInstancekey = new DbOracleInstancePoolKeyDTO();
+        } else if (databaseType.equals(DbConstants.DB_TYPE_SQLSERVER)) {
+            dbInstancekey = new DbSQLServernstancePoolKeyDTO();
+        } else if (databaseType.equals(DbConstants.DB_TYPE_MYSQL)) {
+            dbInstancekey = new DbMySQLnstancePoolKeyDTO();
+        } else {
+            log.info("Error:未实现的数据库类型");
+        }
+        return dbInstancekey;
     }
 
 
@@ -216,15 +219,7 @@ public class DbConnectionPoolFactory {
             return null;
         }
         String databaseType = instance.getDatabaseType();
-        if (instance.getDatabaseType().equals(DbConstants.DB_TYPE_ORACLE)) {
-            instanceKey = new DbOracleInstancePoolKeyDTO();
-        } else if (databaseType.equals(DbConstants.DB_TYPE_SQLSERVER)) {
-            instanceKey = new DbSQLServernstancePoolKeyDTO();
-        } else if (databaseType.equals(DbConstants.DB_TYPE_MYSQL)) {
-            log.info("未实现的数据库类型");
-        } else {
-            log.info("未实现的数据库类型");
-        }
+        instanceKey = getDbInstancePoolKeyDTO(instanceKey, databaseType);
         BeanUtils.copyProperties(instance, instanceKey);
         return instanceKey;
     }

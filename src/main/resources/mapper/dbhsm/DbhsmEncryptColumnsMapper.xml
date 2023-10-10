@@ -3,7 +3,7 @@
 PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.spms.dbhsm.encryptcolumns.mapper.DbhsmEncryptColumnsMapper">
-    
+
     <resultMap type="com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns" id="DbhsmEncryptColumnsResult">
         <result property="id"    column="id"    />
         <result property="dbInstanceId"    column="db_instance_id"    />
@@ -44,14 +44,15 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="establishRules != null  and establishRules != ''"> and establish_rules = #{establishRules}</if>
             <if test="encryptionOffset != null  and encryptionOffset != ''"> and encryption_offset = #{encryptionOffset}</if>
             <if test="encryptionLength != null  and encryptionLength != ''"> and encryption_length = #{encryptionLength}</if>
+            <if test="secretKeyId != null  and secretKeyId != ''"> and secret_key_id = #{secretKeyId}</if>
         </where>
     </select>
-    
+
     <select id="selectDbhsmEncryptColumnsById" parameterType="String" resultMap="DbhsmEncryptColumnsResult">
         <include refid="selectDbhsmEncryptColumnsVo"/>
         where id = #{id}
     </select>
-        
+
     <insert id="insertDbhsmEncryptColumns" parameterType="com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns">
         insert into dbhsm_encrypt_columns
         <trim prefix="(" suffix=")" suffixOverrides=",">
@@ -125,7 +126,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </delete>
 
     <delete id="deleteDbhsmEncryptColumnsByIds" parameterType="String">
-        delete from dbhsm_encrypt_columns where id in 
+        delete from dbhsm_encrypt_columns where id in
         <foreach item="id" collection="array" open="(" separator="," close=")">
             #{id}
         </foreach>

@@ -65,5 +65,5 @@ public interface DbhsmDbInstanceMapper
 
     List<InstanceServerNameVO> listDbInstanceSelect(InstanceServerNameVO instanceServerNameVO);
 
-    DbhsmDbInstance selectDbhsmDbInstanceByUserId(Long id);
+    //DbhsmDbInstance selectDbhsmDbInstanceByUserId(Long id);
 }

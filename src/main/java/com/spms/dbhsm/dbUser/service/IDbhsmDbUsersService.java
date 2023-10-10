@@ -1,6 +1,7 @@
 package com.spms.dbhsm.dbUser.service;
 
 import com.ccsp.common.core.exception.ZAYKException;
+import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.spms.dbhsm.dbUser.domain.DbhsmDbUser;
 
 import java.sql.SQLException;
@@ -62,4 +63,6 @@ public interface IDbhsmDbUsersService
      * @return 结果
      */
     public int deleteDbhsmDbUsersById(Long id);
+
+    AjaxResult2 treeData();
 }

@@ -12,15 +12,20 @@ import java.util.Map;
  */
 public class DbConstants {
 
+    /** 查询数据库用户SQL */
     public static final String DB_SQL_SQLSERVER_USER_QUERY = "select name,principal_id,create_date from sys.database_principals u " +
             "where u.type_desc != 'APPLICATION_ROLE' and u.type_desc != 'DATABASE_ROLE' " +
             "and u.name != 'dbo' and u.name != 'guest'  and u.name != 'INFORMATION_SCHEMA' " +
             "and u.name != 'sys' ";
     public static final String DB_SQL_ORACLE_USER_QUERY = "select  * from all_users where INHERITED='NO'";
+    public static final String DB_SQL_MYSQL_USER_QUERY = "SELECT user FROM  mysql.user group by user";
+
     /**数据库驱动*/
     public static final String DB_ORACLE_CLASS_NAME =  "oracle.jdbc.driver.OracleDriver";
     public static final String DB_SQLSERVER_CLASS_NAME =  "com.microsoft.sqlserver.jdbc.SQLServerDataSource";
     public static final String DB_MYSQL_CLASS_NAME =  "com.mysql.cj.jdbc.Driver";
+    /**字典类型*/
+    public static final String DBHSM_DB_TYPE = "dbhsm_db_type";
     //密码卡类型
     public static String cryptoCardType = "cryptoCardType";
     //三未信安

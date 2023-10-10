@@ -122,9 +122,9 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
             if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(checkDBOracleInstanceUnique(dbhsmDbInstance))) {
                 throw new ZAYKException("数据库实例已存在");
             }
-        }else if(DbConstants.DB_TYPE_SQLSERVER.equals(dbhsmDbInstance.getDatabaseType())){
+        }else{
             //数据库实例唯一性判断
-            if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(checkDBSqlServerUnique(dbhsmDbInstance))) {
+            if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(checkOtherDBUnique(dbhsmDbInstance))) {
                 throw new ZAYKException("数据库实例已存在");
             }
             dbhsmDbInstance.setDatabaseExampleType("-");
@@ -145,6 +145,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         instance.setDatabasePort(dbhsmDbInstance.getDatabasePort());
         instance.setDatabaseServerName(dbhsmDbInstance.getDatabaseServerName());
         instance.setDatabaseExampleType(dbhsmDbInstance.getDatabaseExampleType());
+        instance.setDatabaseType(dbhsmDbInstance.getDatabaseType());
         List<DbhsmDbInstance> infoList = dbhsmDbInstanceMapper.selectDbhsmDbInstanceList(instance);
         if (CollectionUtils.isEmpty(infoList)) {
             return DbConstants.DBHSM_GLOBLE_UNIQUE;
@@ -152,11 +153,12 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
     }
 
-    public String checkDBSqlServerUnique(DbhsmDbInstance dbhsmDbInstance) {
+    public String checkOtherDBUnique(DbhsmDbInstance dbhsmDbInstance) {
         DbhsmDbInstance instance = new DbhsmDbInstance();
         instance.setDatabaseIp(dbhsmDbInstance.getDatabaseIp());
         instance.setDatabasePort(dbhsmDbInstance.getDatabasePort());
         instance.setDatabaseServerName(dbhsmDbInstance.getDatabaseServerName());
+        instance.setDatabaseType(dbhsmDbInstance.getDatabaseType());
         List<DbhsmDbInstance> sqlServerList = dbhsmDbInstanceMapper.selectDbhsmDbInstanceList(instance);
         if (sqlServerList.size() > 0) {
             return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
@@ -245,7 +247,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
             //删除之前先销毁之前的池
             DbhsmDbInstance instanceById = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
             i = dbhsmDbInstanceMapper.deleteDbhsmDbInstanceById(id);
-            //删除动态数据连接池中名称为dbhsmDbInstance的连接池
+            //删除连接池
             DbConnectionPoolFactory.getInstance().unbind(DbConnectionPoolFactory.instanceConventKey(instanceById));
         }
         return i;

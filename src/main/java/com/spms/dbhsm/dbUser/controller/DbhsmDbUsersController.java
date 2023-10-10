@@ -126,4 +126,14 @@ public class DbhsmDbUsersController extends BaseController {
         };
         return toAjax(i);
     }
+
+    /**
+     * 数据库类型-实例树结构
+     */
+    @Log(title = "数据库实例-用户-表树结构", businessType = BusinessType.DELETE)
+    @PostMapping(value = "/treeData")
+    public AjaxResult2 treeData()
+    {
+        return dbhsmDbUsersService.treeData();
+    }
 }

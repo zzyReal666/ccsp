@@ -1,5 +1,6 @@
 package com.spms.dbhsm.secretKey.service.impl;
 
+import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.DateUtils;
 import com.ccsp.common.core.utils.StringUtils;
 import com.ccsp.common.security.utils.SecurityUtils;
@@ -10,6 +11,8 @@ import com.spms.common.JSONDataUtil;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.kmip.KmipServicePoolFactory;
 import com.spms.common.kmip.ZaKmipUtil;
+import com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns;
+import com.spms.dbhsm.encryptcolumns.mapper.DbhsmEncryptColumnsMapper;
 import com.spms.dbhsm.secretKey.domain.DbhsmSecretKeyManage;
 import com.spms.dbhsm.secretKey.mapper.DbhsmSecretKeyManageMapper;
 import com.spms.dbhsm.secretKey.service.IDbhsmSecretKeyManageService;
@@ -25,21 +28,25 @@ import java.util.UUID;
 
 /**
  * 数据库密钥Service业务层处理
- * 
+ *
  * @author ccsp
  * @date 2023-09-22
  */
 @Slf4j
 @Service
-public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageService 
+public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageService
 {
     @Autowired
     private DbhsmSecretKeyManageMapper dbhsmSecretKeyManageMapper;
     @Autowired
     private DbhsmSecretServiceMapper dbhsmSecretServiceMapper;
+
+    @Autowired
+    DbhsmEncryptColumnsMapper dbhsmEncryptColumnsMapper;
+
     /**
      * 查询数据库密钥
-     * 
+     *
      * @param id 数据库密钥主键
      * @return 数据库密钥
      */
@@ -51,7 +58,7 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
 
     /**
      * 查询数据库密钥列表
-     * 
+     *
      * @param dbhsmSecretKeyManage 数据库密钥
      * @return 数据库密钥
      */
@@ -63,7 +70,7 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
 
     /**
      * 新增数据库密钥
-     * 
+     *
      * @param dbhsmSecretKeyManage 数据库密钥
      * @return 结果
      */
@@ -150,7 +157,7 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
 
     /**
      * 修改数据库密钥
-     * 
+     *
      * @param dbhsmSecretKeyManage 数据库密钥
      * @return 结果
      */
@@ -227,25 +234,38 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
 
     /**
      * 批量删除数据库密钥
-     * 
+     *
      * @param ids 需要删除的数据库密钥主键
      * @return 结果
      */
     @Override
-    public int deleteDbhsmSecretKeyManageByIds(Long[] ids)
-    {
-        return dbhsmSecretKeyManageMapper.deleteDbhsmSecretKeyManageByIds(ids);
+    public int deleteDbhsmSecretKeyManageByIds(Long[] ids) throws ZAYKException {
+        int i = 0;
+        for (Long id : ids) {
+            DbhsmSecretKeyManage secretKeyManage = selectDbhsmSecretKeyManageById(id);
+            //判断是否已被加密列使用
+            DbhsmEncryptColumns dbhsmEncryptColumns = new DbhsmEncryptColumns();
+            dbhsmEncryptColumns.setSecretKeyId(secretKeyManage.getSecretKeyId());
+            List<DbhsmEncryptColumns> list = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsList(dbhsmEncryptColumns);
+            if(list.size() > 0){
+                throw new ZAYKException("密钥:"+id+"已被加密列使用,请先删除加密列");
+            }
+            i = deleteDbhsmSecretKeyManageById(id);
+        }
+        return i;
+        //return dbhsmSecretKeyManageMapper.deleteDbhsmSecretKeyManageByIds(ids);
     }
 
     /**
      * 删除数据库密钥信息
-     * 
+     *
      * @param id 数据库密钥主键
      * @return 结果
      */
     @Override
     public int deleteDbhsmSecretKeyManageById(Long id)
     {
+
         return dbhsmSecretKeyManageMapper.deleteDbhsmSecretKeyManageById(id);
     }
 
