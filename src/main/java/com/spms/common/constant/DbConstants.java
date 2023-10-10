@@ -106,9 +106,9 @@ public class DbConstants {
      * */
     public static final Integer ESTABLISH_RULES_YES = 1;
     /** 加密算法 */
-    public static final int SGD_SM4 = 0;
-    public static final int SGD_SM4_FPE_10 = 10;
-    public static final int SGD_SM4_FPE_62 = 62;
+    public static final String SGD_SM4 = "0";
+    public static final String SGD_SM4_FPE_10 = "10";
+    public static final String SGD_SM4_FPE_62 = "62";
 
     /*****************  数据库字段类型  ********************/
     public static int DATA_TYPE_INT = 0x00000001;

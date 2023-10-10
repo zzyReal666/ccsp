@@ -105,6 +105,23 @@ public final class DBUtil {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+            }else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(dbType)){
+                Statement stmt = null;
+                try {
+                    stmt = conn.createStatement();
+                    ResultSet resultSet = stmt.executeQuery("DESCRIBE " + tableName.toUpperCase());
+                    while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
+                        Map<String,String> colMap =new HashMap<>();
+                        colMap.put(DbConstants.DB_COLUMN_NAME, resultSet.getString("Field"));
+                        colMap.put("columnType", resultSet.getString("Type"));
+                        colList.add(colMap);
+                    }
+                    resultSet.close();
+                    stmt.close();
+                    resultSet.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
 
         } catch (Exception e) {

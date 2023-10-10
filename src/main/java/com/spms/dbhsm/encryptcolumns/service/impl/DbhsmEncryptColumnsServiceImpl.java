@@ -188,8 +188,15 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             TransUtil.transEncryptColumns(conn, dbhsmEncryptColumnsAdd);
             TransUtil.transFPEEncryptColumns(conn, dbhsmEncryptColumnsAdd);
         } else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
-            //创建触发器
+            //创建 SqlServer 触发器
             TransUtil.transEncryptColumnsToSqlServer(conn, dbhsmEncryptColumnsAdd);
+        }else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
+
+            if (!DbConstants.SGD_SM4.equals(dbhsmEncryptColumnsAdd.getEncryptionAlgorithm())){
+                throw new Exception("目前只支持SGD_SM4加密算法");
+            }
+            //创建Mysql触发器
+            TransUtil.transEncryptColumnsToMySql(conn, dbhsmEncryptColumnsAdd);
         }
 
         //先删除之前的视图

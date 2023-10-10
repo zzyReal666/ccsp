@@ -468,15 +468,15 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                     executeUpdate = preparedStatement.executeUpdate();
                 }
                 //加密
-                ProcedureUtil.cOciTransStringEncrypt(conn, username);
+                ProcedureUtil.cOciTransStringEncrypt(conn, instance.getDatabaseDba(), username);
                 //FPE加密
-                ProcedureUtil.cOciTransFPEEncrypt(conn, username);
+                ProcedureUtil.cOciTransFPEEncrypt(conn, instance.getDatabaseDba(), username);
                 //解密
-                ProcedureUtil.cOciTransStringDecryptP(conn, username);
+                ProcedureUtil.cOciTransStringDecryptP(conn, instance.getDatabaseDba(), username);
                 ProcedureUtil.cOciTransStringDecryptF(conn, username);
                 ProcedureUtil.cOciTransFpeDecryptF(conn, username);
                 //FPE解密
-                ProcedureUtil.cOciTransFPEDecrypt(conn, username);
+                ProcedureUtil.cOciTransFPEDecrypt(conn, instance.getDatabaseDba(), username);
                 conn.setAutoCommit(false);
                 conn.commit();
                 //使用新增的用户创建连接
