@@ -229,4 +229,40 @@ public class TransUtil {
             }
         }
     }
+
+    /**
+     * 创建Mysql触发器
+     * @param conn
+     * @param encryptColumns
+     */
+    public static void transEncryptColumnsToMySql(Connection conn, DbhsmEncryptColumnsAdd encryptColumns) throws Exception {
+        /**
+           create trigger tri_insert_name before insert
+           on testdb.tests
+           for each row
+           set NEW.name = StringEncrypt(NEW.name,0);
+         */
+
+        log.info("创建Mysql触发器start");
+        //获取网口ip
+        StringBuffer transSql = new StringBuffer("CREATE OR REPLACE TRIGGER tri_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns() + " before insert\n");
+        transSql.append("on " + encryptColumns.getDatabaseServerName() + "." + encryptColumns.getDbTable() + "\n");
+        transSql.append("for each row\n");
+        transSql.append("set NEW." + encryptColumns.getEncryptColumns() + " = StringEncrypt(NEW." + encryptColumns.getEncryptColumns() + ",0)");
+        Statement statement = null;
+
+        try {
+            log.info("exec sql:" + transSql.toString());
+            statement = conn.createStatement();
+            statement.execute(transSql.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new Exception(e.getMessage());
+        } finally {
+            if (statement != null) {
+                statement.close();
+            }
+        }
+
+    }
 }

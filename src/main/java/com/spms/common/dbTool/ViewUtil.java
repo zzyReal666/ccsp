@@ -41,12 +41,15 @@ public class ViewUtil {
 
             }else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(zaDatabaseEncryptColumns.getDatabaseType())){
                 return operViewToSqlServer(conn,zaDatabaseEncryptColumns);
+            }else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(zaDatabaseEncryptColumns.getDatabaseType())){
+                return operViewToMySql(conn,zaDatabaseEncryptColumns);
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
         return false;
     }
+
     /***
      * 一个表只创建一个视图，
      *
@@ -97,8 +100,8 @@ public class ViewUtil {
     public static String createOrReplaceViewSQL(List<Map<String, String>> columns, JSONObject encJson, DbhsmEncryptColumnsAdd encryptColumns) {
         StringBuffer view = new StringBuffer();
         Long length = 0L;
-        int offset = 0,alg = 0;
-        String algorithm=encryptColumns.getEncryptionAlgorithm();
+        int offset = 0;
+        String algorithm = encryptColumns.getEncryptionAlgorithm();
 
         if(DbConstants.ESTABLISH_RULES_YES.equals(encryptColumns.getEstablishRules())) {
             offset = encryptColumns.getEncryptionOffset();
@@ -114,7 +117,7 @@ public class ViewUtil {
             //encjson:加密列
             if (encJson.containsKey(columnName)) {
                 //对表中加密列进行视图语句拼装
-                if(String.valueOf(DbConstants.SGD_SM4).equals(algorithm)) {
+                if(DbConstants.SGD_SM4.equals(algorithm)) {
                     view.append("    c_oci_trans_string_decrypt_f(\n");
                 }else {
                     view.append("    c_oci_trans_fpe_decrypt_f(\n");
@@ -127,13 +130,13 @@ public class ViewUtil {
                 view.append("    '" + encJson.getStr("table") + "',\n");
                 view.append("    '" + columnName + "',\n");
                 view.append("    USER,\n");
-                if(String.valueOf(DbConstants.SGD_SM4).equals(algorithm)) {
+                if(DbConstants.SGD_SM4.equals(algorithm)) {
                     view.append(" " + columnName + "," + "0,0" + ") as " + columnName + (counter==columns.size()?"":","));
                 }else {
                     if(DbConstants.ESTABLISH_RULES_YES.equals(encryptColumns.getEstablishRules())) {
-                        view.append(" " + columnName + "," + (offset - 1) + "," + length + "," + alg + ") as " + columnName+ (counter==columns.size()?"":","));
+                        view.append(" " + columnName + "," + (offset - 1) + "," + length + "," + algorithm + ") as " + columnName+ (counter==columns.size()?"":","));
                     }else{
-                        view.append(" " + columnName + ",0,0," + alg  + ") as " + columnName+ (counter==columns.size()?"":","));
+                        view.append(" " + columnName + ",0,0," + algorithm  + ") as " + columnName+ (counter==columns.size()?"":","));
                     }
                 }
             } else {
@@ -238,6 +241,60 @@ public class ViewUtil {
         } finally {
             if (statement != null) {
                 statement.close();
+            }
+        }
+    }
+
+    /**
+     * mysql创建视图
+     * @param conn
+     * @param encryptColumns
+     * @return
+     */
+    private static boolean operViewToMySql(Connection conn, DbhsmEncryptColumnsAdd encryptColumns) throws Exception {
+        /*
+        create or replace view v_table1
+        as select
+        	StringDecrypt(name)
+        as name from tests;
+        */
+        log.info("创建Mysql视图start: database:{},table:{}",encryptColumns.getDatabaseServerName(),encryptColumns.getDbTable());
+
+        List<Map<String, String>> allColumnsInfo = DBUtil.findAllColumnsInfo(conn,  encryptColumns.getDbTable(),encryptColumns.getDatabaseType());
+
+        if (allColumnsInfo == null || allColumnsInfo.size() == 0){
+            return false;
+        }
+
+        StringBuffer viewSql = new StringBuffer();
+
+        viewSql.append("CREATE OR ALTER view v_" + encryptColumns.getDbTable() + "(");
+        viewSql.append(System.getProperty("line.separator"));
+
+        String columns = "";
+        for (Map<String, String> map :allColumnsInfo){
+            columns += map.get(DbConstants.DB_COLUMN_NAME) + ",";
+        }
+
+        columns = columns.substring(0, columns.length()-1);
+        viewSql.append(columns + ")");
+        viewSql.append(System.getProperty("line.separator"));
+
+        viewSql.append("as SELECT " + columns);
+        viewSql.append(System.getProperty("line.separator"));
+        viewSql.append("from " + encryptColumns.getDatabaseServerName() + ".dbo." + encryptColumns.getDbTable());
+        PreparedStatement preparedStatement = null;
+        log.info("sql server create view:" + viewSql.toString());
+        try {
+            preparedStatement = conn.prepareStatement(viewSql.toString());
+            preparedStatement.execute();
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            if (preparedStatement != null) {
+                preparedStatement.close();
             }
         }
     }

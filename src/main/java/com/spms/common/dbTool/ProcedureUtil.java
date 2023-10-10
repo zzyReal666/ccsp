@@ -14,7 +14,7 @@ import java.sql.SQLException;
 public class ProcedureUtil {
 
     //创建用户时创建存储过程
-    public static void cOciTransStringEncrypt(Connection conn, String username) throws SQLException {
+    public static void cOciTransStringEncrypt(Connection conn,String dbaUser, String username) throws SQLException {
         log.info("创建存储过程start：cOciTransStringEncrypt");
         PreparedStatement statement = null;
         StringBuffer transSql = new StringBuffer("CREATE OR REPLACE PROCEDURE " + username + ".c_oci_trans_string_encrypt_p(\n");
@@ -31,7 +31,7 @@ public class ProcedureUtil {
         transSql.append("  length  IN NATURAL,\n");
         transSql.append("  ovalue OUT VARCHAR2)\n");
         transSql.append("AS EXTERNAL\n");
-        transSql.append("  LIBRARY liboraextapi\n");
+        transSql.append("  LIBRARY " + dbaUser + "liboraextapi\n");
         transSql.append("  NAME \"oci_trans_string_encrypt\"\n");
         transSql.append("  LANGUAGE C\n");
         transSql.append("  WITH CONTEXT\n");
@@ -69,7 +69,7 @@ public class ProcedureUtil {
     }
 
     //创建用户时创建fpe存储过程
-    public static void cOciTransFPEEncrypt(Connection conn, String username) throws SQLException {
+    public static void cOciTransFPEEncrypt(Connection conn,String dbaUser,String username) throws SQLException {
         log.info("创建存储过程start：cOciTransFPEEncrypt");
         PreparedStatement statement = null;
         StringBuffer transSql = new StringBuffer("CREATE OR REPLACE PROCEDURE " + username + ".c_oci_trans_fpe_encrypt_p(\n");
@@ -87,7 +87,7 @@ public class ProcedureUtil {
         transSql.append("  ovalue OUT VARCHAR2,\n");
         transSql.append("  radix IN PLS_INTEGER)\n");
         transSql.append("AS EXTERNAL\n");
-        transSql.append("  LIBRARY liboraextapi\n");
+        transSql.append("  LIBRARY " + dbaUser + "liboraextapi\n");
         transSql.append("  NAME \"oci_trans_fpe_encrypt\"\n");
         transSql.append("  LANGUAGE C\n");
         transSql.append("  WITH CONTEXT\n");
@@ -126,7 +126,7 @@ public class ProcedureUtil {
     }
 
     //创建用户时创建该解密存储过程
-    public static void cOciTransStringDecryptP(Connection conn, String username) throws SQLException {
+    public static void cOciTransStringDecryptP(Connection conn,String dbaUser, String username) throws SQLException {
         log.info("创建存储过程start：cOciTransStringDecryptP");
         PreparedStatement statement = null;
         StringBuffer transSql = new StringBuffer("CREATE OR REPLACE PROCEDURE " + username + ".c_oci_trans_string_decrypt_p(\n");
@@ -143,7 +143,7 @@ public class ProcedureUtil {
         transSql.append("  length IN NATURAL,\n");
         transSql.append("  ovalue OUT VARCHAR2)\n");
         transSql.append("AS EXTERNAL\n");
-        transSql.append("  LIBRARY liboraextapi\n");
+        transSql.append("  LIBRARY " + dbaUser + "liboraextapi\n");
         transSql.append("  NAME \"oci_trans_string_decrypt\"\n");
         transSql.append("  LANGUAGE C\n");
         transSql.append("  WITH CONTEXT\n");
@@ -220,7 +220,7 @@ public class ProcedureUtil {
 
     }
 
-    public static void cOciTransFPEDecrypt(Connection connection, String username) throws SQLException {
+    public static void cOciTransFPEDecrypt(Connection connection,String dbaUser, String username) throws SQLException {
         log.info("创建函数start：c_oci_trans_fpe_decrypt_p");
         PreparedStatement statement = null;
         StringBuffer transSql = new StringBuffer();
@@ -239,7 +239,7 @@ public class ProcedureUtil {
         transSql.append("  ovalue OUT VARCHAR2,\n");
         transSql.append("  radix IN PLS_INTEGER)\n");
         transSql.append("AS EXTERNAL\n");
-        transSql.append("  LIBRARY liboraextapi\n");
+        transSql.append("  LIBRARY " + dbaUser + "liboraextapi\n");
         transSql.append("  NAME \"oci_trans_fpe_decrypt\"\n");
         transSql.append("  LANGUAGE C\n");
         transSql.append("  WITH CONTEXT\n");
