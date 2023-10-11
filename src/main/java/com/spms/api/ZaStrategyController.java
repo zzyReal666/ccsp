@@ -2,7 +2,6 @@ package com.spms.api;
 
 import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.StringUtils;
-import com.sc.kmip.container.KMIPContainer;
 import com.spms.common.JSONDataUtil;
 import com.spms.common.constant.DbConstants;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
@@ -264,7 +263,6 @@ public class ZaStrategyController {
 
     private String getSymmKey(DbhsmEncryptColumns dbEncryptColumns) throws Exception {
         String symmKey = null;
-        KMIPContainer kmipContainer, kmipResponse;
         //根据加密列信息获取加密列使用的密钥ID,根据密钥ID查询密钥信息（za_secret_key_manage表中的密钥关系信息），根据密钥信息获取该密钥的密钥来源
         //密钥ID，对应密钥表中的id字段
         String keyId = dbEncryptColumns.getSecretKeyId();
@@ -281,7 +279,7 @@ public class ZaStrategyController {
         Integer keySource = secretKeyManage.getSecretKeySource();
 
         Object crytoCartTypeObj = JSONDataUtil.getSysDataToDB(DbConstants.cryptoCardType);
-        if (null != crytoCartTypeObj) {
+        if (null == crytoCartTypeObj) {
             throw new IOException();
         }
 

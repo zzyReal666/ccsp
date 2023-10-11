@@ -47,12 +47,16 @@ public class DbConstants {
     //中安云科 SC30密码卡
     public static final int HSM_CARD_ZASEC_SC30 = 11 ;
 
+
+    public static final String DB_TYPE = "dbhsm_db_type";
     public static final String DB_TYPE_ORACLE = "0";
     public static final String DB_TYPE_ORACLE_DESC = "Oracle";
     public static final String DB_TYPE_SQLSERVER = "1";
     public static final String DB_TYPE_SQLSERVER_DESC = "SQL Server";
     public static final String DB_TYPE_MYSQL = "2";
     public static final String DB_TYPE_MYSQL_DESC = "MySql";
+    public static final String DB_TYPE_POSTGRESQL = "3";
+    public static final String DB_TYPE_POSTGRESQL_DESC = "PostgreSQL";
     public static final String DB_COLUMN_NAME = "columnName";
 
     /** 加密状态  1未加密 2已加密 3已解密 */
