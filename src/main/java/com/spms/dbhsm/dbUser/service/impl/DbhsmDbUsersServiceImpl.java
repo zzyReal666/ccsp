@@ -209,7 +209,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         for (DbhsmDbUser user : dbhsmDbUsers) {
             //从被管理的数据库中查询的用户信息与管理端数据库中的用户信息进匹配
             String userName = user.getUserName();
-            if(instance.getDatabaseType().equals(DbConstants.DB_TYPE_ORACLE)){
+            if (instance.getDatabaseType().equals(DbConstants.DB_TYPE_ORACLE)) {
                 userName = user.getUserName().toUpperCase();
             }
             if (dbUser.getUserName().equals(userName) && instance.getId().equals(user.getDatabaseInstanceId())) {
@@ -345,7 +345,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 boolean execute1 = preparedStatement.execute();
                 preparedStatement = connection.prepareStatement(sqlCreateUser);
                 boolean execute = preparedStatement.execute();
-                if(!execute){
+                if (!execute) {
                     int result = insertDbUsers(dbhsmDbUser);
                     if (result != 1) {
                         log.error("创建用户失败!");
@@ -424,9 +424,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
 
     int insertOracleUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException, SQLException {
         Connection conn = null;
-        Connection userConn = null;
         PreparedStatement preparedStatement = null;
-        PreparedStatement userStatement = null;
         int executeUpdate = 0;
         String username, password, tableSpace, sql;
         int result = insertDbUsers(dbhsmDbUser);
@@ -467,6 +465,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                     preparedStatement = conn.prepareStatement(sql);
                     executeUpdate = preparedStatement.executeUpdate();
                 }
+
                 //加密
                 ProcedureUtil.cOciTransStringEncrypt(conn, instance.getDatabaseDba(), username);
                 //FPE加密
@@ -479,23 +478,17 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 ProcedureUtil.cOciTransFPEDecrypt(conn, instance.getDatabaseDba(), username);
                 conn.setAutoCommit(false);
                 conn.commit();
-                //使用新增的用户创建连接
-                DbInstanceGetConnDTO getConnDTO = new DbInstanceGetConnDTO();
-                BeanUtils.copyProperties(instance, getConnDTO);
-                getConnDTO.setDatabaseDba(username);
-                getConnDTO.setDatabaseDbaPassword(password);
-                userConn = DbConnectionPoolFactory.getInstance().getConnection(getConnDTO);
-                if (ObjectUtils.isEmpty(userConn)) {
-                    throw new ZAYKException("使用新用户创建连接异常");
-                }
-                log.info("使用新用户创建连接成功");
+
                 //赋执行库文件liboraextapi的权限
                 sql = "CREATE OR REPLACE LIBRARY liboraextapi AS '" + dbhsmDbUser.getEncLibapiPath() + "'";
                 log.info("赋执行库文件liboraextapi的权限sql: {}", sql);
-                userStatement = userConn.prepareStatement(sql);
-                userStatement.execute();
-                userConn.commit();
-                destroyUserConnPool(instance, username);
+                preparedStatement = conn.prepareStatement(sql);
+                preparedStatement.execute();
+
+                sql = "grant execute on liboraextapi to " + username;
+                log.info("赋执行库文件liboraextapi的权限给用户 sql: {}", sql);
+                preparedStatement = conn.prepareStatement(sql);
+                preparedStatement.execute();
             }
         } catch (ZAYKException e) {
             e.printStackTrace();
@@ -565,7 +558,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
      */
     @Override
     @Transactional(rollbackFor = SQLException.class)
-    public  int deleteDbhsmDbUsersByIds(Long[] ids) throws SQLException, ZAYKException {
+    public int deleteDbhsmDbUsersByIds(Long[] ids) throws SQLException, ZAYKException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         int resultSet = 0;

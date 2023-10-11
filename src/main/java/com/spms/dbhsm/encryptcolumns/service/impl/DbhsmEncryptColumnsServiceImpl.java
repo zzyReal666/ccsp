@@ -7,7 +7,9 @@ import com.ccsp.common.core.utils.SnowFlakeUtil;
 import com.ccsp.common.core.utils.StringUtils;
 import com.ccsp.common.core.utils.tree.EleTreeWrapper;
 import com.ccsp.common.core.web.domain.AjaxResult2;
+import com.ccsp.common.security.utils.DictUtils;
 import com.ccsp.common.security.utils.SecurityUtils;
+import com.ccsp.system.api.systemApi.domain.SysDictData;
 import com.spms.common.CommandUtil;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.dbTool.DBUtil;
@@ -31,9 +33,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.ResultSet;
+import java.sql.*;
 import java.util.*;
 
 /**
@@ -185,8 +185,12 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         int ret = dbhsmEncryptColumnsMapper.insertDbhsmEncryptColumns(dbhsmEncryptColumns);
         if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
             //oracle创建触发器
-            TransUtil.transEncryptColumns(conn, dbhsmEncryptColumnsAdd);
-            TransUtil.transFPEEncryptColumns(conn, dbhsmEncryptColumnsAdd);
+
+            if (DbConstants.SGD_SM4.equals(dbhsmEncryptColumnsAdd.getEncryptionAlgorithm())){
+                TransUtil.transEncryptColumns(conn, dbhsmEncryptColumnsAdd);
+            }else {
+                TransUtil.transFPEEncryptColumns(conn, dbhsmEncryptColumnsAdd);
+            }
         } else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
             //创建 SqlServer 触发器
             TransUtil.transEncryptColumnsToSqlServer(conn, dbhsmEncryptColumnsAdd);
@@ -235,7 +239,62 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
      * @return 结果
      */
     @Override
-    public int deleteDbhsmEncryptColumnsByIds(String[] ids) {
+    public int deleteDbhsmEncryptColumnsByIds(String[] ids) throws Exception {
+        for (int i = 0; i < ids.length; i++) {
+            DbhsmEncryptColumns encryptColumns = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsById(ids[i]);
+            if (encryptColumns == null){
+                log.error("未获取到ID为{}的加密列信息" + ids[i]);
+                continue;
+            }
+            DbhsmDbInstance instance = instanceMapper.selectDbhsmDbInstanceById(encryptColumns.getDbInstanceId());
+            DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
+            BeanUtils.copyProperties(instance, connDTO);
+            Connection connection = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
+            //如果是SQLserver需要删除对应的触发器
+            PreparedStatement preparedStatement = null;
+            Statement statement = null;
+            String algorithm = encryptColumns.getEncryptionAlgorithm();
+            String flag = DbConstants.SGD_SM4.equals(algorithm) ? "_" : "_fpe_";
+            if (Optional.ofNullable(connection).isPresent()) {
+                String sql = "",viewSql="";
+                try {
+                    if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
+                        sql = "DROP TRIGGER IF EXISTS tr_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
+                        viewSql="DROP VIEW IF EXISTS "+ encryptColumns.getDbUserName()+ ".v_" +encryptColumns.getDbTable();
+
+                    } else if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
+                        sql = "DROP TRIGGER " + encryptColumns.getDbUserName() + ".tr" + flag + encryptColumns.getDbUserName() + "_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
+                        viewSql="DROP VIEW "+ encryptColumns.getDbUserName()+ ".v_" +encryptColumns.getDbTable();
+                    }
+                    //执行删除触发器
+                    preparedStatement = connection.prepareStatement(sql);
+                    int resultSet = preparedStatement.executeUpdate();
+                    //执行删除视图(一个表只有一个视图，删除加密列配置同时删除视图可能会存在多个加密列情况重复删除问题，此时重复删除通过try-catch处理。
+                    try {
+                        statement= connection.createStatement();
+                        statement.execute(viewSql);
+                    } catch (SQLException throwables) {
+                        if(!throwables.getMessage().contains("不存在")) {
+                            throwables.printStackTrace();
+                        }
+                    }
+                } catch (SQLException e) {
+                    //触发器不存在异常不抛出，其他异常抛出
+                    if(!e.getMessage().contains("不存在")) {
+                        e.printStackTrace();
+                        throw new SQLException(e.getMessage());
+                    }
+                } finally {
+                    //释放资源
+                    if (preparedStatement != null) {
+                        preparedStatement.close();
+                    }
+                    if (connection != null) {
+                        connection.close();
+                    }
+                }
+            }
+        }
         return dbhsmEncryptColumnsMapper.deleteDbhsmEncryptColumnsByIds(ids);
     }
 
@@ -264,6 +323,17 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         Connection conn = null;
         List<Map<String, Object>> instancetTrees = new ArrayList<Map<String, Object>>();
         List<DbhsmDbInstance> instanceList = instanceMapper.selectDbhsmDbInstanceList(new DbhsmDbInstance());
+        if (StringUtils.isEmpty(instanceList)){
+            return AjaxResult2.success();
+        }
+
+
+        List<SysDictData> dictDatas = DictUtils.getDictCache(DbConstants.DB_TYPE);
+        if (StringUtils.isEmpty(dictDatas)){
+            dictDatas = addDefaultDb();
+        }
+
+
         for (int i = 0; i < instanceList.size(); i++) {
             instance = instanceList.get(i);
             try {
@@ -273,7 +343,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 Map<String, Object> instanceMap = new HashMap<String, Object>();
                 instanceMap.put("id", instance.getId());
                 instanceMap.put("pId", "0");
-                instanceMap.put("title", instance.getDatabaseServerName());
+                instanceMap.put("title", instance.getDatabaseServerName() + getDataBaseName(instance.getDatabaseType(),dictDatas));
                 instanceMap.put("level", 1);
                 instancetTrees.add(instanceMap);
 
@@ -403,5 +473,53 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             databaseType = DbConstants.DB_TYPE_MYSQL_DESC;
         }
         return databaseType + ":" + instance.getDatabaseIp() + ":" + instance.getDatabasePort() + instance.getDatabaseExampleType() + instance.getDatabaseServerName();
+    }
+
+
+    /**
+     * 添加默认数据库类型
+     * @return
+     */
+    private List<SysDictData> addDefaultDb() {
+        List<SysDictData> dictData = new ArrayList<>();
+        SysDictData oracle = new SysDictData();
+        oracle.setDictLabel(DbConstants.DB_TYPE_ORACLE_DESC);
+        oracle.setDictValue(DbConstants.DB_TYPE_ORACLE);
+        dictData.add(oracle);
+
+        SysDictData sqlserver = new SysDictData();
+        sqlserver.setDictLabel(DbConstants.DB_TYPE_SQLSERVER_DESC);
+        sqlserver.setDictValue(DbConstants.DB_TYPE_SQLSERVER);
+        dictData.add(sqlserver);
+
+        SysDictData mysql = new SysDictData();
+        mysql.setDictLabel(DbConstants.DB_TYPE_MYSQL_DESC);
+        mysql.setDictValue(DbConstants.DB_TYPE_MYSQL);
+        dictData.add(mysql);
+
+        SysDictData postgreSQL = new SysDictData();
+        postgreSQL.setDictLabel(DbConstants.DB_TYPE_POSTGRESQL_DESC);
+        postgreSQL.setDictValue(DbConstants.DB_TYPE_POSTGRESQL);
+        dictData.add(postgreSQL);
+        return dictData;
+    }
+
+    /**
+     * 获取数据库名
+     * @param databaseType
+     * @param dictDatas
+     * @return
+     */
+    private String getDataBaseName(String databaseType, List<SysDictData> dictDatas) {
+        if (StringUtils.isEmpty(databaseType)){
+            return "";
+        }
+        for (SysDictData dictData:dictDatas) {
+            if (databaseType.equals(dictData.getDictValue()) && StringUtils.isNotEmpty(dictData.getDictLabel())){
+                return "(" + dictData.getDictLabel() + ")";
+            }
+        }
+
+        return "";
     }
 }

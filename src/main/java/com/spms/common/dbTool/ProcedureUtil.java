@@ -31,7 +31,7 @@ public class ProcedureUtil {
         transSql.append("  length  IN NATURAL,\n");
         transSql.append("  ovalue OUT VARCHAR2)\n");
         transSql.append("AS EXTERNAL\n");
-        transSql.append("  LIBRARY " + dbaUser + "liboraextapi\n");
+        transSql.append("  LIBRARY " + dbaUser + ".liboraextapi\n");
         transSql.append("  NAME \"oci_trans_string_encrypt\"\n");
         transSql.append("  LANGUAGE C\n");
         transSql.append("  WITH CONTEXT\n");
@@ -87,7 +87,7 @@ public class ProcedureUtil {
         transSql.append("  ovalue OUT VARCHAR2,\n");
         transSql.append("  radix IN PLS_INTEGER)\n");
         transSql.append("AS EXTERNAL\n");
-        transSql.append("  LIBRARY " + dbaUser + "liboraextapi\n");
+        transSql.append("  LIBRARY " + dbaUser + ".liboraextapi\n");
         transSql.append("  NAME \"oci_trans_fpe_encrypt\"\n");
         transSql.append("  LANGUAGE C\n");
         transSql.append("  WITH CONTEXT\n");
@@ -143,7 +143,7 @@ public class ProcedureUtil {
         transSql.append("  length IN NATURAL,\n");
         transSql.append("  ovalue OUT VARCHAR2)\n");
         transSql.append("AS EXTERNAL\n");
-        transSql.append("  LIBRARY " + dbaUser + "liboraextapi\n");
+        transSql.append("  LIBRARY " + dbaUser + ".liboraextapi\n");
         transSql.append("  NAME \"oci_trans_string_decrypt\"\n");
         transSql.append("  LANGUAGE C\n");
         transSql.append("  WITH CONTEXT\n");
@@ -239,7 +239,7 @@ public class ProcedureUtil {
         transSql.append("  ovalue OUT VARCHAR2,\n");
         transSql.append("  radix IN PLS_INTEGER)\n");
         transSql.append("AS EXTERNAL\n");
-        transSql.append("  LIBRARY " + dbaUser + "liboraextapi\n");
+        transSql.append("  LIBRARY " + dbaUser + ".liboraextapi\n");
         transSql.append("  NAME \"oci_trans_fpe_decrypt\"\n");
         transSql.append("  LANGUAGE C\n");
         transSql.append("  WITH CONTEXT\n");

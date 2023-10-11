@@ -6,6 +6,7 @@ import com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsAdd;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsDto;
 
+import java.sql.SQLException;
 import java.util.List;
 
 /**
@@ -54,7 +55,7 @@ public interface IDbhsmEncryptColumnsService
      * @param ids 需要删除的数据库加密列主键集合
      * @return 结果
      */
-    public int deleteDbhsmEncryptColumnsByIds(String[] ids);
+    public int deleteDbhsmEncryptColumnsByIds(String[] ids) throws SQLException, Exception;
 
     /**
      * 删除数据库加密列信息
