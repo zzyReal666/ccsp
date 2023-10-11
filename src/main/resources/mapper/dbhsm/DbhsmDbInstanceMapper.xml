@@ -24,6 +24,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <resultMap id="InstanceServerNameResultVO" type="com.spms.dbhsm.dbInstance.domain.VO.InstanceServerNameVO">
         <result column="id" property="id"/>
         <result column="label" property="label"/>
+        <result property="databaseType"    column="database_type"    />
     </resultMap>
     <sql id="selectDbhsmDbInstanceVo">
         select id, database_type, database_ip, database_port, database_server_name, database_example_type, database_dba, database_dba_password, password_service_ip, password_service_port, create_time, update_time, secret_service, database_edition, user_create_mode from dbhsm_db_instance
@@ -54,7 +55,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </select>
 
     <select id="listDbInstanceSelect" resultMap="InstanceServerNameResultVO">
-        select id,database_server_name label
+        select id,database_server_name label,database_type
         from dbhsm_db_instance
     </select>
     <select id="selectDbhsmDbInstanceByUserId" parameterType="Long" resultMap="DbhsmDbInstanceResult">

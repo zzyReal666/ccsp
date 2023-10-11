@@ -177,6 +177,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
     private DbhsmDbUser getDbUser(ResultSet resultSet, DbhsmDbInstance instance, DbInstanceGetConnDTO connDTO, List<DbhsmDbUser> dbhsmDbUsers) throws SQLException, ZAYKException, ParseException {
         DbhsmDbUser dbUser = new DbhsmDbUser();
         String dbType = instance.getDatabaseType();
+        dbUser.setDatabaseType(dbType);
         switch (dbType) {
             case DbConstants.DB_TYPE_ORACLE:
                 dbUser.setUserName(resultSet.getString("userName"));
@@ -207,17 +208,22 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         dbUser.setIsSelfBuilt(DbConstants.IS_NOT_SELF_BUILT);
         //遍历数据库中的用户，如果和查询出的用户名一致说明为web端创建，设置其is_self_built属性值为0
         for (DbhsmDbUser user : dbhsmDbUsers) {
+            if(!user.getDatabaseType().equals(dbUser.getDatabaseType())){
+                continue;
+            }
             //从被管理的数据库中查询的用户信息与管理端数据库中的用户信息进匹配
             String userName = user.getUserName();
             if(instance.getDatabaseType().equals(DbConstants.DB_TYPE_ORACLE)){
                 userName = user.getUserName().toUpperCase();
             }
-            if (dbUser.getUserName().equals(userName) && instance.getId().equals(user.getDatabaseInstanceId())) {
+            if (dbUser.getUserName().equals(userName) && instance.getDatabaseType().equals(user.getDatabaseType())) {
                 dbUser.setIsSelfBuilt(DbConstants.IS_SELF_BUILT);
-                DbhsmPermissionGroup permissionGroup = dbhsmPermissionGroupMapper.selectDbhsmPermissionGroupByPermissionGroupId(user.getPermissionGroupId());
-                PermissionGroupForUserDto permissionGroupForUser = new PermissionGroupForUserDto();
-                BeanUtils.copyProperties(permissionGroup, permissionGroupForUser);
-                dbUser.setPermissionGroupForUserDto(permissionGroupForUser);
+                if(!ObjectUtils.isEmpty(user.getPermissionGroupId())) {
+                    DbhsmPermissionGroup permissionGroup = dbhsmPermissionGroupMapper.selectDbhsmPermissionGroupByPermissionGroupId(user.getPermissionGroupId());
+                    PermissionGroupForUserDto permissionGroupForUser = new PermissionGroupForUserDto();
+                    BeanUtils.copyProperties(permissionGroup, permissionGroupForUser);
+                    dbUser.setPermissionGroupForUserDto(permissionGroupForUser);
+                }
                 dbUser.setId(user.getId());
             }
         }
@@ -239,6 +245,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
             return 0;
         }
         String dbType = instance.getDatabaseType();
+        dbhsmDbUser.setDatabaseType(dbType);
         switch (dbType) {
             case DbConstants.DB_TYPE_ORACLE:
                 return insertOracleUser(dbhsmDbUser, instance);
@@ -276,16 +283,27 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                     }
                 }
                 //根据权限组id查询权限组对应的所有权限SQL：
-                List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
+                //List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
                 //赋权
-                for (int i = 0; i < permissionsSqlList.size(); i++) {
-                    if (!(permissionsSqlList.get(i).toLowerCase().startsWith("grant") && !(permissionsSqlList.get(i).toLowerCase().startsWith("revoke")))) {
-                        log.info("不支持的授权SQL:" + permissionsSqlList.get(i));
-                        throw new ZAYKException("不支持的授权SQL:" + permissionsSqlList.get(i));
-                    }
-                    sql = permissionsSqlList.get(i).trim() + " on " + instance.getDatabaseServerName() + ".* to '" + username + "'@'%'";
+                String permissionsSql = null;
+                try {
+                    //for (String permission : permissionsSqlList) {
+                    //    permissionsSql = permission.toLowerCase();
+                    //    if (!(permissionsSql.startsWith("grant") && !(permissionsSql.startsWith("revoke")))) {
+                    //        log.info("不支持的授权SQL:" + permissionsSql);
+                    //        throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
+                    //    }
+                    //    sql = permission.trim() + " on " + instance.getDatabaseServerName() + ".* to '" + username + "'@'%'";
+                    //    preparedStatement = connection.prepareStatement(sql);
+                    //    preparedStatement.executeUpdate();
+                    //}
+                    sql = " GRANT ALL ON  " + instance.getDatabaseServerName() + ".* TO  " + username;
                     preparedStatement = connection.prepareStatement(sql);
                     preparedStatement.executeUpdate();
+                } catch (SQLException throwables) {
+                    throwables.printStackTrace();
+                    throw new ZAYKException("授权失败!");
+                    //throw new ZAYKException("授权失败!不支持的授权SQL: " + permissionsSql);
                 }
                 sql ="FLUSH PRIVILEGES;";
                 preparedStatement = connection.prepareStatement(sql);
@@ -300,7 +318,6 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
 
             }
         } catch (SQLException e) {
-            log.error(e.getMessage());
             e.printStackTrace();
             throw new ZAYKException(e.getMessage());
         } finally {
@@ -537,12 +554,14 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         //标记为创建的是普通用户
         dbhsmDbUser.setUserRole(DbConstants.ORDINARY_USERS);
         dbhsmDbUser.setCreated(new Date());
-        dbhsmDbUsersMapper.insertDbhsmDbUsers(dbhsmDbUser);
+        int i = dbhsmDbUsersMapper.insertDbhsmDbUsers(dbhsmDbUser);
         //新增用户与权限组对应关系
-        DbhsmUserPermissionGroup permissionGroup = new DbhsmUserPermissionGroup();
-        permissionGroup.setUserId(dbhsmDbUser.getId());
-        permissionGroup.setPermissionGroupId(dbhsmDbUser.getPermissionGroupId());
-        int i = dbhsmUserPermissionGroupMapper.insertDbhsmUserPermissionGroup(permissionGroup);
+        if(dbhsmDbUser.getDatabaseType().equals(DbConstants.DB_TYPE_ORACLE)){
+            DbhsmUserPermissionGroup permissionGroup = new DbhsmUserPermissionGroup();
+            permissionGroup.setUserId(dbhsmDbUser.getId());
+            permissionGroup.setPermissionGroupId(dbhsmDbUser.getPermissionGroupId());
+            dbhsmUserPermissionGroupMapper.insertDbhsmUserPermissionGroup(permissionGroup);
+        }
         return i;
     }
 
@@ -634,17 +653,6 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         }
     }
 
-    public static void main(String[] args) {
-        DbhsmEncryptColumns encryptColumns = new DbhsmEncryptColumns();
-        encryptColumns.setDbUserName("dbhsm_user");
-        DbhsmEncryptColumns encryptColumns2 = new DbhsmEncryptColumns();
-        encryptColumns2.setDbUserName("dbhsm_user");
-        List<DbhsmEncryptColumns> list =new ArrayList<>();
-        list.add(encryptColumns);
-        //list.add(encryptColumns2);
-        String collect = list.stream().map(DbhsmEncryptColumns::getDbUserName).collect(Collectors.joining(","));
-        System.out.println(collect);
-    }
     /**
      * 删除数据库用户信息
      *

@@ -23,16 +23,18 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="userRole"    column="user_role"    />
         <result property="tableSpace"    column="table_space"    />
         <result property="encLibapiPath"    column="enc_libapi_path"    />
+        <result property="databaseType"    column="database_type"    />
     </resultMap>
 
     <sql id="selectDbhsmDbUsersVo">
-        select id, user_id, permission_group_id, database_instance_id, user_name, password, created, common, oracle_maintained, inherited, default_collation, implicit, all_shard, secret_service, is_self_built, user_role, table_space, enc_libapi_path from dbhsm_db_user
+        select id, user_id, permission_group_id, database_instance_id, user_name, password, created, common, oracle_maintained, inherited, default_collation, implicit, all_shard, secret_service, is_self_built, user_role, table_space, enc_libapi_path,database_type  from dbhsm_db_user
     </sql>
 
     <select id="selectDbhsmDbUsersList" parameterType="com.spms.dbhsm.dbUser.domain.DbhsmDbUser" resultMap="DbhsmDbUsersResult">
         <include refid="selectDbhsmDbUsersVo"/>
         <where>
             <if test="userName != null  and userName != ''"> and user_name like concat('%', #{userName}, '%')</if>
+            <if test="databaseType != null "> and database_type = #{databaseType}</if>
         </where>
         order by id desc
     </select>
@@ -62,7 +64,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="userRole != null">user_role,</if>
             <if test="tableSpace != null">table_space,</if>
             <if test="encLibapiPath != null">enc_libapi_path,</if>
-         </trim>
+            <if test="databaseType != null">database_type,</if>
+        </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="userId != null">#{userId},</if>
             <if test="permissionGroupId != null">#{permissionGroupId},</if>
@@ -81,7 +84,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="userRole != null">#{userRole},</if>
             <if test="tableSpace != null">#{tableSpace},</if>
             <if test="encLibapiPath != null">#{encLibapiPath},</if>
-         </trim>
+            <if test="databaseType != null">#{databaseType},</if>
+        </trim>
     </insert>
 
     <update id="updateDbhsmDbUsers" parameterType="com.spms.dbhsm.dbUser.domain.DbhsmDbUser">

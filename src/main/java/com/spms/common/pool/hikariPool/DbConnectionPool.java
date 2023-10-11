@@ -5,6 +5,7 @@ import com.spms.common.constant.DbConstants;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.pool.HikariPool;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
@@ -54,10 +55,13 @@ public class DbConnectionPool {
         config.setMaximumPoolSize(MAX_CONNECTIONS);
         try {
             return new HikariDataSource(config);
+        }catch (HikariPool.PoolInitializationException e){
+            log.info("Could not create HikariCP data source");
+            throw new RuntimeException("创建连接池失败！"+databaseIp+":"+databasePort+e.getMessage(), e);
         } catch (Exception e) {
             e.printStackTrace();
             log.info("Could not create HikariCP data source");
-            throw new RuntimeException(e.getMessage(), e);
+            throw new RuntimeException("连接池创建失败！"+e.getMessage(), e);
         }
     }
 

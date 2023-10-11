@@ -84,6 +84,7 @@ public class DbhsmDbUser extends BaseEntity
     @Excel(name = "加密插件地址")
     private String encLibapiPath;
 
+    /**用户所属数据库类型*/
     private String databaseType;
 
     public String getDatabaseType() {

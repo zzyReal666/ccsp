@@ -142,13 +142,14 @@ public class DbhsmPermissionGroupServiceImpl implements IDbhsmPermissionGroupSer
     @Override
     public String checkPermissionGroupNameUnique(Long permissionGroupId,String permissionGroupName) {
         DbhsmPermissionGroup dbhsmPermissionGroup = dbhsmPermissionGroupMapper.checkPermissionGroupNameUnique(permissionGroupName);
+        if (permissionGroupId != null && permissionGroupId.intValue() == dbhsmPermissionGroup.getPermissionGroupId().intValue()) {
+            return DbConstants.DBHSM_GLOBLE_UNIQUE;
+        }
         if (StringUtils.isNotNull(dbhsmPermissionGroup)){
             return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
         }
 
-        if (permissionGroupId != null && permissionGroupId.intValue() == dbhsmPermissionGroup.getPermissionGroupId().intValue()) {
-            return DbConstants.DBHSM_GLOBLE_UNIQUE;
-        }
+
         return DbConstants.DBHSM_GLOBLE_UNIQUE;
     }
 

@@ -29,4 +29,8 @@ public class InstanceServerNameVO
      */
     @ApiModelProperty(value = "是否被选中")
     private boolean check;
+
+    /** 数据库类型 */
+    @ApiModelProperty(value = "数据库类型")
+    private String databaseType;
 }
