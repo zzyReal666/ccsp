@@ -46,7 +46,7 @@ public interface IDbhsmDbInstanceService
      * @param dbhsmDbInstance 数据库实例
      * @return 结果
      */
-    public int insertDbhsmDbInstance(DbhsmDbInstance dbhsmDbInstance) throws ZAYKException, SQLException;
+    public int insertDbhsmDbInstance(DbhsmDbInstance dbhsmDbInstance) throws ZAYKException;
 
     /**
      * 修改数据库实例

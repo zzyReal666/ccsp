@@ -10,7 +10,16 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
 import java.sql.*;
-
+/**
+ *  增加新的数据库后需要增加的内容：
+ *  1设置JdbcUrl
+ *  2创建数据库连接池key类继承DbInstancePoolKeyDTO
+ *  3 更改DbConnectionPoolFactory.getDbInstancePoolKeyDTO()方法，添加数据库类型
+ *  4 DbConstants类增加数据库常量类型和
+ *  5 web:web界面增加数据库字典类型 实例界面添加新增的字典，更改getDbEditionsDic()方法
+ *  6 增加版本号字典值
+ *  7 pom文件添加数据库驱动依赖
+ * */
 @Slf4j
 public class DbConnectionPool {
     private static DataSource dataSource;
@@ -39,6 +48,9 @@ public class DbConnectionPool {
                 break;
             case DbConstants.DB_TYPE_MYSQL:
                 config.setJdbcUrl("jdbc:mysql://" + databaseIp + ":" + databasePort + "/" + databaseServerName);
+                break;
+            case DbConstants.DB_TYPE_POSTGRESQL:
+                config.setJdbcUrl("jdbc:postgresql://" + databaseIp + ":" + databasePort + "/" + databaseServerName);
                 break;
             default:
                 throw new IllegalArgumentException("Unsupported database type: " + databaseType);
@@ -92,11 +104,11 @@ public class DbConnectionPool {
         //instance.setDatabaseDba("user55");
         //instance.setDatabaseDbaPassword("12345678");
         instance.setDatabaseType(DbConstants.DB_TYPE_SQLSERVER);
-        instance.setDatabaseIp("192.168.7.177");
-        instance.setDatabasePort("1433");
-        instance.setDatabaseServerName("dbtest");
+        instance.setDatabaseIp("192.168.6.212");
+        instance.setDatabasePort("5432");
+        instance.setDatabaseServerName("pgDB");
         instance.setDatabaseExampleType(":");
-        instance.setDatabaseDba("sa");
+        instance.setDatabaseDba("postgres");
         instance.setDatabaseDbaPassword("12345678");
         DbConnectionPoolFactory factory = new DbConnectionPoolFactory();
         Connection connection = factory.getConnection(instance);

@@ -114,7 +114,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public int insertDbhsmDbInstance(DbhsmDbInstance dbhsmDbInstance) throws ZAYKException, SQLException {
+    public int insertDbhsmDbInstance(DbhsmDbInstance dbhsmDbInstance) throws ZAYKException {
         int i = 0;
         //数据类型为oracle
         if(DbConstants.DB_TYPE_ORACLE.equals(dbhsmDbInstance.getDatabaseType())) {

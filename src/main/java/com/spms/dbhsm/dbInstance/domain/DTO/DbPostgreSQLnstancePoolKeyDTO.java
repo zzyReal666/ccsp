@@ -1,5 +1,6 @@
 package com.spms.dbhsm.dbInstance.domain.DTO;
 
+import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import lombok.Builder;
 import lombok.Data;
 
@@ -11,7 +12,7 @@ import lombok.Data;
  */
 @Data
 @Builder
-public class DbOracleInstancePoolKeyDTO extends DbInstancePoolKeyDTO
+public class DbPostgreSQLnstancePoolKeyDTO extends DbInstancePoolKeyDTO
 {
     /** 数据库类型 */
     private String databaseType;
@@ -25,20 +26,17 @@ public class DbOracleInstancePoolKeyDTO extends DbInstancePoolKeyDTO
     /** 数据库服务名 */
     private String databaseServerName;
 
-    /** 实例类型 */
-    private String databaseExampleType;
-
     /** 数据库DBA */
     private String databaseDba;
 
-    public DbOracleInstancePoolKeyDTO() {}
+    public DbPostgreSQLnstancePoolKeyDTO() {
+    }
 
-    public DbOracleInstancePoolKeyDTO(String databaseType, String databaseIp, String databasePort, String databaseServerName, String databaseExampleType, String databaseDba) {
+    public DbPostgreSQLnstancePoolKeyDTO(String databaseType, String databaseIp, String databasePort, String databaseServerName, String databaseDba) {
         this.databaseType = databaseType;
         this.databaseIp = databaseIp;
         this.databasePort = databasePort;
         this.databaseServerName = databaseServerName;
-        this.databaseExampleType = databaseExampleType;
         this.databaseDba = databaseDba;
     }
 
@@ -47,11 +45,11 @@ public class DbOracleInstancePoolKeyDTO extends DbInstancePoolKeyDTO
         if (this == o) {
             return true;
         }
-        if (!(o instanceof DbOracleInstancePoolKeyDTO)) {
+        if (!(o instanceof DbPostgreSQLnstancePoolKeyDTO)) {
             return false;
         }
 
-        DbOracleInstancePoolKeyDTO that = (DbOracleInstancePoolKeyDTO) o;
+        DbPostgreSQLnstancePoolKeyDTO that = (DbPostgreSQLnstancePoolKeyDTO) o;
 
         if (getDatabaseType() != null ? !getDatabaseType().equals(that.getDatabaseType()) : that.getDatabaseType() != null) {
             return false;
@@ -65,9 +63,6 @@ public class DbOracleInstancePoolKeyDTO extends DbInstancePoolKeyDTO
         if (getDatabaseServerName() != null ? !getDatabaseServerName().equals(that.getDatabaseServerName()) : that.getDatabaseServerName() != null) {
             return false;
         }
-        if (getDatabaseExampleType() != null ? !getDatabaseExampleType().equals(that.getDatabaseExampleType()) : that.getDatabaseExampleType() != null) {
-            return false;
-        }
         return getDatabaseDba() != null ? getDatabaseDba().equals(that.getDatabaseDba()) : that.getDatabaseDba() == null;
     }
 
@@ -77,7 +72,6 @@ public class DbOracleInstancePoolKeyDTO extends DbInstancePoolKeyDTO
         result = 31 * result + (getDatabaseIp() != null ? getDatabaseIp().hashCode() : 0);
         result = 31 * result + (getDatabasePort() != null ? getDatabasePort().hashCode() : 0);
         result = 31 * result + (getDatabaseServerName() != null ? getDatabaseServerName().hashCode() : 0);
-        result = 31 * result + (getDatabaseExampleType() != null ? getDatabaseExampleType().hashCode() : 0);
         result = 31 * result + (getDatabaseDba() != null ? getDatabaseDba().hashCode() : 0);
         return result;
     }

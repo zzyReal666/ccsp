@@ -134,6 +134,8 @@ public class DbConnectionPoolFactory {
             dbInstancekey = new DbSQLServernstancePoolKeyDTO();
         } else if (databaseType.equals(DbConstants.DB_TYPE_MYSQL)) {
             dbInstancekey = new DbMySQLnstancePoolKeyDTO();
+        } else if (databaseType.equals(DbConstants.DB_TYPE_POSTGRESQL)) {
+            dbInstancekey = new DbPostgreSQLnstancePoolKeyDTO();
         } else {
             log.info("Error:未实现的数据库类型");
         }

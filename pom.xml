@@ -54,7 +54,12 @@
             <artifactId>mssql-jdbc</artifactId>
             <version>10.2.0.jre8</version>
         </dependency>
-
+        <!-- postgresql 数据库依赖-->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.6.0</version>
+        </dependency>
         <!-- CCSP Common DataSource -->
         <dependency>
             <groupId>ccsp</groupId>

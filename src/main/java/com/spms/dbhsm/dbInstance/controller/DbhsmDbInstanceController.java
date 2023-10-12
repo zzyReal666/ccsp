@@ -19,7 +19,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
-import java.sql.SQLException;
 import java.util.List;
 
 /**
@@ -105,7 +104,7 @@ public class DbhsmDbInstanceController extends BaseController
     {
         try {
             dbhsmDbInstanceService.insertDbhsmDbInstance(dbhsmDbInstance);
-        }catch (ZAYKException | SQLException e){
+        }catch (ZAYKException e){
             log.info("新增数据库实例失败！"+e.getMessage());
             return AjaxResult2.error("新增数据库实例失败！"+e.getMessage());
         }

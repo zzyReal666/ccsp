@@ -1,6 +1,5 @@
 package com.spms.dbhsm.dbInstance.domain.DTO;
 
-import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import lombok.Builder;
 import lombok.Data;
 
@@ -76,12 +75,5 @@ public class DbSQLServernstancePoolKeyDTO extends DbInstancePoolKeyDTO
         return result;
     }
 
-    public static DbSQLServernstancePoolKeyDTO getInstancePoolKeyDTO(DbhsmDbInstance instance){
-        return DbSQLServernstancePoolKeyDTO.builder()
-                .databaseType(instance.getDatabaseType())
-                .databaseIp(instance.getDatabaseIp())
-                .databasePort(instance.getDatabasePort())
-                .databaseServerName(instance.getDatabaseServerName())
-                .build();
-    }
+
 }

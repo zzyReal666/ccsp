@@ -26,6 +26,7 @@ public class DbConstants {
     public static final String DB_MYSQL_CLASS_NAME =  "com.mysql.cj.jdbc.Driver";
     /**字典类型*/
     public static final String DBHSM_DB_TYPE = "dbhsm_db_type";
+    public static final String DB_SQL_POSTGRESQL_USER_QUERY = "select  * from pg_user";
     //密码卡类型
     public static String cryptoCardType = "cryptoCardType";
     //三未信安
