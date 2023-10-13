@@ -33,7 +33,7 @@ public class DbhsmEncryptColumnsController extends BaseController
     /**
      * 查询数据库加密列列表
      */
-    @RequiresPermissions("dbhsm:encryptcolumns:list")
+//    @RequiresPermissions("dbhsm:encryptcolumns:list")
     @GetMapping("/list")
     public AjaxResult list(DbhsmEncryptColumnsDto dbhsmEncryptColumns)
     {
