@@ -245,7 +245,7 @@ public class TransUtil {
 
         log.info("创建Mysql触发器start");
         //获取网口ip
-        StringBuffer transSql = new StringBuffer("CREATE OR REPLACE TRIGGER tri_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns() + " before insert\n");
+        StringBuffer transSql = new StringBuffer("CREATE TRIGGER tri_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns() + " before insert\n");
         transSql.append("on " + encryptColumns.getDatabaseServerName() + "." + encryptColumns.getDbTable() + "\n");
         transSql.append("for each row\n");
         transSql.append("set NEW." + encryptColumns.getEncryptColumns() + " = StringEncrypt(NEW." + encryptColumns.getEncryptColumns() + ",0)");

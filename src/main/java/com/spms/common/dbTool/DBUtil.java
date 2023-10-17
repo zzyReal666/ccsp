@@ -19,6 +19,9 @@ public final class DBUtil {
      * 查询获取数据库所有表名
      */
     public static List<String> findAllTables(Connection conn, String userName,String dbType) {
+        return findAllTables(conn,userName,dbType,"");
+    }
+    public static List<String> findAllTables(Connection conn, String userName,String dbType,String dbName) {
         Statement stmt = null;
         List<String> tableNamesList = new ArrayList<String>();
         try {
@@ -33,6 +36,13 @@ public final class DBUtil {
                 ResultSet resultSet = stmt.executeQuery(DbConstants.DB_SQL_SQLSERVER_TABLE_QUERY);
                 while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
                     tableNamesList.add(resultSet.getString("name"));
+                }
+                resultSet.close();
+            }else  if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(dbType)){
+                String sql = "SELECT table_name as table_name FROM information_schema.tables WHERE table_schema = '" + dbName + "' and table_type = 'BASE TABLE'";
+                ResultSet resultSet = stmt.executeQuery(sql);
+                while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
+                    tableNamesList.add(resultSet.getString("table_name"));
                 }
                 resultSet.close();
             }
@@ -105,11 +115,11 @@ public final class DBUtil {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-            }else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(dbType)){
+            }else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(dbType)){
                 Statement stmt = null;
                 try {
                     stmt = conn.createStatement();
-                    ResultSet resultSet = stmt.executeQuery("DESCRIBE " + tableName.toUpperCase());
+                    ResultSet resultSet = stmt.executeQuery("DESCRIBE " + tableName);
                     while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
                         Map<String,String> colMap =new HashMap<>();
                         colMap.put(DbConstants.DB_COLUMN_NAME, resultSet.getString("Field"));
