@@ -73,4 +73,6 @@ public interface IDbhsmDbInstanceService
     public int deleteDbhsmDbInstanceById(Long id);
 
     List<SelectOption>  getDbTablespace(Long id);
+
+    List<SelectOption> getDbSchema(Long id);
 }

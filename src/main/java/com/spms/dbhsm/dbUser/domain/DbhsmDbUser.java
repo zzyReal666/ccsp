@@ -87,6 +87,17 @@ public class DbhsmDbUser extends BaseEntity
     /**用户所属数据库类型*/
     private String databaseType;
 
+    /**PostgreSQL 用户 schema*/
+    private String schema;
+
+    public String getSchema() {
+        return schema;
+    }
+
+    public void setSchema(String schema) {
+        this.schema = schema;
+    }
+
     public String getDatabaseType() {
         return databaseType;
     }

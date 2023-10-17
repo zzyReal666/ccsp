@@ -1,5 +1,6 @@
 package com.spms.common.dbTool;
 
+import com.spms.dbhsm.dbUser.domain.DbhsmDbUser;
 import lombok.extern.slf4j.Slf4j;
 
 import java.sql.Connection;
@@ -482,4 +483,92 @@ public class ProcedureUtil {
         }
     }
 
+    public static void pgextFuncStringEncrypt(Connection connection,DbhsmDbUser dbhsmDbUser) throws SQLException {
+        /***
+         *
+         * 创建PostgreSQL加密函数
+         * CREATE OR REPLACE FUNCTION
+         * testuser1. pgext_func_string_encrypt (varchar)
+         *
+         * RETURNS varchar
+         * AS 'D:\pgsql\postgreSQL', 'pgext_func_string_encrypt'
+         * LANGUAGE C STRICT;
+         *
+         *
+         */
+        StringBuilder transSQL = new StringBuilder();
+        transSQL.append("CREATE OR REPLACE FUNCTION ");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append(dbhsmDbUser.getSchema() + ".pgext_func_string_encrypt (varchar)");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("RETURNS varchar");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("AS '" + dbhsmDbUser.getEncLibapiPath()+"', 'pgext_func_string_encrypt'");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append(" LANGUAGE C STRICT;");
+        transSQL.append(System.getProperty("line.separator"));
+
+        PreparedStatement preparedStatement = null;
+        try {
+            log.info("PostgreSQL create pgext_func_string_encrypt:\n" + transSQL);
+            preparedStatement = connection.prepareStatement(transSQL.toString());
+            preparedStatement.execute();
+            connection.commit();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (preparedStatement != null) {
+                preparedStatement.close();
+            }
+        }
+    }
+
+    public static void pgextFuncStringDecrypt(Connection connection, DbhsmDbUser dbhsmDbUser) throws SQLException {
+        /***
+         * 创建PostgreSQL解密函数
+         * CREATE OR REPLACE FUNCTION
+         * testuser1.pgext_func_string_decrypt(varchar)
+         * RETURNS varchar
+         *
+         * AS 'D:\pgsql\postgreSQL', 'pgext_func_string_decrypt'
+         * LANGUAGE C STRICT;
+         *
+         *
+         *
+         */
+        StringBuilder transSQL = new StringBuilder();
+        transSQL.append("CREATE OR REPLACE FUNCTION ");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append(dbhsmDbUser.getSchema() + ".pgext_func_string_decrypt(varchar)");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("RETURNS varchar");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("AS '" + dbhsmDbUser.getEncLibapiPath()+"', 'pgext_func_string_decrypt'");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append(" LANGUAGE C STRICT;");
+        transSQL.append(System.getProperty("line.separator"));
+
+        PreparedStatement preparedStatement = null;
+        try {
+            log.info("PostgreSQL create pgext_func_string_encrypt:" + transSQL);
+            preparedStatement = connection.prepareStatement(transSQL.toString());
+            preparedStatement.execute();
+            connection.commit();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new SQLException(e);
+        } finally {
+            if (preparedStatement != null) {
+                preparedStatement.close();
+            }
+        }
+    }
 }

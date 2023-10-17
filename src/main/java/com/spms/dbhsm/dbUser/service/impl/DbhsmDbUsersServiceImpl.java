@@ -271,6 +271,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         String sqlCreateUser,username, password, sql;
         PreparedStatement preparedStatement = null;
         Connection connection = null;
+        Long permissionGroupId = dbhsmDbUser.getPermissionGroupId();
         //根据实例获取数据库连接
         try {
             connection = DbConnectionPoolFactory.getInstance().getConnection(instance);
@@ -281,7 +282,6 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 sqlCreateUser="CREATE USER \"" + username + "\" WITH PASSWORD '" + password + "'";
                 preparedStatement = connection.prepareStatement(sqlCreateUser);
                 boolean execute = preparedStatement.execute();
-                connection.commit();
                 if(!execute){
                     int result = insertDbUsers(dbhsmDbUser);
                     if (result != 1) {
@@ -289,14 +289,28 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                         throw new ZAYKException("创建用户失败!");
                     }
                 }
+                //根据权限组id查询权限组对应的所有权限SQL：
+                List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
+                //赋权
+                String permissionsSql = null;
                 try {
-                    sql = "GRANT ALL PRIVILEGES ON DATABASE \"" + instance.getDatabaseServerName() + "\" TO \"" + username + "\"";
-                    preparedStatement = connection.prepareStatement(sql);
-                    preparedStatement.executeUpdate();
+                    for (String permission : permissionsSqlList) {
+                        permissionsSql = permission.toLowerCase();
+                        if (!(permissionsSql.startsWith("grant") && !(permissionsSql.startsWith("revoke")))) {
+                            log.info("不支持的授权SQL:" + permissionsSql);
+                            throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
+                        }
+                        sql = permission.trim() + " ON ALL TABLES IN SCHEMA " + dbhsmDbUser.getSchema() + " to \"" + username + "\"";
+                        preparedStatement = connection.prepareStatement(sql);
+                        preparedStatement.executeUpdate();
+                    }
                     connection.commit();
+                    //加解密函数
+                    ProcedureUtil.pgextFuncStringEncrypt(connection, dbhsmDbUser);
+                    ProcedureUtil.pgextFuncStringDecrypt(connection, dbhsmDbUser);
                 } catch (SQLException throwables) {
                     throwables.printStackTrace();
-                    throw new ZAYKException("授权失败!");
+                    throw new ZAYKException("授权失败!"+ throwables.getMessage());
                 }
             }
         } catch (SQLException | ZAYKException e) {
@@ -338,7 +352,6 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 sqlCreateUser = "CREATE USER '" + username + "' @'%' IDENTIFIED BY '" + password + "'";
                 preparedStatement = connection.prepareStatement(sqlCreateUser);
                 boolean execute = preparedStatement.execute();
-                connection.commit();
                 if(!execute){
                     int result = insertDbUsers(dbhsmDbUser);
                     if (result != 1) {
@@ -347,24 +360,23 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                     }
                 }
                 //根据权限组id查询权限组对应的所有权限SQL：
-                //List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
+                List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
                 //赋权
-                //String permissionsSql = null;
+                String permissionsSql = null;
                 try {
-                    //for (String permission : permissionsSqlList) {
-                    //    permissionsSql = permission.toLowerCase();
-                    //    if (!(permissionsSql.startsWith("grant") && !(permissionsSql.startsWith("revoke")))) {
-                    //        log.info("不支持的授权SQL:" + permissionsSql);
-                    //        throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
-                    //    }
-                    //    sql = permission.trim() + " on " + instance.getDatabaseServerName() + ".* to '" + username + "'@'%'";
-                    //    preparedStatement = connection.prepareStatement(sql);
-                    //    preparedStatement.executeUpdate();
-                    //}
-                    sql = " GRANT ALL ON  " + instance.getDatabaseServerName() + ".* TO  " + username;
-                    preparedStatement = connection.prepareStatement(sql);
-                    preparedStatement.executeUpdate();
-                    connection.commit();
+                    for (String permission : permissionsSqlList) {
+                        permissionsSql = permission.toLowerCase();
+                        if (!(permissionsSql.startsWith("grant") && !(permissionsSql.startsWith("revoke")))) {
+                            log.info("不支持的授权SQL:" + permissionsSql);
+                            throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
+                        }
+                        sql = permission.trim() + " on " + instance.getDatabaseServerName() + ".* to '" + username + "'@'%'";
+                        preparedStatement = connection.prepareStatement(sql);
+                        preparedStatement.executeUpdate();
+                    }
+                    //sql = " GRANT ALL ON  " + instance.getDatabaseServerName() + ".* TO  " + username;
+                    //preparedStatement = connection.prepareStatement(sql);
+                    //preparedStatement.executeUpdate();
                 } catch (SQLException throwables) {
                     throwables.printStackTrace();
                     throw new ZAYKException("授权失败!"+throwables.getMessage());
@@ -400,7 +412,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
     }
 
     int insertSqlServerlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException {
-        String sqlCreateLoginName, sqlCreateUser, sqlEmpowerment;
+        String sqlCreateLoginName, sqlCreateUser, sqlEmpowerment,sql;
         String username;
         String password;
         PreparedStatement preparedStatement = null;
@@ -472,6 +484,28 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 preparedStatement = connection.prepareStatement(sqlEmpowerment);
                 log.info(sqlEmpowerment);
                 connection.commit();
+
+                Long permissionGroupId = dbhsmDbUser.getPermissionGroupId();
+                //根据权限组id查询权限组对应的所有权限SQL：
+                List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
+                //赋权
+                String permissionsSql = null;
+                try {
+                    for (String permission : permissionsSqlList) {
+                        permissionsSql = permission.toLowerCase();
+                        if (!(permissionsSql.startsWith("grant") && !(permissionsSql.startsWith("revoke")))) {
+                            log.info("不支持的授权SQL:" + permissionsSql);
+                            throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
+                        }
+                        sql = "USE " + dbName + " ;" + permission.trim() + " on " + instance.getDatabaseServerName() + ".* to " + username;
+                        preparedStatement = connection.prepareStatement(sql);
+                        preparedStatement.executeUpdate();
+                    }
+                    connection.commit();
+                } catch (SQLException throwables) {
+                    throwables.printStackTrace();
+                    throw new ZAYKException("授权失败!"+throwables.getMessage());
+                }
             }
         } catch (SQLException e) {
             log.error(e.getMessage());
@@ -540,6 +574,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                     preparedStatement = conn.prepareStatement(sql);
                     executeUpdate = preparedStatement.executeUpdate();
                 }
+                conn.commit();
 
                 //加密
                 ProcedureUtil.cOciTransStringEncrypt(conn, instance.getDatabaseDba(), username);
@@ -551,7 +586,6 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 ProcedureUtil.cOciTransFpeDecryptF(conn, username);
                 //FPE解密
                 ProcedureUtil.cOciTransFPEDecrypt(conn, instance.getDatabaseDba(), username);
-                conn.setAutoCommit(false);
                 conn.commit();
 
                 //赋执行库文件liboraextapi的权限
@@ -564,6 +598,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 log.info("赋执行库文件liboraextapi的权限给用户 sql: {}", sql);
                 preparedStatement = conn.prepareStatement(sql);
                 preparedStatement.execute();
+                conn.commit();
             }
         } catch (ZAYKException e) {
             e.printStackTrace();
@@ -676,7 +711,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                             break;
                         case DbConstants.DB_TYPE_POSTGRESQL:
                             sql = "drop OWNED BY \"" + userName + "\"";
-                            sqlTemp ="drop role \"" + userName + "\"";
+                            sqlTemp ="drop user \"" + userName + "\"";
                             break;
                         default:
                             throw new ZAYKException("暂不支持的数据库类型： " + instance.getDatabaseType());

@@ -50,8 +50,8 @@ public class DbhsmDbInstanceController extends BaseController
      * 查询数据库实例列表
      */
     @RequiresPermissions("dbhsm:dbInstance:list")
-    @GetMapping("/getSecretServiceAndDbSpace")
-    public AjaxResult getSecretServiceAndDbSpace(Long id)
+    @GetMapping("/getDbInfo")
+    public AjaxResult getDbInfo(Long id)
     {
         AjaxResult ajax = new AjaxResult();
         DbhsmDbInstance instance = dbhsmDbInstanceService.selectDbhsmDbInstanceById(id);
@@ -59,6 +59,8 @@ public class DbhsmDbInstanceController extends BaseController
         BeanUtils.copyProperties(instance,instanceGetConnDTO);
         ajax.put("instance",instanceGetConnDTO);
         ajax.put("dbTableSpace",dbhsmDbInstanceService.getDbTablespace(id));
+        //获取PostgreSQL 架构（schema)
+        ajax.put("dbPGSchema",dbhsmDbInstanceService.getDbSchema(id));
         return ajax;
     }
     /**

@@ -321,4 +321,61 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         }
         return tablespaceList;
     }
+
+    @Override
+    public List<SelectOption> getDbSchema(Long id) {
+        Connection conn = null;
+        Statement stmt = null;
+        ResultSet resultSet = null;
+        int i =0;
+        List<SelectOption>  list = new ArrayList<>();
+        DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
+        if(DbConstants.DB_TYPE_POSTGRESQL.equals(instance.getDatabaseType())) {
+            if (!ObjectUtils.isEmpty(instance)) {
+                //创建数据库连接
+                DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
+                BeanUtils.copyProperties(instance, connDTO);
+                try {
+                    conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
+                    if (Optional.ofNullable(conn).isPresent()) {
+                        stmt = conn.createStatement();
+                        resultSet = stmt.executeQuery("SELECT schema_name FROM information_schema.schemata;");
+                        while (resultSet.next()) {
+                            SelectOption option = new SelectOption();
+                            option.setId(i++);
+                            option.setLabel(resultSet.getString("schema_name"));
+                            list.add(option);
+                        }
+                    }
+                } catch (SQLException | ZAYKException e) {
+                    e.printStackTrace();
+                } finally {
+                    if (stmt != null) {
+                        try {
+                            stmt.close();
+                        } catch (SQLException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    if (conn != null) {
+                        try {
+                            conn.close();
+                        } catch (SQLException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    if (resultSet != null) {
+                        try {
+                            resultSet.close();
+                        } catch (SQLException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        }else {
+            return Collections.emptyList();
+        }
+        return list;
+    }
 }
