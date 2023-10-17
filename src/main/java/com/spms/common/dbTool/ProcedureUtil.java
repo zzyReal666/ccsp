@@ -499,7 +499,7 @@ public class ProcedureUtil {
         transSQL.append("CREATE OR REPLACE FUNCTION ");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append(dbhsmDbUser.getSchema() + ".pgext_func_string_encrypt (varchar)");
+        transSQL.append(dbhsmDbUser.getDbSchema() + ".pgext_func_string_encrypt (varchar)");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("RETURNS varchar");
@@ -543,7 +543,7 @@ public class ProcedureUtil {
         transSQL.append("CREATE OR REPLACE FUNCTION ");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append(dbhsmDbUser.getSchema() + ".pgext_func_string_decrypt(varchar)");
+        transSQL.append(dbhsmDbUser.getDbSchema() + ".pgext_func_string_decrypt(varchar)");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("RETURNS varchar");

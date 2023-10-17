@@ -300,7 +300,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                             log.info("不支持的授权SQL:" + permissionsSql);
                             throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
                         }
-                        sql = permission.trim() + " ON ALL TABLES IN SCHEMA " + dbhsmDbUser.getSchema() + " to \"" + username + "\"";
+                        sql = permission.trim() + " ON ALL TABLES IN SCHEMA " + dbhsmDbUser.getDbSchema() + " to \"" + username + "\"";
                         preparedStatement = connection.prepareStatement(sql);
                         preparedStatement.executeUpdate();
                     }
@@ -497,7 +497,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                             log.info("不支持的授权SQL:" + permissionsSql);
                             throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
                         }
-                        sql = "USE " + dbName + " ;" + permission.trim() + " on " + instance.getDatabaseServerName() + ".* to " + username;
+                        sql =  "USE " + dbName + " ;" + "EXEC sp_MSforeachtable '" + permission.trim() + " ON ? TO " + username + "'";
                         preparedStatement = connection.prepareStatement(sql);
                         preparedStatement.executeUpdate();
                     }
