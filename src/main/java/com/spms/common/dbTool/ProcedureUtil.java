@@ -560,7 +560,6 @@ public class ProcedureUtil {
             log.info("PostgreSQL create pgext_func_string_encrypt:" + transSQL);
             preparedStatement = connection.prepareStatement(transSQL.toString());
             preparedStatement.execute();
-            connection.commit();
         } catch (SQLException e) {
             e.printStackTrace();
             throw new SQLException(e);

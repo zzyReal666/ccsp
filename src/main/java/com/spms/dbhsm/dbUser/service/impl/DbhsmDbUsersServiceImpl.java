@@ -267,7 +267,8 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         }
     }
     //postgresql 新增用户
-    private int insertPostgreSqlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException {
+    @Transactional(rollbackFor = Exception.class)
+    int insertPostgreSqlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException {
         String sqlCreateUser,username, password, sql;
         PreparedStatement preparedStatement = null;
         Connection connection = null;
@@ -294,20 +295,23 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 //赋权
                 String permissionsSql = null;
                 try {
-                    for (String permission : permissionsSqlList) {
-                        permissionsSql = permission.toLowerCase();
-                        if (!(permissionsSql.startsWith("grant") && !(permissionsSql.startsWith("revoke")))) {
-                            log.info("不支持的授权SQL:" + permissionsSql);
-                            throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
-                        }
-                        sql = permission.trim() + " ON ALL TABLES IN SCHEMA " + dbhsmDbUser.getDbSchema() + " to \"" + username + "\"";
-                        preparedStatement = connection.prepareStatement(sql);
-                        preparedStatement.executeUpdate();
-                    }
-                    connection.commit();
+                    //for (String permission : permissionsSqlList) {
+                    //    permissionsSql = permission.toLowerCase();
+                    //    if (!(permissionsSql.startsWith("grant") && !(permissionsSql.startsWith("revoke")))) {
+                    //        log.info("不支持的授权SQL:" + permissionsSql);
+                    //        throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
+                    //    }
+                    //    sql = permission.trim() + " ON SCHEMA " + dbhsmDbUser.getDbSchema() + " to \"" + username + "\"";
+                    //    preparedStatement = connection.prepareStatement(sql);
+                    //    preparedStatement.executeUpdate();
+                    //}
+                    sql = "GRANT ALL ON SCHEMA " + dbhsmDbUser.getDbSchema() + " to \"" + username + "\"";
+                    preparedStatement = connection.prepareStatement(sql);
+                    preparedStatement.executeUpdate();
                     //加解密函数
                     ProcedureUtil.pgextFuncStringEncrypt(connection, dbhsmDbUser);
                     ProcedureUtil.pgextFuncStringDecrypt(connection, dbhsmDbUser);
+                    connection.commit();
                 } catch (SQLException throwables) {
                     throwables.printStackTrace();
                     throw new ZAYKException("授权失败!"+ throwables.getMessage());
@@ -336,6 +340,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         return 1;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     int insertMysqlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException {
         String sqlCreateUser,username, password, sql;
         PreparedStatement preparedStatement = null;
@@ -411,6 +416,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
 
     }
 
+    @Transactional(rollbackFor = Exception.class)
     int insertSqlServerlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException {
         String sqlCreateLoginName, sqlCreateUser, sqlEmpowerment,sql;
         String username;
@@ -531,6 +537,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         return 1;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     int insertOracleUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException, SQLException {
         Connection conn = null;
         PreparedStatement preparedStatement = null;

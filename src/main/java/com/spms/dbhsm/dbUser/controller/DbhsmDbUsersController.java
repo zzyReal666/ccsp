@@ -22,6 +22,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 数据库用户Controller
@@ -57,7 +58,9 @@ public class DbhsmDbUsersController extends BaseController {
 
     private List<DbhsmDbUserVO> queryUserList(List<DbhsmDbUserVO> listVos, String userName) {
         if(StringUtils.isNotEmpty(userName)) {
-            listVos.forEach(user -> user.getUserName().equals(userName));
+            return listVos.stream()
+                    .filter(user -> user.getUserName().startsWith(userName))
+                    .collect(Collectors.toList());
         }
         return listVos;
     }
