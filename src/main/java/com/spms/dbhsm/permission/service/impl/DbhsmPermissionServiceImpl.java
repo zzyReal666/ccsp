@@ -7,6 +7,7 @@ import com.spms.common.constant.DbConstants;
 import com.spms.dbhsm.permission.domain.DbhsmPermission;
 import com.spms.dbhsm.permission.mapper.DbhsmPermissionMapper;
 import com.spms.dbhsm.permission.service.IDbhsmPermissionService;
+import com.spms.dbhsm.permissionGroup.mapper.DbhsmPermissionGroupMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +24,8 @@ public class DbhsmPermissionServiceImpl implements IDbhsmPermissionService {
     @Autowired
     private DbhsmPermissionMapper dbhsmPermissionMapper;
 
+    @Autowired
+    private DbhsmPermissionGroupMapper dbhsmPermissionGroupMapper;
     /**
      * 查询数据库权限
      *
@@ -90,6 +93,8 @@ public class DbhsmPermissionServiceImpl implements IDbhsmPermissionService {
      */
     @Override
     public List<DbhsmPermission> selectDbhsmPermissionByPermissionIds(Long[] permissionIds) {
+        //删除权限与权限组关联关系
+        dbhsmPermissionGroupMapper.deleteDbhsmPermissionUnionPermissionGroupByPermissionIds(permissionIds);
         return dbhsmPermissionMapper.selectDbhsmPermissionByPermissionIds(permissionIds);
     }
 

@@ -95,4 +95,6 @@ public interface DbhsmPermissionGroupMapper
     List<SelectOption> selectDbhsmPermissionGroupOption();
 
     List<String> getPermissionsSqlByPermissionsGroupid(Long permissionGroupId);
+
+    int deleteDbhsmPermissionUnionPermissionGroupByPermissionIds(Long[] permissionIds);
 }

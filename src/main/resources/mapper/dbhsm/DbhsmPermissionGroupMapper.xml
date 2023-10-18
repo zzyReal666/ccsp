@@ -60,6 +60,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="permissionGroupName != null  and permissionGroupName != ''"> and a.permission_group_name like concat('%', #{permissionGroupName}, '%')</if>
             <if test="status != null  and status != ''"> and a.status = #{status}</if>
         </where>
+        group by permission_group_name
     </select>
 
     <select id="selectDbhsmPermissionGroupByPermissionGroupId" parameterType="Long" resultMap="DbhsmPermissionGroupResult">
@@ -133,6 +134,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
     <delete id="deleteDbhsmPermissionUnionPermissionGroupByPermissionGroupId" parameterType="Long">
         delete from dbhsm_permission_union_permission_group where permission_group_id = #{permissionGroupId}
+    </delete>
+    <delete id="deleteDbhsmPermissionUnionPermissionGroupByPermissionIds" parameterType="String">
+        delete from dbhsm_permission_union_permission_group where permission_id in
+        <foreach item="permissionId" collection="array" open="(" separator="," close=")">
+            #{permissionId}
+        </foreach>
     </delete>
 
     <insert id="batchDbhsmPermissionUnionPermissionGroup">

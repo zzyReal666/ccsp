@@ -226,9 +226,11 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 dbUser.setIsSelfBuilt(DbConstants.IS_SELF_BUILT);
                 if(!ObjectUtils.isEmpty(user.getPermissionGroupId())) {
                     DbhsmPermissionGroup permissionGroup = dbhsmPermissionGroupMapper.selectDbhsmPermissionGroupByPermissionGroupId(user.getPermissionGroupId());
-                    PermissionGroupForUserDto permissionGroupForUser = new PermissionGroupForUserDto();
-                    BeanUtils.copyProperties(permissionGroup, permissionGroupForUser);
-                    dbUser.setPermissionGroupForUserDto(permissionGroupForUser);
+                    if(!ObjectUtils.isEmpty(permissionGroup)) {
+                        PermissionGroupForUserDto permissionGroupForUser = new PermissionGroupForUserDto();
+                        BeanUtils.copyProperties(permissionGroup, permissionGroupForUser);
+                        dbUser.setPermissionGroupForUserDto(permissionGroupForUser);
+                    }
                 }
                 dbUser.setId(user.getId());
             }
@@ -370,22 +372,23 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 String permissionsSql = null;
                 try {
                     for (String permission : permissionsSqlList) {
-                        permissionsSql = permission.toLowerCase();
-                        if (!(permissionsSql.startsWith("grant") && !(permissionsSql.startsWith("revoke")))) {
-                            log.info("不支持的授权SQL:" + permissionsSql);
-                            throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
+                        if(StringUtils.isNotEmpty(permission)){
+                            permissionsSql = permission.toLowerCase();
+                            if (!(permissionsSql.startsWith("grant") && !(permissionsSql.startsWith("revoke")))) {
+                                log.info("不支持的授权SQL:" + permissionsSql);
+                                throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
+                            }
+                            sql = permission.trim() + " on " + instance.getDatabaseServerName() + ".* to '" + username + "'@'%'";
+                            preparedStatement = connection.prepareStatement(sql);
+                            preparedStatement.executeUpdate();
                         }
-                        sql = permission.trim() + " on " + instance.getDatabaseServerName() + ".* to '" + username + "'@'%'";
-                        preparedStatement = connection.prepareStatement(sql);
-                        preparedStatement.executeUpdate();
                     }
                     //sql = " GRANT ALL ON  " + instance.getDatabaseServerName() + ".* TO  " + username;
                     //preparedStatement = connection.prepareStatement(sql);
                     //preparedStatement.executeUpdate();
                 } catch (SQLException throwables) {
                     throwables.printStackTrace();
-                    throw new ZAYKException("授权失败!"+throwables.getMessage());
-                    //throw new ZAYKException("授权失败!不支持的授权SQL: " + permissionsSql);
+                    throw new ZAYKException("授权失败!不支持的授权SQL: " + permissionsSql +"，异常信息："+ throwables.getMessage());
                 }
                 sql ="FLUSH PRIVILEGES;";
                 preparedStatement = connection.prepareStatement(sql);
@@ -429,6 +432,11 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
             if (Optional.ofNullable(connection).isPresent()) {
                 username = dbhsmDbUser.getUserName();
                 password = dbhsmDbUser.getPassword();
+
+                sqlEmpowerment = "ALTER DATABASE [" + instance.getDatabaseServerName() + "] SET TRUSTWORTHY ON;";
+                preparedStatement = connection.prepareStatement(sqlEmpowerment);
+                preparedStatement.execute();
+                connection.commit();
                 //创建登录名sql
                 String dbName = instance.getDatabaseServerName();
                 sqlCreateLoginName = "USE " + dbName + ";CREATE LOGIN " + username + " WITH PASSWORD = '" + password + "',default_database=" + dbName;
@@ -449,31 +457,20 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 sqlEmpowerment = "exec sp_addrolemember 'db_datareader','" + username + "'";
                 preparedStatement = connection.prepareStatement(sqlEmpowerment);
                 preparedStatement.execute();
-                connection.commit();
 
                 sqlEmpowerment = "exec sp_addrolemember 'db_datawriter','" + username + "'";
                 preparedStatement = connection.prepareStatement(sqlEmpowerment);
                 preparedStatement.execute();
-                connection.commit();
 
                 sqlEmpowerment = "exec sp_addrolemember 'db_ddladmin','" + username + "'";
                 preparedStatement = connection.prepareStatement(sqlEmpowerment);
-                connection.commit();
-
-                sqlEmpowerment = "ALTER DATABASE [" + instance.getDatabaseServerName() + "] SET TRUSTWORTHY ON;";
-                preparedStatement = connection.prepareStatement(sqlEmpowerment);
-                preparedStatement.execute();
-                connection.commit();
-
 
                 try {
                     ProcedureUtil.transSQLServerAssembly(connection, instance.getDatabaseServerName(), dbhsmDbUser.getEncLibapiPath());
-                    connection.commit();
 
                     //创建加解密方法
                     ProcedureUtil.transSQLServerStringEncrypt(connection);
                     ProcedureUtil.transSQLServerStringDecrypt(connection);
-                    connection.commit();
 
                 } catch (SQLException e) {
                     e.printStackTrace();
@@ -489,8 +486,6 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 sqlEmpowerment = "USE " + dbName + " ;GRANT EXECUTE ON dbo.func_string_decrypt TO " + username;
                 preparedStatement = connection.prepareStatement(sqlEmpowerment);
                 log.info(sqlEmpowerment);
-                connection.commit();
-
                 Long permissionGroupId = dbhsmDbUser.getPermissionGroupId();
                 //根据权限组id查询权限组对应的所有权限SQL：
                 List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
@@ -498,14 +493,16 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 String permissionsSql = null;
                 try {
                     for (String permission : permissionsSqlList) {
-                        permissionsSql = permission.toLowerCase();
-                        if (!(permissionsSql.startsWith("grant") && !(permissionsSql.startsWith("revoke")))) {
-                            log.info("不支持的授权SQL:" + permissionsSql);
-                            throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
+                        if(StringUtils.isNotEmpty(permission)) {
+                            permissionsSql = permission.toLowerCase();
+                            if (!(permissionsSql.startsWith("grant") && !(permissionsSql.startsWith("revoke")))) {
+                                log.info("不支持的授权SQL:" + permissionsSql);
+                                throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
+                            }
+                            sql = "USE " + dbName + " ;" + "EXEC sp_MSforeachtable '" + permission.trim() + " ON ? TO " + username + "'";
+                            preparedStatement = connection.prepareStatement(sql);
+                            preparedStatement.executeUpdate();
                         }
-                        sql =  "USE " + dbName + " ;" + "EXEC sp_MSforeachtable '" + permission.trim() + " ON ? TO " + username + "'";
-                        preparedStatement = connection.prepareStatement(sql);
-                        preparedStatement.executeUpdate();
                     }
                     connection.commit();
                 } catch (SQLException throwables) {
@@ -569,17 +566,19 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
                 //赋权
                 for (int i = 0; i < permissionsSqlList.size(); i++) {
-                    if (!(permissionsSqlList.get(i).toLowerCase().startsWith("grant") && !(permissionsSqlList.get(i).toLowerCase().startsWith("revoke")))) {
-                        log.info("不支持的授权SQL:" + permissionsSqlList.get(i));
-                        throw new ZAYKException("不支持的授权SQL:" + permissionsSqlList.get(i));
+                    if(StringUtils.isNotEmpty(permissionsSqlList.get(i))) {
+                        if (!(permissionsSqlList.get(i).toLowerCase().startsWith("grant") && !(permissionsSqlList.get(i).toLowerCase().startsWith("revoke")))) {
+                            log.info("不支持的授权SQL:" + permissionsSqlList.get(i));
+                            throw new ZAYKException("不支持的授权SQL:" + permissionsSqlList.get(i));
+                        }
+                        if (permissionsSqlList.get(i).toLowerCase().startsWith("grant")) {
+                            sql = permissionsSqlList.get(i).trim() + " to " + username;
+                        } else {
+                            sql = permissionsSqlList.get(i).trim() + " from " + username;
+                        }
+                        preparedStatement = conn.prepareStatement(sql);
+                        executeUpdate = preparedStatement.executeUpdate();
                     }
-                    if (permissionsSqlList.get(i).toLowerCase().startsWith("grant")) {
-                        sql = permissionsSqlList.get(i).trim() + " to " + username;
-                    } else {
-                        sql = permissionsSqlList.get(i).trim() + " from " + username;
-                    }
-                    preparedStatement = conn.prepareStatement(sql);
-                    executeUpdate = preparedStatement.executeUpdate();
                 }
                 conn.commit();
 
@@ -715,6 +714,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                             break;
                         case DbConstants.DB_TYPE_MYSQL:
                             sql = "drop user '" + userName + "'@'%'";
+
                             break;
                         case DbConstants.DB_TYPE_POSTGRESQL:
                             sql = "drop OWNED BY \"" + userName + "\"";

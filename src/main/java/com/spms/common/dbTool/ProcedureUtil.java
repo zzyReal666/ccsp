@@ -519,6 +519,7 @@ public class ProcedureUtil {
             connection.commit();
         } catch (Exception e) {
             e.printStackTrace();
+            throw new SQLException(e.getMessage());
         } finally {
             if (preparedStatement != null) {
                 preparedStatement.close();
