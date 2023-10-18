@@ -45,9 +45,14 @@ public final class DBUtil {
                     tableNamesList.add(resultSet.getString("table_name"));
                 }
                 resultSet.close();
+            }else  if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(dbType)){
+                String sql = "select tablename from pg_tables where schemaname = 'public'";
+                ResultSet resultSet = stmt.executeQuery(sql);
+                while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
+                    tableNamesList.add(resultSet.getString("tablename"));
+                }
+                resultSet.close();
             }
-
-
 
             stmt.close();
         } catch (Exception e) {
@@ -126,6 +131,27 @@ public final class DBUtil {
                         colMap.put("columnType", resultSet.getString("Type"));
                         colList.add(colMap);
                     }
+                    resultSet.close();
+                    stmt.close();
+                    resultSet.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(dbType)){
+                Statement stmt = null;
+                try {
+                    stmt = conn.createStatement();
+                    ResultSet resultSet = stmt.executeQuery(
+                            "SELECT format_type(a.atttypid,a.atttypmod) as type,a.attname as name " +
+                                    "FROM pg_class as c,pg_attribute as a where c.relname = '" + tableName +
+                                    "' and a.attrelid = c.oid and a.attnum>0");
+                    while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
+                        Map<String,String> colMap =new HashMap<>();
+                        colMap.put(DbConstants.DB_COLUMN_NAME, resultSet.getString("name"));
+                        colMap.put("columnType", resultSet.getString("type"));
+                        colList.add(colMap);
+                    }
+
                     resultSet.close();
                     stmt.close();
                     resultSet.close();

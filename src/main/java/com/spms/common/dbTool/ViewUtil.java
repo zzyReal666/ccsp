@@ -45,6 +45,8 @@ public class ViewUtil {
                 return operViewToSqlServer(conn, zaDatabaseEncryptColumns);
             } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(zaDatabaseEncryptColumns.getDatabaseType())) {
                 return operViewToMySql(conn, zaDatabaseEncryptColumns, zaDatabaseEncryptColumnsMapper);
+            }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(zaDatabaseEncryptColumns.getDatabaseType())) {
+                return operViewToPostGreSql(conn, zaDatabaseEncryptColumns, zaDatabaseEncryptColumnsMapper);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -228,6 +230,8 @@ public class ViewUtil {
             delViewSql = "DROP VIEW " + encryptColumns.getDbUserName() + ".v_" + encryptColumns.getDbTable();
         } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(encryptColumns.getDatabaseType())) {
             delViewSql = "DROP VIEW " + encryptColumns.getDatabaseServerName() + ".v_" + encryptColumns.getDbTable();
+        }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(encryptColumns.getDatabaseType())) {
+            delViewSql = "DROP VIEW " + encryptColumns.getDbUserName() + ".v_" + encryptColumns.getDbTable();
         }
         log.info("deleteOracleView:" + delViewSql);
         //执行删除语句
@@ -315,7 +319,7 @@ public class ViewUtil {
 
         viewSql.append("from " + encryptColumns.getDatabaseServerName() + "." + encryptColumns.getDbTable());
         PreparedStatement preparedStatement = null;
-        log.info("sql server create view:" + viewSql.toString());
+        log.info("Mysql create view:" + viewSql);
         try {
             preparedStatement = conn.prepareStatement(viewSql.toString());
             preparedStatement.execute();
@@ -329,4 +333,90 @@ public class ViewUtil {
             }
         }
     }
+
+
+    /**
+     * 创建PostgreSQL解密视图(使用用户创建)
+     * @param conn
+     * @param encryptColumns
+     * @param encryptColumnsMapper
+     * @return
+     */
+    private static boolean operViewToPostGreSql(Connection conn, DbhsmEncryptColumnsAdd encryptColumns, DbhsmEncryptColumnsMapper encryptColumnsMapper) throws SQLException {
+
+        /**
+         * create or replace view v_table1 --视图名称
+         * as select
+         * 	testuser1.pgext_func_string_decrypt(name)
+         * as name from table1;
+         */
+        log.info("创建PostgreSQL视图start: database:{},table:{}", encryptColumns.getDatabaseServerName(), encryptColumns.getDbTable());
+
+        List<Map<String, String>> allColumnsInfo = DBUtil.findAllColumnsInfo(conn, encryptColumns.getDbTable(), encryptColumns.getDatabaseType());
+
+        if (allColumnsInfo == null || allColumnsInfo.size() == 0) {
+            return false;
+        }
+
+        //查询出加密字段
+        DbhsmEncryptColumns encryptColumnDto = new DbhsmEncryptColumns();
+        encryptColumnDto.setDbInstanceId(encryptColumns.getDbInstanceId());
+        encryptColumnDto.setDbTable(encryptColumns.getDbTable());
+        encryptColumnDto.setDbUserName(encryptColumns.getDbUserName());
+        List<DbhsmEncryptColumns> dbhsmEncryptColumns = encryptColumnsMapper.selectDbhsmEncryptColumnsList(encryptColumnDto);
+
+        if (StringUtils.isEmpty(dbhsmEncryptColumns)) {
+            dbhsmEncryptColumns = new ArrayList<>();
+        }
+        DbhsmEncryptColumns encryptColumn = new DbhsmEncryptColumns();
+        BeanUtils.copyProperties(encryptColumns, encryptColumn);
+        dbhsmEncryptColumns.add(encryptColumn);
+
+        StringBuffer viewSql = new StringBuffer();
+
+        viewSql.append("create or replace view v_" + encryptColumns.getDbTable());
+        viewSql.append(System.getProperty("line.separator"));
+        viewSql.append("as SELECT ");
+        viewSql.append(System.getProperty("line.separator"));
+
+        //拼接字段
+        String encColumns = "";
+        for (int i = 0; i < allColumnsInfo.size(); i++) {
+            Map<String, String> map = allColumnsInfo.get(i);
+            String columnName = map.get(DbConstants.DB_COLUMN_NAME);
+            String item = columnName + ",";
+            for (DbhsmEncryptColumns encryptColumn1 : dbhsmEncryptColumns) {
+                if (columnName.equalsIgnoreCase(encryptColumn1.getEncryptColumns())) {
+                    if (DbConstants.SGD_SM4.equals(encryptColumn1.getEncryptionAlgorithm())) {
+                        item = encryptColumn1.getDbUserName() + ".pgext_func_string_decrypt(" + columnName + ") as " + columnName + ",";
+                        break;
+                    }
+                }
+            }
+            encColumns += item;
+        }
+
+        if (encColumns.length() > 1) {
+            encColumns = encColumns.substring(0, encColumns.length() - 1);
+        }
+        viewSql.append(encColumns);
+        viewSql.append(System.getProperty("line.separator"));
+
+        viewSql.append("from " + encryptColumns.getDbTable());
+        PreparedStatement preparedStatement = null;
+        log.info("PostgreSQL create view:" + viewSql);
+        try {
+            preparedStatement = conn.prepareStatement(viewSql.toString());
+            preparedStatement.execute();
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            if (preparedStatement != null) {
+                preparedStatement.close();
+            }
+        }
+    }
+
 }

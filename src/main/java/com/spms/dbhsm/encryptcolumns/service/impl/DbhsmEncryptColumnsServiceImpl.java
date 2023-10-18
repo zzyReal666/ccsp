@@ -108,6 +108,8 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 tableName = columnsDto.getDbTableName();
             }else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
                 tableName = columnsDto.getDbTableName();
+            }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
+                tableName = columnsDto.getDbTableName();
             }
 
             List<Map<String, String>> columnsInfoList = DBUtil.findAllColumnsInfo(conn, tableName, instance.getDatabaseType());
@@ -153,7 +155,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
     @Override
     public int insertDbhsmEncryptColumns(DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd) throws Exception {
 
-        // 创建连接
+        // 使用DBA创建连接
         DbhsmDbInstance instance = instanceMapper.selectDbhsmDbInstanceById(dbhsmEncryptColumnsAdd.getDbInstanceId());
         dbhsmEncryptColumnsAdd.setDatabaseType(instance.getDatabaseType());
         dbhsmEncryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
@@ -161,10 +163,9 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
 
         DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
         BeanUtils.copyProperties(instance, connDTO);
-
         conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
 
-        //获取端口
+        //获取端口对应的IP
         String ip = getIp(dbhsmEncryptColumnsAdd.getEthernetPort());
         dbhsmEncryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);
         dbhsmEncryptColumnsAdd.setEncryptionStatus(DbConstants.ENCRYPTED);
@@ -175,9 +176,9 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         DbhsmEncryptColumns dbhsmEncryptColumns = new DbhsmEncryptColumns();
         BeanUtils.copyProperties(dbhsmEncryptColumnsAdd, dbhsmEncryptColumns);
         int ret = dbhsmEncryptColumnsMapper.insertDbhsmEncryptColumns(dbhsmEncryptColumns);
+
         if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
             //oracle创建触发器
-
             if (DbConstants.SGD_SM4.equals(dbhsmEncryptColumnsAdd.getEncryptionAlgorithm())) {
                 TransUtil.transEncryptColumns(conn, dbhsmEncryptColumnsAdd);
             } else {
@@ -193,6 +194,33 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             }
             //创建Mysql触发器
             TransUtil.transEncryptColumnsToMySql(conn, dbhsmEncryptColumnsAdd);
+        }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
+            //改成使用用户的连接
+            DbhsmDbUser dbUser = new DbhsmDbUser();
+            dbUser.setUserName(dbhsmEncryptColumnsAdd.getDbUserName());
+            dbUser.setDatabaseInstanceId(dbhsmEncryptColumnsAdd.getDbInstanceId());
+            List<DbhsmDbUser> dbhsmDbUsers = dbUsersService.selectDbhsmDbUsersList(dbUser);
+            if (StringUtils.isEmpty(dbhsmDbUsers)){
+                log.error("根据实例ID和用户名未获取到用户信息, InstanceId：{}，DbUserName：{}", dbUser.getDatabaseInstanceId(),dbUser.getUserName());
+                throw new Exception("根据实例ID和用户名未获取到用户信息,用户名：" + dbUser.getUserName());
+            }
+            DbInstanceGetConnDTO userconnDTO = new DbInstanceGetConnDTO();
+            DbhsmDbUser user = dbhsmDbUsers.get(0);
+            BeanUtils.copyProperties(instance, userconnDTO);
+            userconnDTO.setDatabaseDbaPassword(user.getPassword());
+            conn = DbConnectionPoolFactory.getInstance().getConnection(userconnDTO);
+
+            //创建POSTGRESQL触发器
+            DbhsmEncryptColumns encryptColumn = new DbhsmEncryptColumns();
+            encryptColumn.setDbInstanceId(dbhsmEncryptColumnsAdd.getDbInstanceId());
+            encryptColumn.setDbTable(dbhsmEncryptColumnsAdd.getDbTable());
+            encryptColumn.setDbUserName(dbhsmEncryptColumnsAdd.getDbUserName());
+            List<DbhsmEncryptColumns> dbhsmEncryptColumns1 = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsList(encryptColumn);
+
+            //使用用户创建触发器函数
+            String funName = "tr_" + user.getUserName() + "_" + user.getDbSchema() + dbhsmEncryptColumnsAdd.getDbTable() + "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
+            TransUtil.transEncryptFunToPostgreSql(conn, funName,dbhsmEncryptColumns1);
+            TransUtil.transEncryptColumnsToPostgreSql(conn, dbhsmEncryptColumnsAdd,user.getDbSchema());
         }
 
         //先删除之前的视图
@@ -239,22 +267,46 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 continue;
             }
             DbhsmDbInstance instance = instanceMapper.selectDbhsmDbInstanceById(encryptColumns.getDbInstanceId());
-            DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
-            BeanUtils.copyProperties(instance, connDTO);
-            Connection connection = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
+            Connection connection = null;
             //如果是SQLserver需要删除对应的触发器
             PreparedStatement preparedStatement = null;
             String algorithm = encryptColumns.getEncryptionAlgorithm();
             String flag = DbConstants.SGD_SM4.equals(algorithm) ? "_" : "_fpe_";
-            if (Optional.ofNullable(connection).isPresent()) {
                 String sql = "";
                 try {
-
                     if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
+                        DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
+                        BeanUtils.copyProperties(instance, connDTO);
+                         connection = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
                         sql = "DROP TRIGGER IF EXISTS tr_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
-
                     } else if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
+                        DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
+                        BeanUtils.copyProperties(instance, connDTO);
+                         connection = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
                         sql = "DROP TRIGGER " + encryptColumns.getDbUserName() + ".tr" + flag + encryptColumns.getDbUserName() + "_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
+                    }else  if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
+                        DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
+                        BeanUtils.copyProperties(instance, connDTO);
+                         connection = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
+                        sql = "DROP TRIGGER tri_"  + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
+                    }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
+                        DbhsmDbUser dbUser = new DbhsmDbUser();
+                        dbUser.setUserName(encryptColumns.getDbUserName());
+                        dbUser.setDatabaseInstanceId(encryptColumns.getDbInstanceId());
+                        List<DbhsmDbUser> dbhsmDbUsers = dbUsersService.selectDbhsmDbUsersList(dbUser);
+                        if (StringUtils.isEmpty(dbhsmDbUsers)){
+                            log.error("根据实例ID和用户名未获取到用户信息, InstanceId：{}，DbUserName：{}", dbUser.getDatabaseInstanceId(),dbUser.getUserName());
+                            throw new Exception("根据实例ID和用户名未获取到用户信息,用户名：" + dbUser.getUserName());
+                        }
+                        DbInstanceGetConnDTO userconnDTO = new DbInstanceGetConnDTO();
+                        DbhsmDbUser user = dbhsmDbUsers.get(0);
+                        BeanUtils.copyProperties(instance, userconnDTO);
+                        userconnDTO.setDatabaseDbaPassword(user.getPassword());
+                        connection = DbConnectionPoolFactory.getInstance().getConnection(userconnDTO);
+
+                        String funName = "tr_" + user.getUserName() + "_" + user.getDbSchema() + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
+                        sql = "DROP TRIGGER tri_"  + user.getDbSchema() + "_" +encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
+                        sql += ";DROP FUNCTION " + funName;
                     }
                     //执行删除触发器
                     preparedStatement = connection.prepareStatement(sql);
@@ -283,7 +335,6 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                         connection.close();
                     }
                 }
-            }
         }
 
         int ret = dbhsmEncryptColumnsMapper.deleteDbhsmEncryptColumnsByIds(ids);

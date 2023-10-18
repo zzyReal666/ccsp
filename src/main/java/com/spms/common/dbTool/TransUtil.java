@@ -1,5 +1,7 @@
 package com.spms.common.dbTool;
 
+import com.ccsp.common.core.utils.StringUtils;
+import com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsAdd;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.ObjectUtils;
@@ -7,6 +9,7 @@ import org.springframework.util.ObjectUtils;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -72,7 +75,7 @@ public class TransUtil {
         transSql.append("    '" + encryptColumns.getDbTable() + "',--表名\n");
         transSql.append("    '" + encryptColumns.getEncryptColumns() + "',--列名，以列名 name 为例\n");
         transSql.append("    USER(),--用户名\n");
-        transSql.append("    :NEW." + encryptColumns.getEncryptColumns().toUpperCase() + "," + (ObjectUtils.isEmpty(encryptColumns.getEncryptionOffset()) ? 0 : encryptColumns.getEncryptionOffset()-1) + "," + (ObjectUtils.isEmpty(encryptColumns.getEncryptionLength()) ? 0 : encryptColumns.getEncryptionLength()) + ", :NEW." + encryptColumns.getEncryptColumns().toUpperCase() + ",--变换的列，此处为变换 name 列6,8分别为偏移量和加密长度\n");
+        transSql.append("    :NEW." + encryptColumns.getEncryptColumns().toUpperCase() + "," + (ObjectUtils.isEmpty(encryptColumns.getEncryptionOffset()) ? 0 : encryptColumns.getEncryptionOffset() - 1) + "," + (ObjectUtils.isEmpty(encryptColumns.getEncryptionLength()) ? 0 : encryptColumns.getEncryptionLength()) + ", :NEW." + encryptColumns.getEncryptColumns().toUpperCase() + ",--变换的列，此处为变换 name 列6,8分别为偏移量和加密长度\n");
         transSql.append("    " + encryptColumns.getEncryptionAlgorithm() + ");\n");
         transSql.append("END;\n");
         Statement statement = null;
@@ -232,15 +235,16 @@ public class TransUtil {
 
     /**
      * 创建Mysql触发器
+     *
      * @param conn
      * @param encryptColumns
      */
     public static void transEncryptColumnsToMySql(Connection conn, DbhsmEncryptColumnsAdd encryptColumns) throws Exception {
         /**
-           create trigger tri_insert_name before insert
-           on testdb.tests
-           for each row
-           set NEW.name = StringEncrypt(NEW.name,0);
+         create trigger tri_insert_name before insert
+         on testdb.tests
+         for each row
+         set NEW.name = StringEncrypt(NEW.name,0);
          */
 
         log.info("创建Mysql触发器start");
@@ -253,6 +257,107 @@ public class TransUtil {
 
         try {
             log.info("exec sql:" + transSql.toString());
+            statement = conn.createStatement();
+            statement.execute(transSql.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new Exception(e.getMessage());
+        } finally {
+            if (statement != null) {
+                statement.close();
+            }
+        }
+
+    }
+
+    /**
+     * 创建PostgreSql触发器(需要使用用户创建)
+     *
+     * @param conn
+     * @param funName
+     */
+    public static void transEncryptFunToPostgreSql(Connection conn, String funName, List<DbhsmEncryptColumns> encryptColumns) throws Exception {
+        /**
+         * 1、定义触发器函数
+         * create or replace function tr_func_string_encrypt()
+         * returns trigger as
+         * $tr_func_string_encrypt$
+         * begin
+         * NEW.name := testuser1.pgext_func_string_encrypt(NEW.name);
+         * return NEW;
+         * end;
+         * $tr_func_string_encrypt$ language 'plpgsql';
+         *
+         */
+        Statement statement = null;
+        try {
+            // 1、定义触发器函数
+            log.info("创建PostgreSql触发器函数start");
+            //函数名是动态的
+            StringBuffer transFun = new StringBuffer("create or replace function " + funName + "()");
+            transFun.append(System.getProperty("line.separator"));
+            transFun.append("returns trigger as");
+            transFun.append(System.getProperty("line.separator"));
+            transFun.append("$tr_func_string_encrypt$");
+            transFun.append(System.getProperty("line.separator"));
+            transFun.append("begin");
+            transFun.append(System.getProperty("line.separator"));
+            transFun.append("$tr_func_string_encrypt$ language 'plpgsql';");
+            transFun.append(System.getProperty("line.separator"));
+
+            if (StringUtils.isNotEmpty(encryptColumns)){
+                for (DbhsmEncryptColumns encryptColumns1 : encryptColumns){
+                    transFun.append("NEW." + encryptColumns1.getEncryptColumns() + " := "+ encryptColumns1.getDbUserName() +".pgext_func_string_encrypt(NEW." + encryptColumns1.getEncryptColumns() + ");");
+                    transFun.append(System.getProperty("line.separator"));
+                }
+            }
+
+            transFun.append("return NEW;");
+            transFun.append(System.getProperty("line.separator"));
+            transFun.append("end");
+            transFun.append(System.getProperty("line.separator"));
+            log.info("exec sql:" + transFun);
+            statement = conn.createStatement();
+            statement.execute(transFun.toString());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new Exception(e.getMessage());
+        } finally {
+            if (statement != null) {
+                statement.close();
+            }
+        }
+
+    }
+
+    /**
+     * 创建PostgreSql触发器(需要使用用户创建)
+     *
+     * @param conn
+     * @param encryptColumn
+     */
+    public static void transEncryptColumnsToPostgreSql(Connection conn, DbhsmEncryptColumnsAdd encryptColumn,String schema) throws Exception {
+        /**
+         *
+         * 2、创建触发器，设置所触发的条件和执行的函数
+         * create trigger tr_encrypt_name --触发器名称
+         * before insert or update of "name" on testuser1."table1"
+         * --name为加密列
+         * for each row
+         * execute procedure tr_func_string_encrypt(); --触发器函数
+         */
+        Statement statement = null;
+        try {
+            // 1、创建触发器，设置所触发的条件和执行的函数
+            log.info("创建PostgreSql触发器start");
+
+            StringBuffer transSql = new StringBuffer("create trigger tri_" + schema + "_" + encryptColumn.getDbTable() + "_" + encryptColumn.getEncryptColumns() + " --触发器名称");
+            transSql.append("before insert or update of \"" + encryptColumn.getEncryptColumns() + "\" on " + encryptColumn.getDbUserName() + ".\"" + encryptColumn.getDbTable() + "\"\n");
+            transSql.append("for each row\n");
+            transSql.append("execute procedure tr_func_string_encrypt()");
+
+            log.info("exec sql:" + transSql);
             statement = conn.createStatement();
             statement.execute(transSql.toString());
         } catch (Exception e) {
