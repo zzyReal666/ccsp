@@ -680,7 +680,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         int resultSet = 0;
-        String sql = "",sqlTemp = "";
+        String sql = "";
         for (Long id : ids) {
             //根据用户id查询用户
             DbhsmDbUser dbhsmDbUser = dbhsmDbUsersMapper.selectDbhsmDbUsersById(id);
@@ -714,11 +714,9 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                             break;
                         case DbConstants.DB_TYPE_MYSQL:
                             sql = "drop user '" + userName + "'@'%'";
-
                             break;
                         case DbConstants.DB_TYPE_POSTGRESQL:
-                            sql = "drop OWNED BY \"" + userName + "\"";
-                            sqlTemp ="drop user \"" + userName + "\"";
+                            sql = "drop OWNED BY \"" + userName + "\";drop user \"" + userName + "\"";
                             break;
                         default:
                             throw new ZAYKException("暂不支持的数据库类型： " + instance.getDatabaseType());
@@ -727,11 +725,6 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                     preparedStatement = connection.prepareStatement(sql);
                     preparedStatement.execute();
                     connection.commit();
-                    if(StringUtils.isNotEmpty(sqlTemp)){
-                        preparedStatement = connection.prepareStatement(sqlTemp);
-                        preparedStatement.execute();
-                        connection.commit();
-                    }
                 }
             } catch (SQLException e) {
                 log.info("删除数据库用户失败!执行SQL:{}", sql);
