@@ -36,6 +36,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <where>
             <if test="userName != null  and userName != ''"> and user_name like concat('%', #{userName}, '%')</if>
             <if test="databaseType != null "> and database_type = #{databaseType}</if>
+            <if test="databaseInstanceId != null "> and database_instance_id = #{databaseInstanceId}</if>
         </where>
         order by id desc
     </select>

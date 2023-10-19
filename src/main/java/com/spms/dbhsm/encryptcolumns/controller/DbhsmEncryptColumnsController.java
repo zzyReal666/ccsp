@@ -77,7 +77,7 @@ public class DbhsmEncryptColumnsController extends BaseController
     /**
      * 新增数据库加密列
      */
-    @RequiresPermissions("dbhsm:encryptcolumns:add")
+//    @RequiresPermissions("dbhsm:encryptcolumns:add")
     @Log(title = "数据库加密列", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@RequestBody DbhsmEncryptColumnsAdd dbhsmEncryptColumns)
@@ -104,7 +104,7 @@ public class DbhsmEncryptColumnsController extends BaseController
     /**
      * 删除数据库加密列
      */
-    @RequiresPermissions("dbhsm:encryptcolumns:remove")
+//    @RequiresPermissions("dbhsm:encryptcolumns:remove")
     @Log(title = "数据库加密列", businessType = BusinessType.DELETE)
 	@DeleteMapping("/{ids}")
     public AjaxResult remove(@PathVariable String[] ids) throws Exception {

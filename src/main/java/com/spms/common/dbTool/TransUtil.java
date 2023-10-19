@@ -298,11 +298,9 @@ public class TransUtil {
             transFun.append(System.getProperty("line.separator"));
             transFun.append("returns trigger as");
             transFun.append(System.getProperty("line.separator"));
-            transFun.append("$tr_func_string_encrypt$");
+            transFun.append("$" + funName + "$");
             transFun.append(System.getProperty("line.separator"));
             transFun.append("begin");
-            transFun.append(System.getProperty("line.separator"));
-            transFun.append("$tr_func_string_encrypt$ language 'plpgsql';");
             transFun.append(System.getProperty("line.separator"));
 
             if (StringUtils.isNotEmpty(encryptColumns)){
@@ -316,6 +314,9 @@ public class TransUtil {
             transFun.append(System.getProperty("line.separator"));
             transFun.append("end");
             transFun.append(System.getProperty("line.separator"));
+            transFun.append("$" + funName + "$ language 'plpgsql'");
+            transFun.append(System.getProperty("line.separator"));
+
             log.info("exec sql:" + transFun);
             statement = conn.createStatement();
             statement.execute(transFun.toString());
@@ -337,7 +338,7 @@ public class TransUtil {
      * @param conn
      * @param encryptColumn
      */
-    public static void transEncryptColumnsToPostgreSql(Connection conn, DbhsmEncryptColumnsAdd encryptColumn,String schema) throws Exception {
+    public static void transEncryptColumnsToPostgreSql(Connection conn, DbhsmEncryptColumnsAdd encryptColumn,String schema,String funName) throws Exception {
         /**
          *
          * 2、创建触发器，设置所触发的条件和执行的函数
@@ -353,9 +354,12 @@ public class TransUtil {
             log.info("创建PostgreSql触发器start");
 
             StringBuffer transSql = new StringBuffer("create trigger tri_" + schema + "_" + encryptColumn.getDbTable() + "_" + encryptColumn.getEncryptColumns() + " --触发器名称");
-            transSql.append("before insert or update of \"" + encryptColumn.getEncryptColumns() + "\" on " + encryptColumn.getDbUserName() + ".\"" + encryptColumn.getDbTable() + "\"\n");
-            transSql.append("for each row\n");
-            transSql.append("execute procedure tr_func_string_encrypt()");
+            transSql.append(System.getProperty("line.separator"));
+            transSql.append("before insert or update of \"" + encryptColumn.getEncryptColumns() + "\" on " + schema + ".\"" + encryptColumn.getDbTable() + "\"");
+            transSql.append(System.getProperty("line.separator"));
+            transSql.append("for each row");
+            transSql.append(System.getProperty("line.separator"));
+            transSql.append("execute procedure " + schema + "." + funName + "()");
 
             log.info("exec sql:" + transSql);
             statement = conn.createStatement();

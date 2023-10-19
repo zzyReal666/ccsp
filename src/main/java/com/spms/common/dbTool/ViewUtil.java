@@ -221,6 +221,10 @@ public class ViewUtil {
     }
 
     public static boolean deleteView(Connection conn, DbhsmEncryptColumnsAdd encryptColumns) throws SQLException {
+       return deleteView(conn,encryptColumns,null);
+    }
+
+    public static boolean deleteView(Connection conn, DbhsmEncryptColumnsAdd encryptColumns,String dbSchema) throws SQLException {
         Statement statement = null;
         String delViewSql = null;
         //创建删除语句
@@ -231,7 +235,7 @@ public class ViewUtil {
         } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(encryptColumns.getDatabaseType())) {
             delViewSql = "DROP VIEW " + encryptColumns.getDatabaseServerName() + ".v_" + encryptColumns.getDbTable();
         }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(encryptColumns.getDatabaseType())) {
-            delViewSql = "DROP VIEW " + encryptColumns.getDbUserName() + ".v_" + encryptColumns.getDbTable();
+            delViewSql = "DROP VIEW  IF EXISTS  " + dbSchema + ".v_" + encryptColumns.getDbTable();
         }
         log.info("deleteOracleView:" + delViewSql);
         //执行删除语句
