@@ -114,7 +114,7 @@ public class DbhsmPermissionController extends BaseController
     @DeleteMapping("/{permissionIds}")
     public AjaxResult remove(@PathVariable Long[] permissionIds)
     {
-        return toAjax(dbhsmPermissionService.deleteDbhsmPermissionByPermissionIds(permissionIds));
+        return dbhsmPermissionService.deleteDbhsmPermissionByPermissionIds(permissionIds);
     }
 }
 

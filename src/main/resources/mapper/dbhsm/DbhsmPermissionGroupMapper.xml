@@ -62,6 +62,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         </where>
         group by permission_group_name
     </select>
+    <select id="selectDbhsmPermissionGroupPermissionIdList" parameterType="com.spms.dbhsm.permission.domain.DbhsmPermission" resultMap="DbhsmPermissionResult">
+        select b.permission_id, c.permission_name
+        from dbhsm_permission_group a
+                 left join dbhsm_permission_union_permission_group b on b.permission_group_id = a.permission_group_id
+                 left join dbhsm_permission c on c.permission_id = b.permission_id
+        where c.permission_id =#{a.permission_id}
+    </select>
 
     <select id="selectDbhsmPermissionGroupByPermissionGroupId" parameterType="Long" resultMap="DbhsmPermissionGroupResult">
         select a.permission_group_id, a.permission_group_name, a.status, a.create_by, a.create_time, a.update_by, a.update_time,
@@ -79,6 +86,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
                  left join dbhsm_permission_union_permission_group pgp on pg.permission_group_id=pgp.permission_group_id
                  left join dbhsm_permission p on p.permission_id=pgp.permission_id
         where pg.permission_group_id=#{permissionGroupId}
+    </select>
+
+    <select id="getPermissionUnionPermissionGroup" resultType="java.lang.String">
+        select permission_id from dbhsm_permission_union_permission_group
     </select>
 
     <insert id="insertDbhsmPermissionGroup" parameterType="com.spms.dbhsm.permissionGroup.domain.DbhsmPermissionGroup" useGeneratedKeys="true" keyProperty="permissionGroupId">

@@ -1,6 +1,7 @@
 package com.spms.dbhsm.permissionGroup.mapper;
 
 import com.spms.common.SelectOption;
+import com.spms.dbhsm.permission.domain.DbhsmPermission;
 import com.spms.dbhsm.permissionGroup.domain.DbhsmPermissionGroup;
 import com.spms.dbhsm.permissionGroup.domain.DbhsmPermissionUnionPermissionGroup;
 import org.apache.ibatis.annotations.Mapper;
@@ -23,6 +24,8 @@ public interface DbhsmPermissionGroupMapper
      * @return 数据库权限组信息
      */
     public DbhsmPermissionGroup selectDbhsmPermissionGroupByPermissionGroupId(Long permissionGroupId);
+
+    public DbhsmPermission selectDbhsmPermissionGroupPermissionIdList(Long permissionId);
 
     /**
      * 查询数据库权限组信息列表
@@ -95,6 +98,8 @@ public interface DbhsmPermissionGroupMapper
     List<SelectOption> selectDbhsmPermissionGroupOption();
 
     List<String> getPermissionsSqlByPermissionsGroupid(Long permissionGroupId);
+
+    List<String> getPermissionUnionPermissionGroup();
 
     int deleteDbhsmPermissionUnionPermissionGroupByPermissionIds(Long[] permissionIds);
 }

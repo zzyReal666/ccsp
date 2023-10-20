@@ -2,6 +2,7 @@ package com.spms.dbhsm.permission.service.impl;
 
 import com.ccsp.common.core.utils.DateUtils;
 import com.ccsp.common.core.utils.StringUtils;
+import com.ccsp.common.core.web.domain.AjaxResult;
 import com.ccsp.common.security.utils.SecurityUtils;
 import com.spms.common.constant.DbConstants;
 import com.spms.dbhsm.permission.domain.DbhsmPermission;
@@ -10,7 +11,10 @@ import com.spms.dbhsm.permission.service.IDbhsmPermissionService;
 import com.spms.dbhsm.permissionGroup.mapper.DbhsmPermissionGroupMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.ObjectUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -81,8 +85,33 @@ public class DbhsmPermissionServiceImpl implements IDbhsmPermissionService {
      * @return 结果
      */
     @Override
-    public int deleteDbhsmPermissionByPermissionIds(Long[] permissionIds) {
-        return dbhsmPermissionMapper.deleteDbhsmPermissionByPermissionIds(permissionIds);
+    public AjaxResult deleteDbhsmPermissionByPermissionIds(Long[] permissionIds) {
+        //校验权限是否被权限组使用,
+        List<String> pNameList = new ArrayList<String>();
+        for (Long permissionId : permissionIds) {
+            String pName = checkPermissionIsUsed(permissionId);
+            if(StringUtils.isEmpty(pName)){
+                deleteDbhsmPermissionByPermissionId(permissionId);
+            }else{
+                pNameList.add(pName);
+            }
+        }
+        if (CollectionUtils.isEmpty(pNameList)){
+            return AjaxResult.success();
+        }else{
+            StringUtils.join(pNameList, ",");
+            return AjaxResult.error("权限"+pNameList+"被使用，无法删除");
+        }
+
+    }
+
+    private String checkPermissionIsUsed(Long permissionId) {
+        //校验是否被权限组使用
+         DbhsmPermission permission = dbhsmPermissionGroupMapper.selectDbhsmPermissionGroupPermissionIdList(permissionId);
+         if(!ObjectUtils.isEmpty(permission)){
+             return permission.getPermissionName();
+         }
+         return null;
     }
 
     /**
@@ -93,8 +122,6 @@ public class DbhsmPermissionServiceImpl implements IDbhsmPermissionService {
      */
     @Override
     public List<DbhsmPermission> selectDbhsmPermissionByPermissionIds(Long[] permissionIds) {
-        //删除权限与权限组关联关系
-        dbhsmPermissionGroupMapper.deleteDbhsmPermissionUnionPermissionGroupByPermissionIds(permissionIds);
         return dbhsmPermissionMapper.selectDbhsmPermissionByPermissionIds(permissionIds);
     }
 
