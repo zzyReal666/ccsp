@@ -271,7 +271,10 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             }
 
             if (i == 0){
-                certView = encryptColumns;
+                certView = new DbhsmEncryptColumns();
+                certView.setDbInstanceId(encryptColumns.getDbInstanceId());
+                certView.setDbUserName(encryptColumns.getDbUserName());
+                certView.setDbTable(encryptColumns.getDbTable());
             }
 
             DbhsmDbInstance instance = instanceMapper.selectDbhsmDbInstanceById(encryptColumns.getDbInstanceId());
@@ -390,7 +393,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 }
             }
         }
-        return 0;
+        return ret;
     }
 
     /**

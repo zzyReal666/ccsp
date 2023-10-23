@@ -8,7 +8,6 @@ import com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsAdd;
 import com.spms.dbhsm.encryptcolumns.mapper.DbhsmEncryptColumnsMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.util.ObjectUtils;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -229,7 +228,7 @@ public class ViewUtil {
         String delViewSql = null;
         //创建删除语句
         if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(encryptColumns.getDatabaseType())) {
-            delViewSql = "DROP VIEW IF EXISTS" + encryptColumns.getDbUserName() + ".v_" + encryptColumns.getDbTable();
+            delViewSql = "DROP VIEW IF EXISTS " + encryptColumns.getDbUserName() + ".v_" + encryptColumns.getDbTable();
         } else if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(encryptColumns.getDatabaseType())) {
             delViewSql = "DROP VIEW " + encryptColumns.getDbUserName() + ".v_" + encryptColumns.getDbTable();
         } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(encryptColumns.getDatabaseType())) {
@@ -309,7 +308,8 @@ public class ViewUtil {
                 if (columnName.equalsIgnoreCase(encryptColumn1.getEncryptColumns())) {
                     item.append("StringDecrypt(");
                     item.append(System.getProperty("line.separator"));
-                    item.append("'" + encryptColumn1.getId() +  "',#--策略唯一标识");
+                    item.append("'" + encryptColumn1.getId() +  "',");
+                    item.append(System.getProperty("line.separator"));
                     item.append("'http://" + encryptColumns.getIpAndPort() + "/api/datahsm/v1/strategy/get', #--'http://192.168.6.31:8080/api/datahsm/v1/strategy/get',策略下载地址");
                     item.append(System.getProperty("line.separator"));
                     item.append("'ip_address',#--IP");
@@ -324,19 +324,16 @@ public class ViewUtil {
                     item.append(System.getProperty("line.separator"));
                     item.append("CAST(User() AS CHAR),#--用户名");
                     item.append(System.getProperty("line.separator"));
-                    item.append("NEW." + encryptColumns.getEncryptColumns() + "," +
-                            (ObjectUtils.isEmpty(encryptColumns.getEncryptionOffset()) ? 0 : encryptColumns.getEncryptionOffset() - 1) + "," +
-                            (ObjectUtils.isEmpty(encryptColumns.getEncryptionLength()) ? 0 : encryptColumns.getEncryptionLength()) + ")");
 
                     if (DbConstants.SGD_SM4.equals(encryptColumn1.getEncryptionAlgorithm())) {
-                        item.append("NEW." + columnName + "," + "0,0) #---- 加密列 --偏移量 --加密长度\n");
+                        item.append(columnName + "," + "0,0) #---- 加密列 --偏移量 --加密长度\n");
                     } else {
                         if (DbConstants.ESTABLISH_RULES_YES.equals(encryptColumns.getEstablishRules())) {
-                            item.append("NEW." + columnName + "," + //加密列
+                            item.append( columnName + "," + //加密列
                                     (encryptColumns.getEncryptionOffset() -1 ) + "," + //偏移量
                                     encryptColumns.getEncryptionLength() +") #---- 加密列 --偏移量 --加密长度\n");
                         } else {
-                            item.append("NEW." + columnName + "," + "0,0) #---- 加密列 --偏移量 --加密长度\n");
+                            item.append( columnName + "," + "0,0) #---- 加密列 --偏移量 --加密长度\n");
                         }
                     }
                     item.append(System.getProperty("line.separator"));
@@ -430,7 +427,7 @@ public class ViewUtil {
             for (DbhsmEncryptColumns encryptColumn1 : dbhsmEncryptColumns) {
                 if (columnName.equalsIgnoreCase(encryptColumn1.getEncryptColumns())) {
                     item.append(encryptColumn1.getDbUserName() + ".pgext_func_string_decrypt(");
-                    item.append("'" + encryptColumn1.getId() + "',#--策略唯一标识");
+                    item.append("'" + encryptColumn1.getId() + "',");
                     item.append(System.getProperty("line.separator"));
                     item.append("'http://" + encryptColumns.getIpAndPort() + "/api/datahsm/v1/strategy/get', #--'http://192.168.6.31:8080/api/datahsm/v1/strategy/get',策略下载地址");
                     item.append(System.getProperty("line.separator"));
