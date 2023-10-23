@@ -181,7 +181,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         DbhsmEncryptColumns dbhsmEncryptColumns = new DbhsmEncryptColumns();
         BeanUtils.copyProperties(dbhsmEncryptColumnsAdd, dbhsmEncryptColumns);
         int ret = dbhsmEncryptColumnsMapper.insertDbhsmEncryptColumns(dbhsmEncryptColumns);
-        DbhsmDbUser user = null;
+        DbhsmDbUser user = new DbhsmDbUser();
         if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
             //oracle创建触发器
             if (DbConstants.SGD_SM4.equals(dbhsmEncryptColumnsAdd.getEncryptionAlgorithm())) {
@@ -193,10 +193,6 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             //创建 SqlServer 触发器
             TransUtil.transEncryptColumnsToSqlServer(conn, dbhsmEncryptColumnsAdd);
         } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
-
-            if (!DbConstants.SGD_SM4.equals(dbhsmEncryptColumnsAdd.getEncryptionAlgorithm())) {
-                throw new Exception("目前只支持SGD_SM4加密算法");
-            }
             //创建Mysql触发器
             TransUtil.transEncryptColumnsToMySql(conn, dbhsmEncryptColumnsAdd);
         }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
@@ -224,12 +220,12 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
 
             //使用用户创建触发器函数
             String funName = "tr_" + user.getUserName() + "_" + user.getDbSchema() + "_" + dbhsmEncryptColumnsAdd.getDbTable() + "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
-            TransUtil.transEncryptFunToPostgreSql(conn, funName,dbhsmEncryptColumns1);
+            TransUtil.transEncryptFunToPostgreSql(conn, funName,dbhsmEncryptColumns1,ip + ":" + dbhsmPort);
             TransUtil.transEncryptColumnsToPostgreSql(conn, dbhsmEncryptColumnsAdd,user.getDbSchema(),funName);
         }
 
         //先删除之前的视图
-        ViewUtil.deleteView(conn, dbhsmEncryptColumnsAdd,user.getDbSchema() );
+        ViewUtil.deleteView(conn, dbhsmEncryptColumnsAdd,user.getDbSchema());
         //创建视图
         boolean viewRet = ViewUtil.operView(conn, dbhsmEncryptColumnsAdd, dbhsmEncryptColumnsMapper);
         if (viewRet) {
@@ -264,13 +260,20 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
      * @return 结果
      */
     @Override
+    @Transactional
     public int deleteDbhsmEncryptColumnsByIds(String[] ids) throws Exception {
+        DbhsmEncryptColumns certView = null;
         for (int i = 0; i < ids.length; i++) {
             DbhsmEncryptColumns encryptColumns = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsById(ids[i]);
             if (encryptColumns == null) {
-                log.error("未获取到ID为{}的加密列信息" + ids[i]);
+                log.error("未获取到ID为{}的加密列信息" , ids[i]);
                 continue;
             }
+
+            if (i == 0){
+                certView = encryptColumns;
+            }
+
             DbhsmDbInstance instance = instanceMapper.selectDbhsmDbInstanceById(encryptColumns.getDbInstanceId());
             Connection connection = null;
             //如果是SQLserver需要删除对应的触发器
@@ -318,6 +321,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                         connection = DbConnectionPoolFactory.getInstance().getConnection(userconnDTO);
 
                         sql = "DROP TRIGGER IF EXISTS tri_"  + user.getDbSchema() + "_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns() + " to " + encryptColumns.getDbTable();
+                        log.info(sql);
                         preparedStatement = connection.prepareStatement(sql);
                         resultSet = preparedStatement.executeUpdate();
 
@@ -332,6 +336,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                     BeanUtils.copyProperties(encryptColumns, encryptColumnsAdd);
                     try{
                         encryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
+                        encryptColumnsAdd.setDatabaseType(instance.getDatabaseType());
                         ViewUtil.deleteView(connection,encryptColumnsAdd);
                     }catch (Exception e){
                         e.printStackTrace();
@@ -356,14 +361,9 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         int ret = dbhsmEncryptColumnsMapper.deleteDbhsmEncryptColumnsByIds(ids);
         if (ret > 0) {
             //重新创建视图
-            DbhsmEncryptColumns encryptColumns = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsById(ids[0]);
-            DbhsmEncryptColumns encryptColumn = new DbhsmEncryptColumns();
-            encryptColumn.setDbInstanceId(encryptColumns.getDbInstanceId());
-            encryptColumn.setDbUserName(encryptColumns.getDbUserName());
-            encryptColumn.setDbTable(encryptColumns.getDbTable());
-            List<DbhsmEncryptColumns> dbhsmEncryptColumns = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsList(encryptColumn);
+            List<DbhsmEncryptColumns> dbhsmEncryptColumns = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsList(certView);
             if (StringUtils.isNotEmpty(dbhsmEncryptColumns)) {
-                DbhsmDbInstance instance = instanceMapper.selectDbhsmDbInstanceById(encryptColumns.getDbInstanceId());
+                DbhsmDbInstance instance = instanceMapper.selectDbhsmDbInstanceById(certView.getDbInstanceId());
                 DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
                 BeanUtils.copyProperties(instance, connDTO);
                 Connection connection = DbConnectionPoolFactory.getInstance().getConnection(connDTO);

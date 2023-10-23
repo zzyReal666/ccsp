@@ -270,7 +270,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
     }
     //postgresql 新增用户
     @Transactional(rollbackFor = Exception.class)
-    int insertPostgreSqlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException {
+    public int insertPostgreSqlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException {
         String sqlCreateUser,username, password, sql;
         PreparedStatement preparedStatement = null;
         Connection connection = null;
