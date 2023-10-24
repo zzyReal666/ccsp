@@ -319,7 +319,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                         preparedStatement = connection.prepareStatement(sql);
                         resultSet = preparedStatement.executeUpdate();
 
-                        String funName =  "tr_" + user.getUserName() + "_" + user.getDbSchema() + "_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns()
+                        String funName =  "tr_" + user.getUserName() + "_" + user.getDbSchema() + "_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
                         sql = "DROP FUNCTION " + funName;
                         preparedStatement = connection.prepareStatement(sql);
                          resultSet = preparedStatement.executeUpdate();
