@@ -310,6 +310,8 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                     sql = "GRANT ALL ON SCHEMA " + dbhsmDbUser.getDbSchema() + " to \"" + username + "\"";
                     preparedStatement = connection.prepareStatement(sql);
                     preparedStatement.executeUpdate();
+                    //将schema下的所有表赋权给用户
+                    TablePermissionsGrantedToUsers(connection,dbhsmDbUser.getDbSchema(),username);
                     //加解密函数
                     ProcedureUtil.pgextFuncStringEncrypt(connection, dbhsmDbUser);
                     ProcedureUtil.pgextFuncStringDecrypt(connection, dbhsmDbUser);
@@ -340,6 +342,24 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
             }
         }
         return 1;
+    }
+    /** 将schema下的所有表赋权给用户*/
+    private void TablePermissionsGrantedToUsers(Connection connection,String dbSchema, String username) {
+        PreparedStatement preparedStatement = null;
+        String getAllTablesNameSql = "SELECT * FROM information_schema.tables WHERE table_schema = '"+dbSchema+"'";
+        try {
+            preparedStatement = connection.prepareStatement(getAllTablesNameSql);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                String tableName = resultSet.getString("TABLE_NAME");
+                String grantPermissionSql = "GRANT ALL ON TABLE "+dbSchema+".\""+tableName+"\" TO \""+username+"\"";
+                preparedStatement = connection.prepareStatement(grantPermissionSql);
+                boolean execute = preparedStatement.execute();
+                log.info("grantPermissionSql:{},Sql执行返回：{}",grantPermissionSql,execute);
+            }
+        }catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
