@@ -376,6 +376,8 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                     BeanUtils.copyProperties(dbhsmEncryptColumn, dbhsmEncryptColumnsAdd);
                     String ip = getIp(dbhsmEncryptColumn.getEthernetPort());
                     dbhsmEncryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);
+                    dbhsmEncryptColumnsAdd.setDatabaseType(instance.getDatabaseType());
+                    dbhsmEncryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
                     boolean viewRet = ViewUtil.operView(connection, dbhsmEncryptColumnsAdd, dbhsmEncryptColumnsMapper);
                     if (viewRet) {
                         connection.commit();
