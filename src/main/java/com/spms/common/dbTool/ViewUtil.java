@@ -429,31 +429,31 @@ public class ViewUtil {
                     item.append(encryptColumn1.getDbUserName() + ".pgext_func_string_decrypt(");
                     item.append("'" + encryptColumn1.getId() + "',");
                     item.append(System.getProperty("line.separator"));
-                    item.append("'http://" + encryptColumns.getIpAndPort() + "/api/datahsm/v1/strategy/get', #--'http://192.168.6.31:8080/api/datahsm/v1/strategy/get',策略下载地址");
+                    item.append("'http://" + encryptColumns.getIpAndPort() + "/api/datahsm/v1/strategy/get', --'http://192.168.6.31:8080/api/datahsm/v1/strategy/get',策略下载地址");
                     item.append(System.getProperty("line.separator"));
-                    item.append("CAST(inet_client_addr() as char),#--IP");
+                    item.append("CAST(inet_client_addr() as char),--IP");
                     item.append(System.getProperty("line.separator"));
-                    item.append("CAST(current_catalog as char),#--实例名");
+                    item.append("CAST(current_catalog as char),--实例名");
                     item.append(System.getProperty("line.separator"));
-                    item.append("CAST(current_catalog as char),#--库名");
+                    item.append("CAST(current_catalog as char),--库名");
                     item.append(System.getProperty("line.separator"));
-                    item.append("'" + encryptColumn1.getDbTable() + "',#--表名");
+                    item.append("'" + encryptColumn1.getDbTable() + "',--表名");
                     item.append(System.getProperty("line.separator"));
-                    item.append("'" + encryptColumn1.getEncryptColumns() + "',#--列名");
+                    item.append("'" + encryptColumn1.getEncryptColumns() + "',--列名");
                     item.append(System.getProperty("line.separator"));
-                    item.append("CAST(User() AS CHAR),#--用户名");
+                    item.append("CAST(user AS CHAR),--用户名");
                     item.append(System.getProperty("line.separator"));
 
                     if (DbConstants.SGD_SM4.equals(encryptColumn1.getEncryptionAlgorithm())) {
-                        item.append(encryptColumn1.getEncryptColumns() + "," + "0) #---- 加密列 --偏移量\n");
+                        item.append(encryptColumn1.getEncryptColumns() + "," + "0) ---- 加密列 --偏移量\n");
                     } else {
                         if (DbConstants.ESTABLISH_RULES_YES.equals(encryptColumn1.getEstablishRules())) {
                             item.append( encryptColumn1.getEncryptColumns() + "," + //加密列
                                     (encryptColumn1.getEncryptionOffset() -1 ) + "," + //偏移量
                                     encryptColumn1.getEncryptionLength() +"," +//加密长度
-                                    encryptColumn1.getEncryptionAlgorithm() + ") #---- 加密列 --偏移量 --加密长度  --算法\n");
+                                    encryptColumn1.getEncryptionAlgorithm() + ") ---- 加密列 --偏移量 --加密长度  --算法\n");
                         } else {
-                            item.append( encryptColumn1.getEncryptColumns() + "," + "0) #---- 加密列 --偏移量\n");
+                            item.append( encryptColumn1.getEncryptColumns() + "," + "0) ---- 加密列 --偏移量\n");
                         }
                     }
                     item.append(" as " + encryptColumn1.getEncryptColumns() + " ,");

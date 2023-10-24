@@ -373,7 +373,7 @@ public class TransUtil {
                     transFun.append(System.getProperty("line.separator"));
                     transFun.append("'" + encryptColumns1.getEncryptColumns() + "',#--列名");
                     transFun.append(System.getProperty("line.separator"));
-                    transFun.append("CAST(User() AS CHAR),#--用户名");
+                    transFun.append("CAST(user AS CHAR),#--用户名");
                     transFun.append(System.getProperty("line.separator"));
 
                     if (DbConstants.SGD_SM4.equals(encryptColumns1.getEncryptionAlgorithm())) {
