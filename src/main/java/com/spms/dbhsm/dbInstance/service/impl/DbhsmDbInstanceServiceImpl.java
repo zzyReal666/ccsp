@@ -2,6 +2,7 @@ package com.spms.dbhsm.dbInstance.service.impl;
 
 import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.DateUtils;
+import com.ccsp.common.core.utils.StringUtils;
 import com.spms.common.SelectOption;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.dbTool.FunctionUtil;
@@ -21,10 +22,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
 import javax.annotation.PostConstruct;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -285,10 +283,43 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
             //删除之前先销毁之前的池
             DbhsmDbInstance instanceById = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
             i = dbhsmDbInstanceMapper.deleteDbhsmDbInstanceById(id);
+            //删除加解密函数
+            delEncDecFunction(instanceById);
             //删除连接池
             DbConnectionPoolFactory.getInstance().unbind(DbConnectionPoolFactory.instanceConventKey(instanceById));
         }
         return i;
+    }
+
+    private void delEncDecFunction(DbhsmDbInstance instanceById) {
+        String delEncFunSql = "",delDecFunSql = "";
+        try {
+            Connection connection = DbConnectionPoolFactory.getInstance().getConnection(instanceById);
+            String databaseType = instanceById.getDatabaseType();
+            //删除mysql加解密函数
+            switch (databaseType) {
+                case DbConstants.DB_TYPE_ORACLE:
+                    break;
+                case DbConstants.DB_TYPE_SQLSERVER:
+                    break;
+                case DbConstants.DB_TYPE_MYSQL:
+                    delEncFunSql="DROP FUNCTION StringEncrypt;";
+                    delDecFunSql="DROP FUNCTION StringDecrypt;";
+                    break;
+                case DbConstants.DB_TYPE_POSTGRESQL:
+                    break;
+                default:
+                    log.info("Unknown database type: " + databaseType);
+            }
+            //执行SQL
+            if(!StringUtils.isEmpty(delEncFunSql)){
+                connection.prepareStatement(delEncFunSql).executeUpdate();
+                connection.prepareStatement(delDecFunSql).executeUpdate();
+                connection.commit();
+            }
+        } catch (ZAYKException | SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
