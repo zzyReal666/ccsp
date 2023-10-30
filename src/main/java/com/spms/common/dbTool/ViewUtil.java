@@ -36,6 +36,10 @@ public class ViewUtil {
      * @return
      */
     public static boolean operView(Connection conn, DbhsmEncryptColumnsAdd zaDatabaseEncryptColumns, DbhsmEncryptColumnsMapper zaDatabaseEncryptColumnsMapper) {
+       return operView(conn,zaDatabaseEncryptColumns,zaDatabaseEncryptColumnsMapper,"");
+
+    }
+    public static boolean operView(Connection conn, DbhsmEncryptColumnsAdd zaDatabaseEncryptColumns, DbhsmEncryptColumnsMapper zaDatabaseEncryptColumnsMapper,String dbSchema) {
 
         try {
             if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(zaDatabaseEncryptColumns.getDatabaseType())) {
@@ -46,7 +50,7 @@ public class ViewUtil {
             } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(zaDatabaseEncryptColumns.getDatabaseType())) {
                 return operViewToMySql(conn, zaDatabaseEncryptColumns, zaDatabaseEncryptColumnsMapper);
             }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(zaDatabaseEncryptColumns.getDatabaseType())) {
-                return operViewToPostGreSql(conn, zaDatabaseEncryptColumns, zaDatabaseEncryptColumnsMapper);
+                return operViewToPostGreSql(conn, zaDatabaseEncryptColumns, zaDatabaseEncryptColumnsMapper,dbSchema);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -380,7 +384,7 @@ public class ViewUtil {
      * @param encryptColumnsMapper
      * @return
      */
-    private static boolean operViewToPostGreSql(Connection conn, DbhsmEncryptColumnsAdd encryptColumns, DbhsmEncryptColumnsMapper encryptColumnsMapper) throws SQLException {
+    private static boolean operViewToPostGreSql(Connection conn, DbhsmEncryptColumnsAdd encryptColumns, DbhsmEncryptColumnsMapper encryptColumnsMapper,String dbSchema) throws SQLException {
 
         /**
          * create or replace view v_table1 --视图名称
@@ -426,7 +430,7 @@ public class ViewUtil {
             boolean isEncColumn = false;
             for (DbhsmEncryptColumns encryptColumn1 : dbhsmEncryptColumns) {
                 if (columnName.equalsIgnoreCase(encryptColumn1.getEncryptColumns())) {
-                    item.append(encryptColumn1.getDbUserName() + ".pgext_func_string_decrypt(");
+                    item.append(dbSchema + ".pgext_func_string_decrypt(");
                     item.append("'" + encryptColumn1.getId() + "',");
                     item.append(System.getProperty("line.separator"));
                     item.append("'http://" + encryptColumns.getIpAndPort() + "/api/datahsm/v1/strategy/get', --'http://192.168.6.31:8080/api/datahsm/v1/strategy/get',策略下载地址");

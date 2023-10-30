@@ -205,11 +205,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 log.error("根据实例ID和用户名未获取到用户信息, InstanceId：{}，DbUserName：{}", dbUser.getDatabaseInstanceId(),dbUser.getUserName());
                 throw new Exception("根据实例ID和用户名未获取到用户信息,用户名：" + dbUser.getUserName());
             }
-            DbInstanceGetConnDTO userconnDTO = new DbInstanceGetConnDTO();
             user = dbhsmDbUsers.get(0);
-            BeanUtils.copyProperties(instance, userconnDTO);
-            userconnDTO.setDatabaseDbaPassword(user.getPassword());
-            conn = DbConnectionPoolFactory.getInstance().getConnection(userconnDTO);
 
             //创建POSTGRESQL触发器
             DbhsmEncryptColumns encryptColumn = new DbhsmEncryptColumns();
@@ -227,7 +223,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         //先删除之前的视图
         ViewUtil.deleteView(conn, dbhsmEncryptColumnsAdd,user.getDbSchema());
         //创建视图
-        boolean viewRet = ViewUtil.operView(conn, dbhsmEncryptColumnsAdd, dbhsmEncryptColumnsMapper);
+        boolean viewRet = ViewUtil.operView(conn, dbhsmEncryptColumnsAdd, dbhsmEncryptColumnsMapper,user.getDbSchema());
         if (viewRet) {
             conn.commit();
         } else {
@@ -316,19 +312,14 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                             log.error("根据实例ID和用户名未获取到用户信息, InstanceId：{}，DbUserName：{}", dbUser.getDatabaseInstanceId(),dbUser.getUserName());
                             throw new Exception("根据实例ID和用户名未获取到用户信息,用户名：" + dbUser.getUserName());
                         }
-                        DbInstanceGetConnDTO userconnDTO = new DbInstanceGetConnDTO();
                         DbhsmDbUser user = dbhsmDbUsers.get(0);
-                        BeanUtils.copyProperties(instance, userconnDTO);
-                        userconnDTO.setDatabaseDbaPassword(user.getPassword());
-                        userconnDTO.setDatabaseDba(user.getUserName());
-                        connection = DbConnectionPoolFactory.getInstance().getConnection(userconnDTO);
 
                         sql = "DROP TRIGGER IF EXISTS tri_"  + user.getDbSchema() + "_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns() + " to " + encryptColumns.getDbTable();
                         log.info(sql);
                         preparedStatement = connection.prepareStatement(sql);
                         resultSet = preparedStatement.executeUpdate();
 
-                        String funName =  "tr_" + user.getUserName() + "_" + user.getDbSchema() + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
+                        String funName =  "tr_" + user.getUserName() + "_" + user.getDbSchema() + "_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
                         sql = "DROP FUNCTION " + funName;
                         preparedStatement = connection.prepareStatement(sql);
                          resultSet = preparedStatement.executeUpdate();
