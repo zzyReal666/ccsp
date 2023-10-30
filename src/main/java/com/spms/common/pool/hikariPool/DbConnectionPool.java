@@ -9,7 +9,10 @@ import com.zaxxer.hikari.pool.HikariPool;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 /**
  *  增加新的数据库后需要增加的内容：
  *  1设置JdbcUrl
@@ -67,13 +70,19 @@ public class DbConnectionPool {
         config.setMaximumPoolSize(MAX_CONNECTIONS);
         try {
             return new HikariDataSource(config);
-        }catch (HikariPool.PoolInitializationException e){
+        }catch (HikariPool.PoolInitializationException  e){
+            //String errorMessage = new String(e.getMessage().getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
+            Throwable rootCause = e.getCause();
+            String errorMessage = rootCause != null ? rootCause.getMessage() : "";
             log.info("Could not create HikariCP data source");
-            throw new RuntimeException("创建连接池失败！"+databaseIp+":"+databasePort+e.getMessage(), e);
+            throw new RuntimeException("创建连接池失败！"+databaseIp+":"+databasePort+errorMessage, e);
         } catch (Exception e) {
             e.printStackTrace();
+            //String errorMessage = new String(e.getMessage().getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
+            Throwable rootCause = e.getCause();
+            String errorMessage = rootCause != null ? rootCause.getMessage() : "";
             log.info("Could not create HikariCP data source");
-            throw new RuntimeException("连接池创建失败！"+e.getMessage(), e);
+            throw new RuntimeException("连接池创建失败！"+errorMessage, e);
         }
     }
 

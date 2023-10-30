@@ -2,19 +2,25 @@ package com.spms.dbhsm.secretService.service.impl;
 
 import com.ccsp.common.core.utils.DateUtils;
 import com.ccsp.common.core.utils.StringUtils;
+import com.ccsp.common.core.web.domain.AjaxResult;
 import com.spms.common.CommandUtil;
 import com.spms.common.Int4jUtil;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.kmip.KmipServicePoolFactory;
+import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
+import com.spms.dbhsm.dbInstance.mapper.DbhsmDbInstanceMapper;
 import com.spms.dbhsm.secretService.domain.DbhsmSecretService;
 import com.spms.dbhsm.secretService.mapper.DbhsmSecretServiceMapper;
 import com.spms.dbhsm.secretService.service.IDbhsmSecretServiceService;
+import io.seata.common.util.CollectionUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -28,6 +34,9 @@ import java.util.List;
 public class DbhsmSecretServiceServiceImpl implements IDbhsmSecretServiceService {
     @Autowired
     private DbhsmSecretServiceMapper dbhsmSecretServiceMapper;
+
+    @Autowired
+    private DbhsmDbInstanceMapper dbhsmInstanceMapper;
 
     @PostConstruct
     private void initSecretService() {
@@ -156,9 +165,11 @@ public class DbhsmSecretServiceServiceImpl implements IDbhsmSecretServiceService
     public int updateDbhsmSecretService(DbhsmSecretService dbhsmSecretService) throws IOException {
         DbhsmSecretService dbhsmSecretService1 = dbhsmSecretServiceMapper.selectDbhsmSecretServiceById(dbhsmSecretService.getId());
         if (dbhsmSecretService1.getSecretService().equals(dbhsmSecretService.getSecretService())
-                && dbhsmSecretService1.getPassword().equals(dbhsmSecretService.getPassword())
+                && dbhsmSecretService1.getSecretKeyIndex().equals(dbhsmSecretService.getSecretKeyIndex())
                 && dbhsmSecretService1.getUserName().equals(dbhsmSecretService.getUserName())
                 && dbhsmSecretService1.getServiceIp().equals(dbhsmSecretService.getServiceIp())
+                && dbhsmSecretService1.getPassword().equals(dbhsmSecretService.getPassword())
+                && dbhsmSecretService1.getServiceUrl().equals(dbhsmSecretService.getServiceUrl())
                 && dbhsmSecretService1.getServicePort().equals(dbhsmSecretService.getServicePort())) {
             return 1;
         }
@@ -177,21 +188,34 @@ public class DbhsmSecretServiceServiceImpl implements IDbhsmSecretServiceService
      * @return 结果
      */
     @Override
-    public int deleteDbhsmSecretServiceByIds(Long[] ids) {
+    public AjaxResult deleteDbhsmSecretServiceByIds(Long[] ids) {
+        List<String> secretService = new ArrayList();
         for (Long id : ids) {
             DbhsmSecretService dbhsmSecretService = dbhsmSecretServiceMapper.selectDbhsmSecretServiceById(id);
             if (dbhsmSecretService == null) {
                 continue;
             }
-
+            //校验密码服务是否被使用
+            DbhsmDbInstance instance = new DbhsmDbInstance();
+            instance.setSecretService(dbhsmSecretService.getSecretService());
+            List<DbhsmDbInstance> instanceList = dbhsmInstanceMapper.selectDbhsmDbInstanceList(instance);
+            if(instanceList.size() > 0){
+                secretService.add(dbhsmSecretService.getSecretService());
+                List<Long> idList = new ArrayList<>(Arrays.asList(ids));
+                idList.remove(id);
+                ids = idList.toArray(new Long[0]);
+                continue;
+            }
             KmipServicePoolFactory.unbind(dbhsmSecretService);
             String commandCopy = "rm -rf /opt/config_file/jsonfile/" + dbhsmSecretService.getSecretService() + ".ini";
             log.info("commandCopy  === " + commandCopy);
             String status = CommandUtil.exeCmd(commandCopy, 5);
             log.info("commandCopy  === " + status);
         }
-
-        return dbhsmSecretServiceMapper.deleteDbhsmSecretServiceByIds(ids);
+        if(ids.length > 0) {
+            dbhsmSecretServiceMapper.deleteDbhsmSecretServiceByIds(ids);
+        }
+        return (CollectionUtils.isEmpty(secretService)) ?  AjaxResult.success(): AjaxResult.error("删除失败，密码服务" + StringUtils.join(secretService,",") + "正在被使用");
     }
 
     /**

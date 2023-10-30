@@ -294,14 +294,14 @@ public class TransUtil {
         transSql.append(System.getProperty("line.separator"));
 
         if (DbConstants.SGD_SM4.equals(algorithm)) {
-            transSql.append("NEW." + encryptColumns.getEncryptColumns() + "," + "0,0) #---- 加密列 --偏移量 --加密长度\n");
+            transSql.append("NEW." + encryptColumns.getEncryptColumns() + "," + "0,0); #---- 加密列 --偏移量 --加密长度\n");
         } else {
             if (DbConstants.ESTABLISH_RULES_YES.equals(encryptColumns.getEstablishRules())) {
                 transSql.append("NEW." + encryptColumns.getEncryptColumns() + "," + //加密列
                         (encryptColumns.getEncryptionOffset() -1 ) + "," + //偏移量
                         encryptColumns.getEncryptionLength() +") #---- 加密列 --偏移量 --加密长度\n");
             } else {
-                transSql.append("NEW." + encryptColumns.getEncryptColumns() + "," + "0,0) #---- 加密列 --偏移量 --加密长度\n");
+                transSql.append("NEW." + encryptColumns.getEncryptColumns() + "," + "0,0); #---- 加密列 --偏移量 --加密长度\n");
             }
         }
         transSql.append(System.getProperty("line.separator"));

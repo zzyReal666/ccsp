@@ -4,6 +4,7 @@ import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.DateUtils;
 import com.spms.common.SelectOption;
 import com.spms.common.constant.DbConstants;
+import com.spms.common.dbTool.FunctionUtil;
 import com.spms.common.pool.hikariPool.DbConnectionPoolFactory;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstancePoolKeyDTO;
@@ -28,6 +29,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * 数据库实例Service业务层处理
@@ -45,12 +48,14 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
     @PostConstruct
     public void init() {
         // 创建线程1
-        new Thread(new Runnable() {
+        ExecutorService executor = Executors.newFixedThreadPool(1);
+        executor.execute(new Runnable() {
             @Override
             public void run() {
                 initDbConnectionPool();
             }
-        }).start();
+        });
+        executor.shutdown();
     }
     public  void initDbConnectionPool()  {
         try {
@@ -91,7 +96,30 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
 
     @Override
     public List<InstanceServerNameVO> listDbInstanceSelect(InstanceServerNameVO instanceServerNameVO) {
-        return dbhsmDbInstanceMapper.listDbInstanceSelect(instanceServerNameVO);
+        List<InstanceServerNameVO> voList = dbhsmDbInstanceMapper.listDbInstanceSelect(instanceServerNameVO);
+        for (InstanceServerNameVO vo : voList) {
+            switch (vo.getDatabaseType()) {
+                case "0":
+                    vo.setLabel(vo.getLabel() + "(" + DbConstants.DB_TYPE_ORACLE_DESC + ")");
+                    break;
+                case "1":
+                    vo.setLabel(vo.getLabel() + "(" + DbConstants.DB_TYPE_SQLSERVER_DESC + ")");
+                    break;
+                case "2":
+                    vo.setLabel(vo.getLabel() + "(" + DbConstants.DB_TYPE_MYSQL_DESC + ")");
+                    break;
+                case "3":
+                    vo.setLabel(vo.getLabel() + "(" + DbConstants.DB_TYPE_POSTGRESQL_DESC + ")");
+                    break;
+                case "4":
+                    vo.setLabel(vo.getLabel() + "(" + DbConstants.DB_TYPE_DB2_DESC + ")");
+                    break;
+                default:
+                    // 处理未知的数据库类型
+                    break;
+            }
+        }
+        return voList;
     }
 
     /**
@@ -114,7 +142,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public int insertDbhsmDbInstance(DbhsmDbInstance dbhsmDbInstance) throws ZAYKException {
+    public int insertDbhsmDbInstance(DbhsmDbInstance dbhsmDbInstance) throws ZAYKException, SQLException {
         int i = 0;
         //数据类型为oracle
         if(DbConstants.DB_TYPE_ORACLE.equals(dbhsmDbInstance.getDatabaseType())) {
@@ -135,7 +163,17 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         DbInstanceGetConnDTO  dbInstanceGetConnDTO = new DbInstanceGetConnDTO();
         BeanUtils.copyProperties(dbhsmDbInstance,dbInstanceGetConnDTO);
         DbConnectionPoolFactory.buildDataSourcePool(dbInstanceGetConnDTO);
+        Connection connection = DbConnectionPoolFactory.getInstance().getConnection(dbInstanceGetConnDTO);
         DbConnectionPoolFactory.queryPool();
+        //创建加解密函数
+        try {
+            FunctionUtil.createEncryptDecryptFunction(connection,dbhsmDbInstance);
+        }catch (Exception e) {
+            e.printStackTrace();
+            //关闭连接池
+            DbConnectionPoolFactory.getInstance().unbind(DbConnectionPoolFactory.instanceConventKey(dbhsmDbInstance));
+        }
+
         return i;
     }
 

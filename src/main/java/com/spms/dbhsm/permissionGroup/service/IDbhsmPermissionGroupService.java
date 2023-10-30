@@ -8,15 +8,15 @@ import java.util.List;
 
 /**
  * 数据库权限组信息Service接口
- * 
+ *
  * @author diq
  * @date 2023-09-20
  */
-public interface IDbhsmPermissionGroupService 
+public interface IDbhsmPermissionGroupService
 {
     /**
      * 查询数据库权限组信息
-     * 
+     *
      * @param permissionGroupId 数据库权限组信息主键
      * @return 数据库权限组信息
      */
@@ -24,15 +24,18 @@ public interface IDbhsmPermissionGroupService
     public PermissionGroupEditDto selectDbhsmPermissionGroupByPermissionGroupId2(Long permissionGroupId);
     /**
      * 查询数据库权限组信息列表
-     * 
+     *
      * @param dbhsmPermissionGroup 数据库权限组信息
      * @return 数据库权限组信息集合
      */
     public List<DbhsmPermissionGroup> selectDbhsmPermissionGroupList(DbhsmPermissionGroup dbhsmPermissionGroup);
 
+    List<DbhsmPermissionGroup> selectDbhsmPermissionGroupVoList(DbhsmPermissionGroup dbhsmPermissionGroup);
+
+
     /**
      * 新增数据库权限组信息
-     * 
+     *
      * @param dbhsmPermissionGroup 数据库权限组信息
      * @return 结果
      */
@@ -40,7 +43,7 @@ public interface IDbhsmPermissionGroupService
 
     /**
      * 修改数据库权限组信息
-     * 
+     *
      * @param dbhsmPermissionGroup 数据库权限组信息
      * @return 结果
      */
@@ -48,7 +51,7 @@ public interface IDbhsmPermissionGroupService
 
     /**
      * 批量删除数据库权限组信息
-     * 
+     *
      * @param permissionGroupIds 需要删除的数据库权限组信息主键集合
      * @return 结果
      */
@@ -56,7 +59,7 @@ public interface IDbhsmPermissionGroupService
 
     /**
      * 删除数据库权限组信息信息
-     * 
+     *
      * @param permissionGroupId 数据库权限组信息主键
      * @return 结果
      */

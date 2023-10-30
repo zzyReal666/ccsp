@@ -75,6 +75,16 @@ public class DbhsmPermissionGroupServiceImpl implements IDbhsmPermissionGroupSer
     public List<DbhsmPermissionGroup> selectDbhsmPermissionGroupList(DbhsmPermissionGroup dbhsmPermissionGroup) {
         return dbhsmPermissionGroupMapper.selectDbhsmPermissionGroupList(dbhsmPermissionGroup);
     }
+    /**
+     * 查询数据库权限组信息列表
+     *
+     * @param dbhsmPermissionGroup 数据库权限组信息
+     * @return 数据库权限组信息
+     */
+    @Override
+    public List<DbhsmPermissionGroup> selectDbhsmPermissionGroupVoList(DbhsmPermissionGroup dbhsmPermissionGroup) {
+        return dbhsmPermissionGroupMapper.selectDbhsmPermissionGroupVoList(dbhsmPermissionGroup);
+    }
 
     /**
      * 新增数据库权限组信息

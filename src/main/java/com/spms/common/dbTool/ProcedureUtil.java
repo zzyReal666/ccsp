@@ -322,23 +322,37 @@ public class ProcedureUtil {
      *
      * @param conn
      */
-    public static void transSQLServerStringEncrypt(Connection conn) throws SQLException {
+    public static void transSQLServerStringEncryptEX(Connection conn) throws SQLException {
 
         /**
-         * create or alter FUNCTION func_string_encrypt (
+         * create or alter FUNCTION func_string_encrypt_ex (
+         * @policy_id NVARCHAR(50),@policy_url NVARCHAR(200),@user_ipaddr NVARCHAR(50),
+         * @db_instance_name NVARCHAR(50),@db_table_name NVARCHAR(50),
+         * @db_column_name NVARCHAR(50),@db_user_name NVARCHAR(50),
          * @rawstring NVARCHAR(50), @rawstringlen INT,
          * @offset INT, @length INT, @encryptstringlen INT
          * )
          * RETURNS NVARCHAR(50)
          * AS
          * EXTERNAL NAME
-         * libsqlextdll.[libsqlserver.SqlExtFunc].Sqlstringencrypt
+         * libsqlextdll.[libsqlserver.SqlExtPolicyFunc].SqlStringEncryptEx
          * 分别对应 [程序集名称].[namespace.class].[方法/函数]
+         * GO
+         *
          * */
 
         StringBuilder transSQL = new StringBuilder();
 
-        transSQL.append("create FUNCTION func_string_encrypt (");
+        transSQL.append("create or alter FUNCTION func_string_encrypt_ex (");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("@policy_id NVARCHAR(50),@policy_url NVARCHAR(200),@user_ipaddr NVARCHAR(50),");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("@db_instance_name NVARCHAR(50),@db_table_name NVARCHAR(50),");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("@db_column_name NVARCHAR(50),@db_user_name NVARCHAR(50),");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("@rawstring NVARCHAR(50), @rawstringlen INT,");
@@ -359,7 +373,7 @@ public class ProcedureUtil {
         transSQL.append("EXTERNAL NAME");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("libsqlextdll.[libsqlserver.SqlExtFunc].Sqlstringencrypt ");
+        transSQL.append("libsqlextdll.[libsqlserver.SqlExtPolicyFunc].SqlStringEncryptEx ");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("/* 分别对应 [程序集名称].[namespace.class].[方法/函数] */");
@@ -367,10 +381,10 @@ public class ProcedureUtil {
 
         PreparedStatement statement = null;
         try {
-            log.info("创建函数cOciTransStringDecryptFSQL：{} ", transSQL.toString());
+            log.info("创建函数func_string_encrypt_ex：{} ", transSQL.toString());
             statement = conn.prepareStatement(transSQL.toString());
             statement.execute();
-            log.info("创建函数end：cOciTransStringDecryptF 命令提交完成");
+            log.info("创建函数end：func_string_encrypt_ex 命令提交完成");
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -385,28 +399,44 @@ public class ProcedureUtil {
      *
      * @param conn
      */
-    public static void transSQLServerStringDecrypt(Connection conn) throws SQLException {
+    public static void transSQLServerStringDecryptEX(Connection conn) throws SQLException {
 
         /**
-         * create or alter FUNCTION func_string_decrypt(
+         * create or alter FUNCTION func_string_decrypt_ex (
+         * @policy_id NVARCHAR(50),@policy_url NVARCHAR(200),@user_ipaddr NVARCHAR(50),
+         * @db_instance_name NVARCHAR(50),@db_name NVARCHAR(50), @db_table_name NVARCHAR(50),
+         * @db_column_name NVARCHAR(50),@db_user_name NVARCHAR(50),
          * @rawstring NVARCHAR(50), @rawstringlen INT,
-         * @offset INT, @length INT, @encryptstringlen INT)
+         * @offset INT, @length INT, @encryptstringlen INT
+         * )
          * RETURNS NVARCHAR(50)
          * AS
-         * EXTERNAL NAME
-         *
-         * GO
+         * EXTERNAL NAME libsqlextdll.[libsqlserver.SqlExtPolicyFunc].SqlStringDecryptEx
+         * 分别对应 [程序集名称].[namespace.class].[方法/函数]
+         *GO
          * */
 
         StringBuilder transSQL = new StringBuilder();
 
-        transSQL.append("create FUNCTION func_string_decrypt(");
+        transSQL.append("create or alter FUNCTION func_string_decrypt_ex (");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("@policy_id NVARCHAR(50),@policy_url NVARCHAR(200),@user_ipaddr NVARCHAR(50),");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("@db_instance_name NVARCHAR(50),@db_name NVARCHAR(50), @db_table_name NVARCHAR(50),");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("@db_column_name NVARCHAR(50),@db_user_name NVARCHAR(50),");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("@rawstring NVARCHAR(50), @rawstringlen INT,");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("@offset INT, @length INT, @encryptstringlen INT)");
+        transSQL.append("@offset INT, @length INT, @encryptstringlen INT");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append(")");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("RETURNS NVARCHAR(50)");
@@ -415,18 +445,163 @@ public class ProcedureUtil {
         transSQL.append("AS");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("EXTERNAL NAME");
+        transSQL.append("EXTERNAL NAME libsqlextdll.[libsqlserver.SqlExtPolicyFunc].SqlStringDecryptEx");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("libsqlextdll.[libsqlserver.SqlExtFunc].Sqlstringencrypt ");
+        transSQL.append("/*分别对应 [程序集名称].[namespace.class].[方法/函数] */");
         transSQL.append(System.getProperty("line.separator"));
 
         PreparedStatement statement = null;
         try {
-            log.info("创建函数 func_string_decrypt：{} ", transSQL.toString());
+            log.info("创建函数 func_string_decrypt_ex：{} ", transSQL.toString());
             statement = conn.prepareStatement(transSQL.toString());
             statement.execute();
-            log.info("创建函数end：cOciTransStringDecryptF 命令提交完成");
+            log.info("创建函数end：func_string_decrypt_ex 命令提交完成");
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (statement != null) {
+                statement.close();
+            }
+        }
+    }
+
+    /**
+     * SQLserver FPE加密函数带策略
+     *
+     * @param conn
+     */
+    public static void funcSQLServerFuncFpeEncryptEx(Connection conn) throws SQLException {
+
+        /**
+         * --创建动态策略的fpe加密函数
+         * create or alter FUNCTION func_fpe_encrypt_ex (
+         * @policy_id NVARCHAR(50),@policy_url NVARCHAR(200),@user_ipaddr NVARCHAR(50),
+         * @db_instance_name NVARCHAR(50),@db_name NVARCHAR(50), @db_table_name NVARCHAR(50),
+         * @db_column_name NVARCHAR(50),@db_user_name NVARCHAR(50),
+         * @rawstring NVARCHAR(50), @rawstringlen INT,
+         * @offset INT, @length INT, @encryptstringlen INT, @radix INT
+         * )
+         * RETURNS NVARCHAR(50)
+         * AS
+         * EXTERNAL NAME libsqlextdll.[libsqlserver.SqlExtPolicyFunc].SqlfpeStringEncryptEx
+         * 分别对应 [程序集名称].[namespace.class].[方法/函数]
+         *GO
+         * */
+
+        StringBuilder transSQL = new StringBuilder();
+
+        transSQL.append("create or alter FUNCTION func_fpe_encrypt_ex (");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("@policy_id NVARCHAR(50),@policy_url NVARCHAR(200),@user_ipaddr NVARCHAR(50),");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("@db_instance_name NVARCHAR(50),@db_name NVARCHAR(50), @db_table_name NVARCHAR(50),");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("@db_column_name NVARCHAR(50),@db_user_name NVARCHAR(50),");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("@rawstring NVARCHAR(50), @rawstringlen INT,");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("@offset INT, @length INT, @encryptstringlen INT, @radix INT");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append(")");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("RETURNS NVARCHAR(50)");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("AS");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("EXTERNAL NAME libsqlextdll.[libsqlserver.SqlExtPolicyFunc].SqlfpeStringEncryptEx");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("/*分别对应 [程序集名称].[namespace.class].[方法/函数]*/");
+        transSQL.append(System.getProperty("line.separator"));
+
+        PreparedStatement statement = null;
+        try {
+            log.info("创建函数 func_fpe_encrypt_ex：{} ", transSQL.toString());
+            statement = conn.prepareStatement(transSQL.toString());
+            statement.execute();
+            log.info("创建函数end：func_fpe_encrypt_ex 命令提交完成");
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (statement != null) {
+                statement.close();
+            }
+        }
+    }
+
+    /**
+     * SQLserver数据库字段解密方法
+     *
+     * @param conn
+     */
+    public static void funcSQLServerFuncFpeDecryptEx(Connection conn) throws SQLException {
+
+        /**
+         * create or alter FUNCTION func_fpe_decrypt_ex (
+         * @policy_id NVARCHAR(50),@policy_url NVARCHAR(200),@user_ipaddr NVARCHAR(50),
+         * @db_instance_name NVARCHAR(50),@db_name NVARCHAR(50), @db_table_name NVARCHAR(50),
+         * @db_column_name NVARCHAR(50),@db_user_name NVARCHAR(50),
+         * @rawstring NVARCHAR(50), @rawstringlen INT,
+         * @offset INT, @length INT, @encryptstringlen INT, @radix INT
+         * )
+         * RETURNS NVARCHAR(50)
+         * AS
+         * EXTERNAL NAME libsqlextdll.[libsqlserver.SqlExtPolicyFunc].SqlfpeStringDecryptEx
+         * 分别对应 [程序集名称].[namespace.class].[方法/函数]
+         *GO
+         * */
+
+        StringBuilder transSQL = new StringBuilder();
+
+        transSQL.append("create or alter FUNCTION func_fpe_decrypt_ex (");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("@policy_id NVARCHAR(50),@policy_url NVARCHAR(200),@user_ipaddr NVARCHAR(50),");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("@db_instance_name NVARCHAR(50),@db_name NVARCHAR(50), @db_table_name NVARCHAR(50),");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("@db_column_name NVARCHAR(50),@db_user_name NVARCHAR(50),");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("@rawstring NVARCHAR(50), @rawstringlen INT,");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("@offset INT, @length INT, @encryptstringlen INT, @radix INT");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append(")");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("RETURNS NVARCHAR(50)");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("AS");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("EXTERNAL NAME libsqlextdll.[libsqlserver.SqlExtPolicyFunc].SqlfpeStringDecryptEx");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("/*分别对应 [程序集名称].[namespace.class].[方法/函数] */");
+        transSQL.append(System.getProperty("line.separator"));
+
+        PreparedStatement statement = null;
+        try {
+            log.info("创建函数 func_fpe_decrypt_ex：{} ", transSQL.toString());
+            statement = conn.prepareStatement(transSQL.toString());
+            statement.execute();
+            log.info("创建函数end：func_fpe_decrypt_ex 命令提交完成");
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -487,19 +662,46 @@ public class ProcedureUtil {
          *
          * 创建PostgreSQL加密函数
          * CREATE OR REPLACE FUNCTION
-         * testuser1. pgext_func_string_encrypt (varchar)
-         *
-         * RETURNS varchar
-         * AS 'D:\pgsql\postgreSQL', 'pgext_func_string_encrypt'
-         * LANGUAGE C STRICT;
-         *
+         *  testuser1.pgext_func_string_encrypt( --testuser1 架构
+         * 	text, --策略唯一标识类型
+         * 	text, --策略下载地址类型
+         * 	text, --ip
+         * 	text, --实例名
+         * 	text, --库名
+         * 	text, --表名
+         * 	text, --列名
+         * 	text, --用户名
+         * 	text, --加密数据
+         * 	integer) --偏移量
+         *      RETURNS text
+         *      AS 'D:\pgsql\postgreSQL', 'pgext_func_string_encrypt'
+         *      LANGUAGE C STRICT;
          *
          */
         StringBuilder transSQL = new StringBuilder();
         transSQL.append("CREATE OR REPLACE FUNCTION ");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append(dbhsmDbUser.getDbSchema() + ".pgext_func_string_encrypt (varchar)");
+        transSQL.append(dbhsmDbUser.getDbSchema() + ".pgext_func_string_encrypt (");
+        transSQL.append("text,--策略唯一标识类型");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--策略下载地址类型");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--ip");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--实例名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--库名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--表名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--列名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--用户名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--加密数据");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("integer) --偏移量");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("RETURNS varchar");
@@ -530,21 +732,50 @@ public class ProcedureUtil {
     public static void pgextFuncStringDecrypt(Connection connection, DbhsmDbUser dbhsmDbUser) throws SQLException {
         /***
          * 创建PostgreSQL解密函数
-         * CREATE OR REPLACE FUNCTION
-         * testuser1.pgext_func_string_decrypt(varchar)
-         * RETURNS varchar
+
          *
+         *CREATE OR REPLACE FUNCTION
+         * testuser1.pgext_func_string_decrypt(  -testuser1 架构
+         * 	text, --策略唯一标识类型
+         * 	text, --策略下载地址类型
+         * 	text, --ip
+         * 	text, --实例名
+         * 	text, --库名
+         * 	text, --表名
+         * 	text, --列名
+         * 	text, --用户名
+         * 	text, --加密数据
+         * 	integer) --偏移量
+         * RETURNS text
          * AS 'D:\pgsql\postgreSQL', 'pgext_func_string_decrypt'
          * LANGUAGE C STRICT;
-         *
-         *
          *
          */
         StringBuilder transSQL = new StringBuilder();
         transSQL.append("CREATE OR REPLACE FUNCTION ");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append(dbhsmDbUser.getDbSchema() + ".pgext_func_string_decrypt(varchar)");
+        transSQL.append(dbhsmDbUser.getDbSchema() + ".pgext_func_string_decrypt(");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--策略唯一标识类型");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--策略下载地址类型");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--ip");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--实例名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--库名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--表名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--列名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--用户名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--加密数据");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("integer) --偏移量");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("RETURNS varchar");

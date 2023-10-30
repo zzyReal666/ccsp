@@ -10,6 +10,7 @@ import com.ccsp.common.security.annotation.RequiresPermissions;
 import com.spms.dbhsm.secretService.domain.DbhsmSecretService;
 import com.spms.dbhsm.secretService.service.IDbhsmSecretServiceService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
@@ -18,7 +19,7 @@ import java.util.List;
 
 /**
  * 密码服务Controller
- * 
+ *
  * @author diq
  * @date 2023-09-25
  */
@@ -71,6 +72,21 @@ public class DbhsmSecretServiceController extends BaseController
     @Log(title = "密码服务", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@RequestBody DbhsmSecretService dbhsmSecretService) throws Exception {
+        //根据服务名称判断数据库是否已存在相同的密码服务
+        DbhsmSecretService secretService = new DbhsmSecretService();
+        secretService.setSecretService(dbhsmSecretService.getSecretService());
+        List<DbhsmSecretService> serviceList = dbhsmSecretServiceService.selectDbhsmSecretServiceList(secretService);
+        if(!CollectionUtils.isEmpty(serviceList)){
+            return AjaxResult.error("名称为"+dbhsmSecretService.getSecretService()+"的密码服务已存在，请更换服务名称！");
+        }
+        //根据ip和端口号判断数据库是否已存在相同的密码服务
+        DbhsmSecretService secretServiceTemp = new DbhsmSecretService();
+        secretServiceTemp.setServiceIp(dbhsmSecretService.getServiceIp());
+        secretServiceTemp.setServicePort(dbhsmSecretService.getServicePort());
+        List<DbhsmSecretService> serviceListTemp = dbhsmSecretServiceService.selectDbhsmSecretServiceList(secretServiceTemp);
+        if(!CollectionUtils.isEmpty(serviceListTemp)){
+            return AjaxResult.error("IP为："+dbhsmSecretService.getServiceIp()+"，端口号为："+dbhsmSecretService.getServicePort()+" 的密码服务已存在，请勿重复添加！");
+        }
         try {
             return toAjax(dbhsmSecretServiceService.insertDbhsmSecretService(dbhsmSecretService));
         } catch (Exception e) {
@@ -97,6 +113,6 @@ public class DbhsmSecretServiceController extends BaseController
 	@DeleteMapping("/{ids}")
     public AjaxResult remove(@PathVariable Long[] ids)
     {
-        return toAjax(dbhsmSecretServiceService.deleteDbhsmSecretServiceByIds(ids));
+        return dbhsmSecretServiceService.deleteDbhsmSecretServiceByIds(ids);
     }
 }

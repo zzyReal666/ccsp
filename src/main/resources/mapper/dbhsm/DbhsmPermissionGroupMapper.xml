@@ -62,6 +62,16 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         </where>
         group by permission_group_name
     </select>
+
+    <select id="selectDbhsmPermissionGroupVoList" parameterType="com.spms.dbhsm.permissionGroup.domain.DbhsmPermissionGroup" resultMap="DbhsmPermissionGroupResult">
+        select a.permission_group_id, a.permission_group_name, a.status, a.create_by, a.create_time, a.update_by, a.update_time,
+        b.permission_id as sub_permission_id, b.permission_group_id as sub_permission_group_id, b.create_by as sub_create_by, b.create_time as sub_create_time, b.update_by as sub_update_by, b.update_time as sub_update_time,
+        c.permission_name
+        from dbhsm_permission_group a
+        left join dbhsm_permission_union_permission_group b on b.permission_group_id = a.permission_group_id
+        left join dbhsm_permission c on c.permission_id = b.permission_id
+    </select>
+
     <select id="selectDbhsmPermissionGroupPermissionIdList" parameterType="com.spms.dbhsm.permission.domain.DbhsmPermission" resultMap="DbhsmPermissionResult">
         select b.permission_id, c.permission_name
         from dbhsm_permission_group a

@@ -219,9 +219,19 @@ public class ZaStrategyController {
             v.add(new DEROctetString(requestApiData.getDatabaseEdition().getBytes()));
         }else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(dbInstance.getDatabaseType())){
             //                int db_type;                //数据库类型，
-            v.add(new ASN1Integer(DbConstants.DB_TYPE_ORACLE_api));
+            v.add(new ASN1Integer(DbConstants.DB_TYPE_MSSQL_api));
             //char db_version[128];       //数据库版本
-            v.add(new DEROctetString(dbInstance.getDatabaseExampleType().getBytes()));
+            v.add(new DEROctetString(dbInstance.getDatabaseEdition().getBytes()));
+        }else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(dbInstance.getDatabaseType())){
+            //                int db_type;                //数据库类型，
+            v.add(new ASN1Integer(DbConstants.DB_TYPE_MYSQL_api));
+            //char db_version[128];       //数据库版本
+            v.add(new DEROctetString(dbInstance.getDatabaseEdition().getBytes()));
+        }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(dbInstance.getDatabaseType())){
+            //                int db_type;                //数据库类型，
+            v.add(new ASN1Integer(DbConstants.DB_TYPE_POSTGRESQL_api));
+            //char db_version[128];       //数据库版本
+            v.add(new DEROctetString(dbInstance.getDatabaseEdition().getBytes()));
         }
 
         //char db_url[256];           //数据库地址

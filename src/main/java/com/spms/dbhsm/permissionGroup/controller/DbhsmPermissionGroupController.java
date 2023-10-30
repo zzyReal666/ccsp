@@ -40,9 +40,10 @@ public class DbhsmPermissionGroupController extends BaseController
     @GetMapping("/list")
     public TableDataInfo list(DbhsmPermissionGroup dbhsmPermissionGroup)
     {
-        startPage();
         List<DbhsmPermissionGroup> list = dbhsmPermissionGroupService.selectDbhsmPermissionGroupList(dbhsmPermissionGroup);
-        return getDataTable(list);
+        startPage();
+        List<DbhsmPermissionGroup> voList = dbhsmPermissionGroupService.selectDbhsmPermissionGroupVoList(dbhsmPermissionGroup);
+        return getDataTable(list,voList);
     }
     /**
      * 查询数据库权限组信息列表

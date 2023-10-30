@@ -8,6 +8,7 @@ import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.ccsp.system.api.systemApi.RemoteDicDataService;
 import com.ccsp.system.api.systemApi.domain.SysDictData;
 import com.spms.common.constant.DbConstants;
+import com.spms.common.dbTool.FunctionUtil;
 import com.spms.common.dbTool.ProcedureUtil;
 import com.spms.common.pool.hikariPool.DbConnectionPoolFactory;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
@@ -222,7 +223,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
             if (instance.getDatabaseType().equals(DbConstants.DB_TYPE_ORACLE)) {
                 userName = user.getUserName().toUpperCase();
             }
-            if (dbUser.getUserName().equals(userName) && instance.getDatabaseType().equals(user.getDatabaseType())) {
+            if (dbUser.getUserName().equals(userName) && instance.getDatabaseType().equals(user.getDatabaseType()) && instance.getId().equals(user.getDatabaseInstanceId())) {
                 dbUser.setIsSelfBuilt(DbConstants.IS_SELF_BUILT);
                 if(!ObjectUtils.isEmpty(user.getPermissionGroupId())) {
                     DbhsmPermissionGroup permissionGroup = dbhsmPermissionGroupMapper.selectDbhsmPermissionGroupByPermissionGroupId(user.getPermissionGroupId());
@@ -362,7 +363,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         }
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = ZAYKException.class)
     int insertMysqlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException {
         String sqlCreateUser,username, password, sql;
         PreparedStatement preparedStatement = null;
@@ -376,8 +377,10 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 username = dbhsmDbUser.getUserName();
                 password = dbhsmDbUser.getPassword();
                 //创建用户sql
-                sqlCreateUser = "CREATE USER '" + username + "' @'%' IDENTIFIED BY '" + password + "'";
+                sqlCreateUser = "CREATE USER ?@'%' IDENTIFIED BY ?";
                 preparedStatement = connection.prepareStatement(sqlCreateUser);
+                preparedStatement.setString(1, username);
+                preparedStatement.setString(2, password);
                 boolean execute = preparedStatement.execute();
                 if(!execute){
                     int result = insertDbUsers(dbhsmDbUser);
@@ -408,7 +411,13 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                     //preparedStatement.executeUpdate();
                 } catch (SQLException throwables) {
                     throwables.printStackTrace();
-                    throw new ZAYKException("授权失败!不支持的授权SQL: " + permissionsSql +"，异常信息："+ throwables.getMessage());
+                    // 回滚事务
+                    connection.rollback();
+                    // 撤销创建的用户
+                    sql = "DROP USER '" + username + "'@'%'";
+                    preparedStatement = connection.prepareStatement(sql);
+                    preparedStatement.executeUpdate();
+                    throw new ZAYKException("创建用户失败：授权失败，不支持的授权SQL: " + permissionsSql + "，异常信息：" + throwables.getMessage());
                 }
                 sql ="FLUSH PRIVILEGES;";
                 preparedStatement = connection.prepareStatement(sql);
@@ -487,11 +496,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
 
                 try {
                     ProcedureUtil.transSQLServerAssembly(connection, instance.getDatabaseServerName(), dbhsmDbUser.getEncLibapiPath());
-
-                    //创建加解密方法
-                    ProcedureUtil.transSQLServerStringEncrypt(connection);
-                    ProcedureUtil.transSQLServerStringDecrypt(connection);
-
+                    FunctionUtil.createSqlServerFunction(connection);
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
@@ -770,7 +775,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         List<DbhsmEncryptColumns> encryptColumnsList = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsList(encryptColumns);
         if(!CollectionUtils.isEmpty(encryptColumnsList)){
             String dbUserNameStr = encryptColumnsList.stream().map(DbhsmEncryptColumns::getDbTable).distinct().collect(Collectors.joining(","));
-            throw new ZAYKException("该用户下的表:"+dbUserNameStr+"已配置加密列，不允许删除！");
+            throw new ZAYKException(userName+"用户下的表:"+dbUserNameStr+"已配置加密列，不允许删除！");
         }
     }
 

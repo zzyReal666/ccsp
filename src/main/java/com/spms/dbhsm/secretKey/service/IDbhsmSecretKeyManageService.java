@@ -73,4 +73,8 @@ public interface IDbhsmSecretKeyManageService
      * @return
      */
     String checkSecretKeyIndexUnique(DbhsmSecretKeyManage dbhsmSecretKeyManage);
+
+    String checkSecretKeyUniqueEdit(DbhsmSecretKeyManage dbhsmSecretKeyManage);
+
+    String checkSecretKeyIndexUniqueEdit(DbhsmSecretKeyManage dbhsmSecretKeyManage);
 }

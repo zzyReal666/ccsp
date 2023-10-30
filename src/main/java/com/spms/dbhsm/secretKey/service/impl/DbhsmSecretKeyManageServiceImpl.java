@@ -1,5 +1,6 @@
 package com.spms.dbhsm.secretKey.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.DateUtils;
 import com.ccsp.common.core.utils.StringUtils;
@@ -290,6 +291,23 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
         }
         return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
     }
+    /**
+     * 校验密钥名称是否唯一
+     * @param dbhsmSecretKeyManage
+     * @return
+     */
+    @Override
+    public String checkSecretKeyUniqueEdit(DbhsmSecretKeyManage dbhsmSecretKeyManage) {
+        DbhsmSecretKeyManage secretKeyUnique = dbhsmSecretKeyManageMapper.checkSecretKeyUnique(dbhsmSecretKeyManage.getSecretKeyName());
+        if (ObjectUtil.isEmpty(secretKeyUnique)) {
+            return DbConstants.DBHSM_GLOBLE_UNIQUE;
+        }
+        //有值的情况，如果是修改，允许有一条
+        if (dbhsmSecretKeyManage.getId() != null && dbhsmSecretKeyManage.getId() == secretKeyUnique.getId().intValue()) {
+            return DbConstants.DBHSM_GLOBLE_UNIQUE;
+        }
+        return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
+    }
 
     @Override
     public String checkSecretKeyIndexUnique(DbhsmSecretKeyManage dbhsmSecretKeyManage) {
@@ -304,6 +322,22 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
         if (secretKeyUniqueList.size() > 1) {
             //至少两条
             return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
+        }
+
+        //只有一条
+        if (dbhsmSecretKeyManage.getId() != null && dbhsmSecretKeyManage.getId().intValue() == secretKeyUniqueList.get(0).getId().intValue()) {
+            return DbConstants.DBHSM_GLOBLE_UNIQUE;
+        }
+        return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
+    }
+    @Override
+    public String checkSecretKeyIndexUniqueEdit(DbhsmSecretKeyManage dbhsmSecretKeyManage) {
+        DbhsmSecretKeyManage secretKeyManage = new DbhsmSecretKeyManage();
+        secretKeyManage.setSecretKeyIndex(dbhsmSecretKeyManage.getSecretKeyIndex());
+        secretKeyManage.setSecretKeySource(dbhsmSecretKeyManage.getSecretKeySource());
+        List<DbhsmSecretKeyManage> secretKeyUniqueList = dbhsmSecretKeyManageMapper.selectDbhsmSecretKeyManageList(secretKeyManage);
+        if (StringUtils.isEmpty(secretKeyUniqueList)) {
+            return DbConstants.DBHSM_GLOBLE_UNIQUE;
         }
 
         //只有一条

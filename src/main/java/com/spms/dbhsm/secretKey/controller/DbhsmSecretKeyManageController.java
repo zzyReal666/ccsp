@@ -95,6 +95,14 @@ public class DbhsmSecretKeyManageController extends BaseController
     @PutMapping
     public AjaxResult edit(@RequestBody DbhsmSecretKeyManage dbhsmSecretKeyManage)
     {
+        //校验密钥名称是否唯一
+        if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(dbhsmSecretKeyManageService.checkSecretKeyUniqueEdit(dbhsmSecretKeyManage))) {
+            return AjaxResult.error("密钥名称已存在");
+        }
+        //校验密钥索引是否已被创建过
+        if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(dbhsmSecretKeyManageService.checkSecretKeyIndexUniqueEdit(dbhsmSecretKeyManage))) {
+            return AjaxResult.error(dbhsmSecretKeyManage.getSecretKeyIndex() + "号密钥已创建,请使用其他密钥索引！");
+        }
         try {
             return toAjax(dbhsmSecretKeyManageService.updateDbhsmSecretKeyManage(dbhsmSecretKeyManage));
         } catch (Exception e) {

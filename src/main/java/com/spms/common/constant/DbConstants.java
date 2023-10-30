@@ -58,6 +58,8 @@ public class DbConstants {
     public static final String DB_TYPE_MYSQL_DESC = "MySql";
     public static final String DB_TYPE_POSTGRESQL = "3";
     public static final String DB_TYPE_POSTGRESQL_DESC = "PostgreSQL";
+    public static final String DB_TYPE_DB2 = "4";
+    public static final String DB_TYPE_DB2_DESC = "DB2";
     public static final String DB_COLUMN_NAME = "columnName";
 
     /** 加密状态  1未加密 2已加密 3已解密 */
@@ -67,9 +69,9 @@ public class DbConstants {
     /**
      * 是否唯一返回码
      */
-    /* 存在  */
+    /**存在  */
     public static final String DBHSM_GLOBLE_UNIQUE = "0";
-    /* 不存在  */
+    /** 不存在  */
     public static final String DBHSM_GLOBLE_NOT_UNIQUE = "1";
 
     //

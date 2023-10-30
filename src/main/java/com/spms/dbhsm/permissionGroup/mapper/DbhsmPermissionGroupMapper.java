@@ -35,6 +35,8 @@ public interface DbhsmPermissionGroupMapper
      */
     public List<DbhsmPermissionGroup> selectDbhsmPermissionGroupList(DbhsmPermissionGroup dbhsmPermissionGroup);
 
+    public List<DbhsmPermissionGroup> selectDbhsmPermissionGroupVoList(DbhsmPermissionGroup dbhsmPermissionGroup);
+
     /**
      * 新增数据库权限组信息
      *
