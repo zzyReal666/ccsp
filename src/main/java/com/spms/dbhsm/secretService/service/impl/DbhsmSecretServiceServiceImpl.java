@@ -7,8 +7,8 @@ import com.spms.common.CommandUtil;
 import com.spms.common.Int4jUtil;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.kmip.KmipServicePoolFactory;
-import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
-import com.spms.dbhsm.dbInstance.mapper.DbhsmDbInstanceMapper;
+import com.spms.dbhsm.secretKey.domain.DbhsmSecretKeyManage;
+import com.spms.dbhsm.secretKey.mapper.DbhsmSecretKeyManageMapper;
 import com.spms.dbhsm.secretService.domain.DbhsmSecretService;
 import com.spms.dbhsm.secretService.mapper.DbhsmSecretServiceMapper;
 import com.spms.dbhsm.secretService.service.IDbhsmSecretServiceService;
@@ -36,7 +36,7 @@ public class DbhsmSecretServiceServiceImpl implements IDbhsmSecretServiceService
     private DbhsmSecretServiceMapper dbhsmSecretServiceMapper;
 
     @Autowired
-    private DbhsmDbInstanceMapper dbhsmInstanceMapper;
+    private DbhsmSecretKeyManageMapper dbhsmSecretKeyManageMapper;
 
     @PostConstruct
     private void initSecretService() {
@@ -196,10 +196,10 @@ public class DbhsmSecretServiceServiceImpl implements IDbhsmSecretServiceService
                 continue;
             }
             //校验密码服务是否被使用
-            DbhsmDbInstance instance = new DbhsmDbInstance();
-            instance.setSecretService(dbhsmSecretService.getSecretService());
-            List<DbhsmDbInstance> instanceList = dbhsmInstanceMapper.selectDbhsmDbInstanceList(instance);
-            if(instanceList.size() > 0){
+            DbhsmSecretKeyManage secretKeyManage = new DbhsmSecretKeyManage();
+            secretKeyManage.setSecretKeyServer(dbhsmSecretService.getSecretService());
+            List<DbhsmSecretKeyManage> keyManageList = dbhsmSecretKeyManageMapper.selectDbhsmSecretKeyManageList(secretKeyManage);
+            if(keyManageList.size() > 0){
                 secretService.add(dbhsmSecretService.getSecretService());
                 List<Long> idList = new ArrayList<>(Arrays.asList(ids));
                 idList.remove(id);

@@ -1,5 +1,6 @@
 package com.spms.dbhsm.permissionGroup.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.ccsp.common.core.utils.DateUtils;
 import com.ccsp.common.core.utils.StringUtils;
 import com.ccsp.common.security.utils.SecurityUtils;
@@ -152,15 +153,26 @@ public class DbhsmPermissionGroupServiceImpl implements IDbhsmPermissionGroupSer
     @Override
     public String checkPermissionGroupNameUnique(Long permissionGroupId,String permissionGroupName) {
         DbhsmPermissionGroup dbhsmPermissionGroup = dbhsmPermissionGroupMapper.checkPermissionGroupNameUnique(permissionGroupName);
-        if (permissionGroupId != null && permissionGroupId.intValue() == dbhsmPermissionGroup.getPermissionGroupId().intValue()) {
+        if (ObjectUtil.isNull(dbhsmPermissionGroup)){
             return DbConstants.DBHSM_GLOBLE_UNIQUE;
         }
-        if (StringUtils.isNotNull(dbhsmPermissionGroup)){
-            return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
+        return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
+    }
+    /**
+     * 校验权限组名称是否唯一
+     * @param permissionGroupName
+     * @return
+     */
+    @Override
+    public String checkPermissionGroupNameUniqueEdit(Long permissionGroupId,String permissionGroupName) {
+        DbhsmPermissionGroup dbhsmPermissionGroup = dbhsmPermissionGroupMapper.checkPermissionGroupNameUnique(permissionGroupName);
+        if (ObjectUtil.isNull(dbhsmPermissionGroup)){
+            return DbConstants.DBHSM_GLOBLE_UNIQUE;
         }
-
-
-        return DbConstants.DBHSM_GLOBLE_UNIQUE;
+        if (ObjectUtil.isNotNull(dbhsmPermissionGroup) && permissionGroupId.intValue() == dbhsmPermissionGroup.getPermissionGroupId().intValue()){
+            return DbConstants.DBHSM_GLOBLE_UNIQUE;
+        }
+        return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
     }
 
     @Override

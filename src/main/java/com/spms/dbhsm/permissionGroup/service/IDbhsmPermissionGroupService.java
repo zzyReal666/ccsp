@@ -73,4 +73,6 @@ public interface IDbhsmPermissionGroupService
     String checkPermissionGroupNameUnique(Long permissionGroupId,String permissionGroupName);
 
     List<SelectOption> selectDbhsmPermissionGroupOption();
+
+    String checkPermissionGroupNameUniqueEdit(Long permissionGroupId, String permissionGroupName);
 }

@@ -246,6 +246,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
      * @return 结果
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public int insertDbhsmDbUsers(DbhsmDbUser dbhsmDbUser) throws ZAYKException, SQLException {
         //根据实例id获取数据库实例
         DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(dbhsmDbUser.getDatabaseInstanceId());
@@ -270,18 +271,18 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         }
     }
     //postgresql 新增用户
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = ZAYKException.class)
     public int insertPostgreSqlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException {
         String sqlCreateUser,username, password, sql;
         PreparedStatement preparedStatement = null;
         Connection connection = null;
-        Long permissionGroupId = dbhsmDbUser.getPermissionGroupId();
+        //Long permissionGroupId = dbhsmDbUser.getPermissionGroupId();
+        username = dbhsmDbUser.getUserName();
+        password = dbhsmDbUser.getPassword();
         //根据实例获取数据库连接
         try {
             connection = DbConnectionPoolFactory.getInstance().getConnection(instance);
             if (Optional.ofNullable(connection).isPresent()) {
-                username = dbhsmDbUser.getUserName();
-                password = dbhsmDbUser.getPassword();
                 //创建postgresql用户sql
                 sqlCreateUser="CREATE USER \"" + username + "\" WITH PASSWORD '" + password + "'";
                 preparedStatement = connection.prepareStatement(sqlCreateUser);
@@ -294,9 +295,9 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                     }
                 }
                 //根据权限组id查询权限组对应的所有权限SQL：
-                List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
+                //List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
                 //赋权
-                String permissionsSql = null;
+                //String permissionsSql = null;
                 try {
                     //for (String permission : permissionsSqlList) {
                     //    permissionsSql = permission.toLowerCase();
@@ -323,6 +324,20 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 }
             }
         } catch (SQLException | ZAYKException e) {
+            dbhsmDbUsersMapper.deleteDbhsmDbUsersById(dbhsmDbUser.getId());
+            try {
+                // 回滚事务
+                assert connection != null;
+                connection.rollback();
+                //删除创建的用户
+                sql = "drop OWNED BY \"" + username + "\";drop user \"" + username + "\"";
+                log.info("删除数据库用户执行SQL:{}", sql);
+                preparedStatement = connection.prepareStatement(sql);
+                preparedStatement.executeUpdate();
+                connection.commit();
+            }catch (SQLException sqlException){
+                sqlException.printStackTrace();
+            }
             e.printStackTrace();
             throw new ZAYKException(e.getMessage());
         } finally {
@@ -360,6 +375,16 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
             }
         }catch (SQLException throwables) {
             throwables.printStackTrace();
+        }finally {
+            //释放资源preparedStatement，connection不在此处释放，由调用者释放
+            if (preparedStatement != null){
+                try {
+                    preparedStatement.close();
+                } catch (SQLException sqlException) {
+                    sqlException.printStackTrace();
+                }
+            }
+
         }
     }
 
@@ -417,7 +442,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                     sql = "DROP USER '" + username + "'@'%'";
                     preparedStatement = connection.prepareStatement(sql);
                     preparedStatement.executeUpdate();
-                    throw new ZAYKException("创建用户失败：授权失败，不支持的授权SQL: " + permissionsSql + "，异常信息：" + throwables.getMessage());
+                    throw new ZAYKException("创建用户失败：授权失败，MySQL不支持的授权SQL: " + permissionsSql );
                 }
                 sql ="FLUSH PRIVILEGES;";
                 preparedStatement = connection.prepareStatement(sql);

@@ -122,7 +122,10 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 DbhsmEncryptColumns encryptColumns = new DbhsmEncryptColumns();
                 encryptColumns.setDbInstanceId(instance.getId());
                 encryptColumns.setDbInstance(getInstance(instance));
-                encryptColumns.setDbUserName(dbUserInfo.getUserName());
+                //Oracle数据库需要区分用户 查询使用
+                if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
+                    encryptColumns.setDbUserName(dbUserInfo.getUserName());
+                }
                 encryptColumns.setDbTable(columnsDto.getDbTableName());
                 encryptColumns.setEncryptColumns(columnsInfoList.get(j).get(DbConstants.DB_COLUMN_NAME));
                 encryptColumns.setColumnsType(columnsInfoList.get(j).get("columnType"));
@@ -138,14 +141,16 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                     encryptColumns.setEncryptionAlgorithm("-");
                     encryptColumns.setEncryptionStatus(DbConstants.NOT_ENCRYPTED);
                 }
+                encryptColumns.setDbUserName(dbUserInfo.getUserName());
                 columnsList.add(encryptColumns);
             }
         } catch (Exception e) {
             e.printStackTrace();
             throw new Exception(e.getMessage());
-        }
-        if (conn != null) {
-            conn.close();
+        }finally {
+            if (conn != null) {
+                conn.close();
+            }
         }
         return columnsList;
     }
@@ -159,13 +164,12 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
     @Transactional(rollbackFor = Exception.class)
     @Override
     public int insertDbhsmEncryptColumns(DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd) throws Exception {
-
         // 使用DBA创建连接
         DbhsmDbInstance instance = instanceMapper.selectDbhsmDbInstanceById(dbhsmEncryptColumnsAdd.getDbInstanceId());
         dbhsmEncryptColumnsAdd.setDatabaseType(instance.getDatabaseType());
         dbhsmEncryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
         Connection conn = null;
-
+       try {
         DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
         BeanUtils.copyProperties(instance, connDTO);
         conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
@@ -230,11 +234,15 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             log.error("创建视图异常");
             throw new Exception("创建视图异常");
         }
-
-        if (conn != null) {
-            conn.close();
+            return ret;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new Exception(e);
+        } finally {
+            if (conn != null) {
+                conn.close();
+            }
         }
-        return ret;
     }
 
     /**
@@ -372,9 +380,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                     boolean viewRet = ViewUtil.operView(connection, dbhsmEncryptColumnsAdd, dbhsmEncryptColumnsMapper);
                     if (viewRet) {
                         connection.commit();
-                        if (connection != null) {
-                            connection.close();
-                        }
+                        connection.close();
                     } else {
                         if (connection != null) {
                             connection.close();
@@ -473,7 +479,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 for (int j = 0; j < usersList.size(); j++) {
                     try {
                         user = usersList.get(j);
-                        if (user.getIsSelfBuilt().intValue() != 0) {
+                        if (user.getIsSelfBuilt() != 0) {
                             continue;
                         }
 
@@ -506,6 +512,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                                 conn = null;
                             }
                         } catch (Exception e) {
+                            e.printStackTrace();
                         }
                     }
                 }

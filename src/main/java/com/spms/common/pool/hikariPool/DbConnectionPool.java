@@ -75,14 +75,14 @@ public class DbConnectionPool {
             Throwable rootCause = e.getCause();
             String errorMessage = rootCause != null ? rootCause.getMessage() : "";
             log.info("Could not create HikariCP data source");
-            throw new RuntimeException("创建连接池失败！"+databaseIp+":"+databasePort+errorMessage, e);
+            throw new RuntimeException("创建连接池失败！请检查网络是否正常及用户名密码是否正确。", e);
         } catch (Exception e) {
             e.printStackTrace();
             //String errorMessage = new String(e.getMessage().getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
             Throwable rootCause = e.getCause();
             String errorMessage = rootCause != null ? rootCause.getMessage() : "";
             log.info("Could not create HikariCP data source");
-            throw new RuntimeException("连接池创建失败！"+errorMessage, e);
+            throw new RuntimeException("创建连接池失败！请检查网络是否正常及用户名密码是否正确。", e);
         }
     }
 

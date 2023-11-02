@@ -305,11 +305,13 @@ public class ViewUtil {
         String encColumns = "";
         for (int i = 0; i < allColumnsInfo.size(); i++) {
             Map<String, String> map = allColumnsInfo.get(i);
-            String columnName = map.get(DbConstants.DB_COLUMN_NAME);
+            //防止列名为mysql关键字添加``
+            String columnName = "`"+map.get(DbConstants.DB_COLUMN_NAME)+"`";
+            String colName = map.get(DbConstants.DB_COLUMN_NAME);
             StringBuffer item = new StringBuffer();
             boolean isEncColumn = false;
             for (DbhsmEncryptColumns encryptColumn1 : dbhsmEncryptColumns) {
-                if (columnName.equalsIgnoreCase(encryptColumn1.getEncryptColumns())) {
+                if (colName.equalsIgnoreCase(encryptColumn1.getEncryptColumns())) {
                     item.append("StringDecrypt(");
                     item.append(System.getProperty("line.separator"));
                     item.append("'" + encryptColumn1.getId() +  "',");
@@ -342,7 +344,7 @@ public class ViewUtil {
                     }
                     item.append(System.getProperty("line.separator"));
 
-                    item.append(" as " + encryptColumn1.getEncryptColumns() + " ,");
+                    item.append(" as `" + encryptColumn1.getEncryptColumns() + "` ,");
                     isEncColumn = true;
                     break;
                 }

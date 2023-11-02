@@ -111,7 +111,7 @@ public class DbhsmPermissionGroupController extends BaseController
     @PutMapping
     public AjaxResult edit(@RequestBody DbhsmPermissionGroup dbhsmPermissionGroup)
     {
-        if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(dbhsmPermissionGroupService.checkPermissionGroupNameUnique(dbhsmPermissionGroup.getPermissionGroupId(),dbhsmPermissionGroup.getPermissionGroupName()))) {
+        if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(dbhsmPermissionGroupService.checkPermissionGroupNameUniqueEdit(dbhsmPermissionGroup.getPermissionGroupId(),dbhsmPermissionGroup.getPermissionGroupName()))) {
             return AjaxResult.error("权限组名称已存在");
         }
         return toAjax(dbhsmPermissionGroupService.updateDbhsmPermissionGroup(dbhsmPermissionGroup));
