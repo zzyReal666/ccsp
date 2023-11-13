@@ -9,19 +9,9 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>spms-dbhsm-manager</artifactId>
+    <artifactId>spms-dbenc-manager</artifactId>
 
     <dependencies>
-        <!-- SpringCloud Alibaba Nacos -->
-<!--        <dependency>-->
-<!--            <groupId>com.alibaba.cloud</groupId>-->
-<!--            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>-->
-<!--        </dependency>-->
-<!--        &lt;!&ndash; SpringCloud Alibaba Nacos Config &ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>com.alibaba.cloud</groupId>-->
-<!--            <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>-->
-<!--        </dependency>-->
 
         <!-- Mysql Connector -->
         <dependency>
