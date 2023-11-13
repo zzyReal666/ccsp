@@ -84,7 +84,12 @@ public class DbhsmPermissionGroupServiceImpl implements IDbhsmPermissionGroupSer
      */
     @Override
     public List<DbhsmPermissionGroup> selectDbhsmPermissionGroupVoList(DbhsmPermissionGroup dbhsmPermissionGroup) {
-        return dbhsmPermissionGroupMapper.selectDbhsmPermissionGroupVoList(dbhsmPermissionGroup);
+        List<DbhsmPermissionGroup> dbhsmPermissionGroups = dbhsmPermissionGroupMapper.selectDbhsmPermissionGroupListAll(dbhsmPermissionGroup);
+        for (int i = 0; i < dbhsmPermissionGroups.size(); i++) {
+            List<DbhsmPermission> permissions = dbhsmPermissionMapper.selectDbhsmPermissionListByGroupId(dbhsmPermissionGroups.get(i).getPermissionGroupId());
+            dbhsmPermissionGroups.get(i).setDbhsmPermissionList(permissions);
+        }
+        return dbhsmPermissionGroups;
     }
 
     /**

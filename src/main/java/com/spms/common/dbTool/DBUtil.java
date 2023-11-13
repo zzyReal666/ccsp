@@ -124,7 +124,7 @@ public final class DBUtil {
                 Statement stmt = null;
                 try {
                     stmt = conn.createStatement();
-                    ResultSet resultSet = stmt.executeQuery("DESCRIBE " + tableName);
+                    ResultSet resultSet = stmt.executeQuery("DESCRIBE `" + tableName + "`");
                     while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
                         Map<String,String> colMap =new HashMap<>();
                         colMap.put(DbConstants.DB_COLUMN_NAME, resultSet.getString("Field"));
@@ -141,10 +141,14 @@ public final class DBUtil {
                 Statement stmt = null;
                 try {
                     stmt = conn.createStatement();
+                    //ResultSet resultSet = stmt.executeQuery(
+                    //        "SELECT format_type(a.atttypid,a.atttypmod) as type,a.attname as name " +
+                    //                "FROM pg_class as c,pg_attribute as a where c.relname = '" + tableName +
+                    //                "' and a.attrelid = c.oid and a.attnum>0");
                     ResultSet resultSet = stmt.executeQuery(
-                            "SELECT format_type(a.atttypid,a.atttypmod) as type,a.attname as name " +
-                                    "FROM pg_class as c,pg_attribute as a where c.relname = '" + tableName +
-                                    "' and a.attrelid = c.oid and a.attnum>0");
+                            "SELECT data_type as type ,column_name as name ,character_maximum_length as length   \n" +
+                                 "FROM information_schema.columns \n" +
+                                  "WHERE table_name ='" + tableName + "' ORDER BY ordinal_position");
                     while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
                         Map<String,String> colMap =new HashMap<>();
                         colMap.put(DbConstants.DB_COLUMN_NAME, resultSet.getString("name"));

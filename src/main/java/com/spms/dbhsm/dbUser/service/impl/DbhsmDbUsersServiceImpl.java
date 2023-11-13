@@ -249,6 +249,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
     @Transactional(rollbackFor = Exception.class)
     public int insertDbhsmDbUsers(DbhsmDbUser dbhsmDbUser) throws ZAYKException, SQLException {
         //根据实例id获取数据库实例
+        int i = 0;
         DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(dbhsmDbUser.getDatabaseInstanceId());
         if (instance == null) {
             log.info("数据库实例不存在！");
@@ -317,6 +318,9 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                     //加解密函数
                     ProcedureUtil.pgextFuncStringEncrypt(connection, dbhsmDbUser);
                     ProcedureUtil.pgextFuncStringDecrypt(connection, dbhsmDbUser);
+                    //fpe函数
+                    ProcedureUtil.pgextFuncFPEEncrypt(connection, dbhsmDbUser);
+                    ProcedureUtil.pgextFuncFPEDecrypt(connection, dbhsmDbUser);
                     connection.commit();
                 } catch (SQLException throwables) {
                     throwables.printStackTrace();
@@ -447,6 +451,12 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 sql ="FLUSH PRIVILEGES;";
                 preparedStatement = connection.prepareStatement(sql);
                 executeUpdate = preparedStatement.executeUpdate();
+                //创建加解密函数
+                try {
+                    FunctionUtil.createEncryptDecryptFunction(connection,instance);
+                }catch (Exception e) {
+                    log.info("创建加解密函数失败！加密吗函数已存在？"+e.getMessage());
+                }
                 connection.commit();
             }
         } catch (SQLException e) {
@@ -518,9 +528,11 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
 
                 sqlEmpowerment = "exec sp_addrolemember 'db_ddladmin','" + username + "'";
                 preparedStatement = connection.prepareStatement(sqlEmpowerment);
-
+                preparedStatement.execute();
                 try {
+                    //创建SQLserver程序集
                     ProcedureUtil.transSQLServerAssembly(connection, instance.getDatabaseServerName(), dbhsmDbUser.getEncLibapiPath());
+                    //创建sm4加解密方法 fpe方法
                     FunctionUtil.createSqlServerFunction(connection);
                 } catch (SQLException e) {
                     e.printStackTrace();
@@ -528,14 +540,33 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
 
                 sqlEmpowerment = "USE " + dbName + "; GRANT REFERENCES ON ASSEMBLY::libsqlextdll TO " + username;
                 preparedStatement = connection.prepareStatement(sqlEmpowerment);
+                preparedStatement.execute();
+                log.info(sqlEmpowerment);
 
-                log.info(sqlEmpowerment);
-                sqlEmpowerment = "USE " + dbName + " ;GRANT EXECUTE ON dbo.func_string_encrypt TO " + username;
+                sqlEmpowerment = "USE master; GRANT VIEW SERVER STATE TO " + username;
                 preparedStatement = connection.prepareStatement(sqlEmpowerment);
+                preparedStatement.execute();
                 log.info(sqlEmpowerment);
-                sqlEmpowerment = "USE " + dbName + " ;GRANT EXECUTE ON dbo.func_string_decrypt TO " + username;
+
+                //给用户赋执行sm4加解密方法 fpe方法权限
+                sqlEmpowerment = "USE " + dbName + " ;GRANT EXECUTE ON dbo.func_string_encrypt_ex TO " + username;
                 preparedStatement = connection.prepareStatement(sqlEmpowerment);
+                preparedStatement.execute();
                 log.info(sqlEmpowerment);
+                sqlEmpowerment = "USE " + dbName + " ;GRANT EXECUTE ON dbo.func_string_decrypt_ex TO " + username;
+                preparedStatement = connection.prepareStatement(sqlEmpowerment);
+                preparedStatement.execute();
+                log.info(sqlEmpowerment);
+                sqlEmpowerment = "USE " + dbName + " ;GRANT EXECUTE ON dbo.func_fpe_encrypt_ex TO " + username;
+                preparedStatement = connection.prepareStatement(sqlEmpowerment);
+                preparedStatement.execute();
+                log.info(sqlEmpowerment);
+                sqlEmpowerment = "USE " + dbName + " ;GRANT EXECUTE ON dbo.func_fpe_decrypt_ex TO " + username;
+                preparedStatement = connection.prepareStatement(sqlEmpowerment);
+                preparedStatement.execute();
+                log.info(sqlEmpowerment);
+                //connection.commit();
+
                 Long permissionGroupId = dbhsmDbUser.getPermissionGroupId();
                 //根据权限组id查询权限组对应的所有权限SQL：
                 List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
@@ -557,7 +588,17 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                     connection.commit();
                 } catch (SQLException throwables) {
                     throwables.printStackTrace();
-                    throw new ZAYKException("授权失败!"+throwables.getMessage());
+                    // 回滚事务
+                    connection.rollback();
+                    try {
+                        sql = "drop user " + username + ";drop login " + username;
+                        preparedStatement = connection.prepareStatement(sql);
+                        preparedStatement.execute();
+                        connection.commit();
+                    } catch (SQLException sqlException) {
+                        sqlException.printStackTrace();
+                    }
+                    throw new ZAYKException("创建用户失败：授权失败，SQL Server不支持的授权SQL: " + permissionsSql );
                 }
             }
         } catch (SQLException e) {
@@ -589,7 +630,8 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         Connection conn = null;
         PreparedStatement preparedStatement = null;
         int executeUpdate = 0;
-        String username, password, tableSpace, sql;
+        String username, password, tableSpace, sql,permissionsSql = null;
+        dbhsmDbUser.setUserName(dbhsmDbUser.getUserName().toUpperCase());
         int result = insertDbUsers(dbhsmDbUser);
         if (result != 1) {
             log.error("创建用户失败!");
@@ -615,20 +657,34 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 //根据权限组id查询权限组对应的所有权限SQL：
                 List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
                 //赋权
-                for (int i = 0; i < permissionsSqlList.size(); i++) {
-                    if(StringUtils.isNotEmpty(permissionsSqlList.get(i))) {
-                        if (!(permissionsSqlList.get(i).toLowerCase().startsWith("grant") && !(permissionsSqlList.get(i).toLowerCase().startsWith("revoke")))) {
-                            log.info("不支持的授权SQL:" + permissionsSqlList.get(i));
-                            throw new ZAYKException("不支持的授权SQL:" + permissionsSqlList.get(i));
+                try {
+                    for (int i = 0; i < permissionsSqlList.size(); i++) {
+                        permissionsSql=permissionsSqlList.get(i);
+                        if(StringUtils.isNotEmpty(permissionsSql)) {
+                            if (!(permissionsSql.toLowerCase().startsWith("grant") && !(permissionsSql.toLowerCase().startsWith("revoke")))) {
+                                log.info("不支持的授权SQL:" + permissionsSql);
+                                throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
+                            }
+                            if (permissionsSql.toLowerCase().startsWith("grant")) {
+                                sql = permissionsSql.trim() + " to " + username;
+                            } else {
+                                sql = permissionsSql.trim() + " from " + username;
+                            }
+                            preparedStatement = conn.prepareStatement(sql);
+                            executeUpdate = preparedStatement.executeUpdate();
                         }
-                        if (permissionsSqlList.get(i).toLowerCase().startsWith("grant")) {
-                            sql = permissionsSqlList.get(i).trim() + " to " + username;
-                        } else {
-                            sql = permissionsSqlList.get(i).trim() + " from " + username;
-                        }
-                        preparedStatement = conn.prepareStatement(sql);
-                        executeUpdate = preparedStatement.executeUpdate();
                     }
+                } catch (ZAYKException e) {
+                    e.printStackTrace();
+                } catch (SQLException sqlException) {
+                    // 回滚事务
+                    conn.rollback();
+                    // 撤销创建的用户
+                    sql = "DROP USER " + username + " cascade";
+                    preparedStatement = conn.prepareStatement(sql);
+                    preparedStatement.executeUpdate();
+                    sqlException.printStackTrace();
+                    throw new ZAYKException("创建用户失败：授权失败，Oracle不支持的授权SQL:" + permissionsSql);
                 }
                 conn.commit();
 
@@ -656,9 +712,6 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 preparedStatement.execute();
                 conn.commit();
             }
-        } catch (ZAYKException e) {
-            e.printStackTrace();
-            throw new ZAYKException(e.getErrMsg());
         } catch (SQLException e) {
             e.printStackTrace();
             throw new SQLException(e);
@@ -725,7 +778,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
      * @return 结果
      */
     @Override
-    @Transactional(rollbackFor = SQLException.class)
+    @Transactional(rollbackFor = {ZAYKException.class,SQLException.class})
     public int deleteDbhsmDbUsersByIds(Long[] ids) throws SQLException, ZAYKException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;

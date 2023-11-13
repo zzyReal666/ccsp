@@ -3,7 +3,7 @@
 PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.spms.dbhsm.permission.mapper.DbhsmPermissionMapper">
-    
+
     <resultMap type="com.spms.dbhsm.permission.domain.DbhsmPermission" id="DbhsmPermissionResult">
         <result property="permissionId"    column="permission_id"    />
         <result property="parentId"    column="parent_id"    />
@@ -21,12 +21,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
     <select id="selectDbhsmPermissionList" parameterType="com.spms.dbhsm.permission.domain.DbhsmPermission" resultMap="DbhsmPermissionResult">
         <include refid="selectDbhsmPermissionVo"/>
-        <where>  
+        <where>
             <if test="permissionName != null  and permissionName != ''"> and permission_name like concat('%', #{permissionName}, '%')</if>
             <if test="permissionSql != null  and permissionSql != ''"> and permission_sql = #{permissionSql}</if>
         </where>
     </select>
-    
+
     <select id="selectDbhsmPermissionByPermissionId" parameterType="Long" resultMap="DbhsmPermissionResult">
         <include refid="selectDbhsmPermissionVo"/>
         where permission_id = #{permissionId}
@@ -80,7 +80,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </delete>
 
     <delete id="deleteDbhsmPermissionByPermissionIds" parameterType="String">
-        delete from dbhsm_permission where permission_id in 
+        delete from dbhsm_permission where permission_id in
         <foreach item="permissionId" collection="array" open="(" separator="," close=")">
             #{permissionId}
         </foreach>
@@ -93,4 +93,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             #{permissionId}
         </foreach>
     </select>
+    <select id="selectDbhsmPermissionListByGroupId" parameterType="Long" resultMap="DbhsmPermissionResult">
+        select permission_sql from dbhsm_permission where permission_id in(
+            select permission_id from dbhsm_permission_union_permission_group
+            where permission_group_id =#{permissionGroupId})
+    </select>
+
 </mapper>

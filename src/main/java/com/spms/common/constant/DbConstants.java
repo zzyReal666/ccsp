@@ -112,10 +112,27 @@ public class DbConstants {
      *  是否建立加密规则 1：是 0：否
      * */
     public static final Integer ESTABLISH_RULES_YES = 1;
-    /** 加密算法 */
+    /** 加密算法 注意：增加算法后要在algMapping（）中进行添加相应的算法名称*/
     public static final String SGD_SM4 = "0";
     public static final String SGD_SM4_FPE_10 = "10";
     public static final String SGD_SM4_FPE_62 = "62";
+
+    /** 算法标识（0,10,62）映射为算法名称*/
+    public static String algMapping(String algFlag) {
+        Map<String, String> map = new HashMap<>();
+        map.put(SGD_SM4, "SGD_SM4");
+        map.put(SGD_SM4_FPE_10, "SGD_SM4_FPE_10");
+        map.put(SGD_SM4_FPE_62, "SGD_SM4_FPE_62");
+        return map.get(algFlag) == null ? algFlag : map.get(algFlag);
+    }
+    /** 算法标识（0,10,62）映射为视图名称 区分sm4和fpe拼接使用*/
+    public static String algMappingStrOrFpe(String algFlag) {
+        Map<String, String> map = new HashMap<>();
+        map.put(SGD_SM4, "string");
+        map.put(SGD_SM4_FPE_10, "fpe");
+        map.put(SGD_SM4_FPE_62, "fpe");
+        return map.get(algFlag) == null ? algFlag : map.get(algFlag);
+    }
 
     /*****************  数据库字段类型  ********************/
     public static int DATA_TYPE_INT = 0x00000001;

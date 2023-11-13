@@ -249,7 +249,7 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
             dbhsmEncryptColumns.setSecretKeyId(secretKeyManage.getSecretKeyId());
             List<DbhsmEncryptColumns> list = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsList(dbhsmEncryptColumns);
             if(list.size() > 0){
-                throw new ZAYKException("密钥:"+id+"已被加密列使用,请先删除加密列");
+                throw new ZAYKException("密钥ID为:"+secretKeyManage.getSecretKeyId()+"的密钥已被加密列使用,请先删除加密列");
             }
             i = deleteDbhsmSecretKeyManageById(id);
         }

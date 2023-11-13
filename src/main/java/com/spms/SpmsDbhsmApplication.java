@@ -12,7 +12,7 @@ public class SpmsDbhsmApplication {
     public static void main(String[] args) {
         SpringApplication.run(SpmsDbhsmApplication.class, args);
         System.out.println("****************");
-        System.out.println("DBHSM 模块启动成功");
+        System.out.println("DBENC 模块启动成功");
         System.out.println("****************");
     }
 }

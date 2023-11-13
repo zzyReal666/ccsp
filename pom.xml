@@ -64,6 +64,7 @@
         <dependency>
             <groupId>ccsp</groupId>
             <artifactId>ccsp-common-datasource</artifactId>
+            <version>3.5.0</version>
         </dependency>
 
         <!-- SpringCloud Alibaba Sentinel -->
@@ -82,20 +83,24 @@
         <dependency>
             <groupId>ccsp</groupId>
             <artifactId>ccsp-common-swagger</artifactId>
+            <version>3.5.0</version>
         </dependency>
 
         <!-- CCSP Common Security -->
         <dependency>
             <groupId>ccsp</groupId>
             <artifactId>ccsp-common-security</artifactId>
+            <version>3.5.0</version>
         </dependency>
         <dependency>
             <groupId>ccsp</groupId>
             <artifactId>ccsp-common-core</artifactId>
+            <version>3.5.0</version>
         </dependency>
         <dependency>
             <groupId>ccsp</groupId>
             <artifactId>ccsp-common-log</artifactId>
+            <version>3.5.0</version>
         </dependency>
 
         <dependency>

@@ -101,6 +101,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <select id="getPermissionUnionPermissionGroup" resultType="java.lang.String">
         select permission_id from dbhsm_permission_union_permission_group
     </select>
+    <select id="selectDbhsmPermissionGroupListAll" parameterType="com.spms.dbhsm.permissionGroup.domain.DbhsmPermissionGroup" resultMap="DbhsmPermissionGroupResult">
+        <include refid="selectDbhsmPermissionGroupVo"/>
+    </select>
 
     <insert id="insertDbhsmPermissionGroup" parameterType="com.spms.dbhsm.permissionGroup.domain.DbhsmPermissionGroup" useGeneratedKeys="true" keyProperty="permissionGroupId">
         insert into dbhsm_permission_group

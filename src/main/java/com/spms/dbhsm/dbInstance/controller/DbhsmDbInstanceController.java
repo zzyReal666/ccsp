@@ -139,6 +139,6 @@ public class DbhsmDbInstanceController extends BaseController
 	@DeleteMapping("/{ids}")
     public AjaxResult remove(@PathVariable Long[] ids)
     {
-        return toAjax(dbhsmDbInstanceService.deleteDbhsmDbInstanceByIds(ids));
+        return dbhsmDbInstanceService.deleteDbhsmDbInstanceByIds(ids);
     }
 }

@@ -104,4 +104,6 @@ public interface DbhsmPermissionGroupMapper
     List<String> getPermissionUnionPermissionGroup();
 
     int deleteDbhsmPermissionUnionPermissionGroupByPermissionIds(Long[] permissionIds);
+
+    List<DbhsmPermissionGroup> selectDbhsmPermissionGroupListAll(DbhsmPermissionGroup dbhsmPermissionGroup);
 }

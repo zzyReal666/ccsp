@@ -349,7 +349,7 @@ public class ProcedureUtil {
         transSQL.append("@policy_id NVARCHAR(50),@policy_url NVARCHAR(200),@user_ipaddr NVARCHAR(50),");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("@db_instance_name NVARCHAR(50),@db_table_name NVARCHAR(50),");
+        transSQL.append("@db_instance_name NVARCHAR(50),@db_name NVARCHAR(50),@db_table_name NVARCHAR(50),");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("@db_column_name NVARCHAR(50),@db_user_name NVARCHAR(50),");
@@ -374,9 +374,6 @@ public class ProcedureUtil {
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("libsqlextdll.[libsqlserver.SqlExtPolicyFunc].SqlStringEncryptEx ");
-        transSQL.append(System.getProperty("line.separator"));
-
-        transSQL.append("/* 分别对应 [程序集名称].[namespace.class].[方法/函数] */");
         transSQL.append(System.getProperty("line.separator"));
 
         PreparedStatement statement = null;
@@ -446,9 +443,6 @@ public class ProcedureUtil {
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("EXTERNAL NAME libsqlextdll.[libsqlserver.SqlExtPolicyFunc].SqlStringDecryptEx");
-        transSQL.append(System.getProperty("line.separator"));
-
-        transSQL.append("/*分别对应 [程序集名称].[namespace.class].[方法/函数] */");
         transSQL.append(System.getProperty("line.separator"));
 
         PreparedStatement statement = null;
@@ -701,7 +695,9 @@ public class ProcedureUtil {
         transSQL.append(System.getProperty("line.separator"));
         transSQL.append("text,--加密数据");
         transSQL.append(System.getProperty("line.separator"));
-        transSQL.append("integer) --偏移量");
+        transSQL.append("integer, --偏移量");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("integer) --加密长度");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("RETURNS varchar");
@@ -773,9 +769,11 @@ public class ProcedureUtil {
         transSQL.append(System.getProperty("line.separator"));
         transSQL.append("text,--用户名");
         transSQL.append(System.getProperty("line.separator"));
-        transSQL.append("text,--加密数据");
+        transSQL.append("text,--解密数据");
         transSQL.append(System.getProperty("line.separator"));
-        transSQL.append("integer) --偏移量");
+        transSQL.append("integer, --偏移量");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("integer) --解密长度");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("RETURNS varchar");
@@ -790,6 +788,157 @@ public class ProcedureUtil {
         PreparedStatement preparedStatement = null;
         try {
             log.info("PostgreSQL create pgext_func_string_encrypt:" + transSQL);
+            preparedStatement = connection.prepareStatement(transSQL.toString());
+            preparedStatement.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new SQLException(e);
+        } finally {
+            if (preparedStatement != null) {
+                preparedStatement.close();
+            }
+        }
+    }
+
+    public static void pgextFuncFPEEncrypt(Connection connection, DbhsmDbUser dbhsmDbUser) throws SQLException {
+        /***
+         * 创建PostgreSQL FPE格式保留算法
+         * CREATE OR REPLACE FUNCTION testuser1.pgext_func_fpe_encrypt( --testuser1 架构
+         * 	text, --策略唯一标识类型
+         * 	text, --策略下载地址类型
+         * 	text, --ip
+         * 	text, --实例名
+         * 	text, --库名
+         * 	text, --表名
+         * 	text, --列名
+         * 	text, --用户名
+         * 	text, --加密数据
+         * 	integer, --偏移量
+         * 	integer, --加密长度
+         * integer) --算法radix
+         *      RETURNS text
+         *      AS 'D:\pgsql\postgreSQL', 'pgext_func_fpe_encrypt'
+         *      LANGUAGE C STRICT;
+         *
+         */
+        StringBuilder transSQL = new StringBuilder();
+        transSQL.append("CREATE OR REPLACE FUNCTION ");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append(dbhsmDbUser.getDbSchema() + ".pgext_func_fpe_encrypt(");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--策略唯一标识类型");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--策略下载地址类型");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--ip");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--实例名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--库名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--表名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--列名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--用户名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--加密数据");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("integer,--偏移量");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("integer,--加密长度");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("integer) --算法radix");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("RETURNS text");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("AS '" + dbhsmDbUser.getEncLibapiPath()+"', 'pgext_func_fpe_encrypt'");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append(" LANGUAGE C STRICT;");
+        transSQL.append(System.getProperty("line.separator"));
+
+        PreparedStatement preparedStatement = null;
+        try {
+            log.info("PostgreSQL create pgext_func_fpe_encrypt:" + transSQL);
+            preparedStatement = connection.prepareStatement(transSQL.toString());
+            preparedStatement.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new SQLException(e);
+        } finally {
+            if (preparedStatement != null) {
+                preparedStatement.close();
+            }
+        }
+    }
+
+    public static void pgextFuncFPEDecrypt(Connection connection, DbhsmDbUser dbhsmDbUser) throws SQLException {
+        /***
+         * 创建PostgreSQL FPE格式保留算法
+         * CREATE OR REPLACE FUNCTION testuser1.pgext_func_fpe_decrypt( --testuser1 架构
+         * 	text, --策略唯一标识类型
+         * 	text, --策略下载地址类型
+         * 	text, --ip
+         * 	text, --实例名
+         * 	text, --库名
+         * 	text, --表名
+         * 	text, --列名
+         * 	text, --用户名
+         * 	text, --解密数据
+         * 	integer, --偏移量
+         * 	integer, --加密长度
+         * integer) --算法radix
+         *      RETURNS text
+         *      AS 'D:\pgsql\postgreSQL', 'pgext_func_fpe_decrypt'
+         *      LANGUAGE C STRICT;
+         */
+        StringBuilder transSQL = new StringBuilder();
+        transSQL.append("CREATE OR REPLACE FUNCTION ");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append(dbhsmDbUser.getDbSchema() + ".pgext_func_fpe_decrypt(");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--策略唯一标识类型");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--策略下载地址类型");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--ip");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--实例名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--库名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--表名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--列名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--用户名");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("text,--解密数据");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("integer,--偏移量");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("integer,--加密长度");
+        transSQL.append(System.getProperty("line.separator"));
+        transSQL.append("integer) --算法radix");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("RETURNS text");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append("AS '" + dbhsmDbUser.getEncLibapiPath()+"', 'pgext_func_fpe_decrypt'");
+        transSQL.append(System.getProperty("line.separator"));
+
+        transSQL.append(" LANGUAGE C STRICT;");
+        transSQL.append(System.getProperty("line.separator"));
+
+        PreparedStatement preparedStatement = null;
+        try {
+            log.info("PostgreSQL create pgext_func_fpe_decrypt:" + transSQL);
             preparedStatement = connection.prepareStatement(transSQL.toString());
             preparedStatement.execute();
         } catch (SQLException e) {

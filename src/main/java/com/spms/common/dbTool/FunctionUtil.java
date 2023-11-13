@@ -31,11 +31,11 @@ public class FunctionUtil {
         String stringDecryptFunction =  "CREATE FUNCTION StringDecrypt RETURNS STRING SONAME 'mysqldll.dll'";
         PreparedStatement preparedStatement = null;
         try {
-            log.info("create Mysql StringEncrypt  Function INFO：" + stringEncryptFunction);
+            log.info("CREATE MYSQL STRINGENCRYPT  Function INFO：\n" + stringEncryptFunction);
             preparedStatement = connection.prepareStatement(stringEncryptFunction);
             preparedStatement.execute();
 
-            log.info("create Mysql  StringDecrypt Function INFO：" + stringDecryptFunction);
+            log.info("CREATE MYSQL  STRINGDECRYPT FUNCTION INFO：\n" + stringDecryptFunction);
             preparedStatement = connection.prepareStatement(stringDecryptFunction);
             preparedStatement.execute();
         } catch (SQLException e) {
@@ -65,10 +65,13 @@ public class FunctionUtil {
             default:
                 throw new ZAYKException("暂不支持的数据库类型： " + dbType);
         }
-        connection.commit();
 
     }
 
+    /**
+     * 创建加解密方法 fpe方法
+     * @param connection
+     */
     public static void createSqlServerFunction(Connection connection) {
         try {
             //创建加解密方法 fpe方法

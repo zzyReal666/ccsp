@@ -112,24 +112,24 @@ public class DbConnectionPool {
         //instance.setDatabaseExampleType(":");
         //instance.setDatabaseDba("user55");
         //instance.setDatabaseDbaPassword("12345678");
-        instance.setDatabaseType(DbConstants.DB_TYPE_SQLSERVER);
-        instance.setDatabaseIp("192.168.6.212");
+        instance.setDatabaseType(DbConstants.DB_TYPE_POSTGRESQL);
+        instance.setDatabaseIp("192.168.7.39");
         instance.setDatabasePort("5432");
         instance.setDatabaseServerName("pgDB");
         instance.setDatabaseExampleType(":");
         instance.setDatabaseDba("postgres");
-        instance.setDatabaseDbaPassword("12345678");
+        instance.setDatabaseDbaPassword("postgres1");
         DbConnectionPoolFactory factory = new DbConnectionPoolFactory();
         Connection connection = factory.getConnection(instance);
         System.out.println(connection);
-        //String sql = "select * from table1";
-        String sql1 = "drop user testuser12";
-        String sql = DbConstants.DB_SQL_SQLSERVER_USER_QUERY;
+        String sql = "select * from table1";
+        //String sql1 = "drop user testuser12";
+        //String sql = DbConstants.DB_SQL_SQLSERVER_USER_QUERY;
         PreparedStatement statement = null;
         ResultSet resultSet = null;
 
         try {
-            statement = connection.prepareStatement(sql1);
+            statement = connection.prepareStatement(sql);
             //statement = connSQLServer().prepareStatement(sql1);
             statement.execute();
             //connection.commit();
@@ -139,7 +139,7 @@ public class DbConnectionPool {
                 while (resultSet.next()) {
                     // 处理结果集
                     //System.out.println(resultSet.getString("id"));
-                    System.out.println(resultSet.getString("name"));
+                    System.out.println(resultSet.getString("con2"));
                 }
             }
         } catch (SQLException e) {

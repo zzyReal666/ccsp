@@ -3,9 +3,9 @@ package com.spms.dbhsm.dbInstance.service.impl;
 import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.DateUtils;
 import com.ccsp.common.core.utils.StringUtils;
+import com.ccsp.common.core.web.domain.AjaxResult;
 import com.spms.common.SelectOption;
 import com.spms.common.constant.DbConstants;
-import com.spms.common.dbTool.FunctionUtil;
 import com.spms.common.pool.hikariPool.DbConnectionPoolFactory;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstancePoolKeyDTO;
@@ -13,6 +13,8 @@ import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import com.spms.dbhsm.dbInstance.domain.VO.InstanceServerNameVO;
 import com.spms.dbhsm.dbInstance.mapper.DbhsmDbInstanceMapper;
 import com.spms.dbhsm.dbInstance.service.IDbhsmDbInstanceService;
+import com.spms.dbhsm.dbUser.domain.DbhsmDbUser;
+import com.spms.dbhsm.dbUser.mapper.DbhsmDbUsersMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +24,10 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
 import javax.annotation.PostConstruct;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -42,6 +47,9 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
 {
     @Autowired
     private DbhsmDbInstanceMapper dbhsmDbInstanceMapper;
+
+    @Autowired
+    private DbhsmDbUsersMapper dbhsmDbUsersMapper;
 
     @PostConstruct
     public void init() {
@@ -161,17 +169,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         DbInstanceGetConnDTO  dbInstanceGetConnDTO = new DbInstanceGetConnDTO();
         BeanUtils.copyProperties(dbhsmDbInstance,dbInstanceGetConnDTO);
         DbConnectionPoolFactory.buildDataSourcePool(dbInstanceGetConnDTO);
-        Connection connection = DbConnectionPoolFactory.getInstance().getConnection(dbInstanceGetConnDTO);
         DbConnectionPoolFactory.queryPool();
-        //创建加解密函数
-        try {
-            FunctionUtil.createEncryptDecryptFunction(connection,dbhsmDbInstance);
-        }catch (Exception e) {
-            e.printStackTrace();
-            //关闭连接池
-            DbConnectionPoolFactory.getInstance().unbind(DbConnectionPoolFactory.instanceConventKey(dbhsmDbInstance));
-        }
-
         return i;
     }
 
@@ -277,18 +275,24 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public int deleteDbhsmDbInstanceByIds(Long[] ids){
+    public AjaxResult deleteDbhsmDbInstanceByIds(Long[] ids){
         int i = 0;
+        List<String> isUsedInstances = new ArrayList<String>();
         for (Long id : ids) {
             //删除之前先销毁之前的池
             DbhsmDbInstance instanceById = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
+            //查看实例是否创建过用户
+            if(checkInstanceCreatedUser(id)){
+                isUsedInstances.add(getInstance(instanceById));
+                continue;
+            }
             i = dbhsmDbInstanceMapper.deleteDbhsmDbInstanceById(id);
             //删除加解密函数
             delEncDecFunction(instanceById);
             //删除连接池
             DbConnectionPoolFactory.getInstance().unbind(DbConnectionPoolFactory.instanceConventKey(instanceById));
         }
-        return i;
+        return isUsedInstances.size()>0? AjaxResult.error("实例："+StringUtils.join(isUsedInstances,",")+"已从管理端创建过用户，无法删除！"):AjaxResult.success();
     }
 
     private void delEncDecFunction(DbhsmDbInstance instanceById) {
@@ -397,6 +401,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         Statement stmt = null;
         ResultSet resultSet = null;
         int i =0;
+        String sql = null;
         List<SelectOption>  list = new ArrayList<>();
         DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
         if(DbConstants.DB_TYPE_POSTGRESQL.equals(instance.getDatabaseType())) {
@@ -408,7 +413,8 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
                     conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
                     if (Optional.ofNullable(conn).isPresent()) {
                         stmt = conn.createStatement();
-                        resultSet = stmt.executeQuery("SELECT schema_name FROM information_schema.schemata;");
+                        sql = "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('pg_catalog', 'pg_toast', 'information_schema');";
+                        resultSet = stmt.executeQuery(sql);
                         while (resultSet.next()) {
                             SelectOption option = new SelectOption();
                             option.setId(i++);
@@ -446,5 +452,26 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
             return Collections.emptyList();
         }
         return list;
+    }
+
+    public boolean checkInstanceCreatedUser(Long instanceId) {
+        DbhsmDbUser user = new DbhsmDbUser();
+        user.setDatabaseInstanceId(instanceId);
+        List<DbhsmDbUser> dbhsmDbUsers = dbhsmDbUsersMapper.selectDbhsmDbUsersList(user);
+        return dbhsmDbUsers.size() > 0;
+    }
+
+    private String getInstance(DbhsmDbInstance instance) {
+        String databaseType = "";
+        if (DbConstants.DB_TYPE_ORACLE.equals(instance.getDatabaseType())) {
+            databaseType = DbConstants.DB_TYPE_ORACLE_DESC;
+        } else if (DbConstants.DB_TYPE_SQLSERVER.equals(instance.getDatabaseType())) {
+            databaseType = DbConstants.DB_TYPE_SQLSERVER_DESC;
+        } else if (DbConstants.DB_TYPE_MYSQL.equals(instance.getDatabaseType())) {
+            databaseType = DbConstants.DB_TYPE_MYSQL_DESC;
+        } else if(DbConstants.DB_TYPE_POSTGRESQL.equals(instance.getDatabaseType())) {
+            databaseType = DbConstants.DB_TYPE_POSTGRESQL_DESC;
+        }
+        return databaseType + ":" + instance.getDatabaseIp() + ":" + instance.getDatabasePort() + instance.getDatabaseExampleType() + instance.getDatabaseServerName();
     }
 }

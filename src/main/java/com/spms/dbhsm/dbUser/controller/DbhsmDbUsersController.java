@@ -126,6 +126,9 @@ public class DbhsmDbUsersController extends BaseController {
         } catch (ZAYKException | SQLException e){
             e.printStackTrace();
             return AjaxResult.error(e.getMessage());
+        }catch (Exception e){
+            e.printStackTrace();
+            return AjaxResult.error("删除数据库用户失败！");
         };
         return toAjax(i);
     }

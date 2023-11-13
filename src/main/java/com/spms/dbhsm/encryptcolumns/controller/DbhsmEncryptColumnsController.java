@@ -19,7 +19,7 @@ import java.util.List;
 
 /**
  * 数据库加密列Controller
- * 
+ *
  * @author diq
  * @date 2023-09-27
  */
@@ -108,7 +108,13 @@ public class DbhsmEncryptColumnsController extends BaseController
     @Log(title = "数据库加密列", businessType = BusinessType.DELETE)
 	@DeleteMapping("/{ids}")
     public AjaxResult remove(@PathVariable String[] ids) throws Exception {
-        return toAjax(dbhsmEncryptColumnsService.deleteDbhsmEncryptColumnsByIds(ids));
+        try {
+            dbhsmEncryptColumnsService.deleteDbhsmEncryptColumnsByIds(ids);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return AjaxResult.error("删除失败！");
+        }
+        return AjaxResult.success();
     }
 
     /**
