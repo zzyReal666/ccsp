@@ -143,9 +143,12 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                     preparedStatement = conn.prepareStatement(sql);
                     resultSet = preparedStatement.executeQuery();
                     //对返回结果进行封装用户对象
+                    //id用于排序
+                    Long id =1L;
                     while (resultSet.next()) {
-                        DbhsmDbUser dbUser = getDbUser(resultSet, instance, connDTO, dbhsmDbUsers);
+                        DbhsmDbUser dbUser = getDbUser(resultSet, instance, connDTO, dbhsmDbUsers,id);
                         dbhsmDbUsersResult.add(dbUser);
+                        id++;
                     }
                 }
             } catch (ZAYKException | SQLException | ParseException e) {
@@ -175,15 +178,16 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 }
             }
         }
-        return dbhsmDbUsersResult.stream().sorted(Comparator.comparing(DbhsmDbUser::getIsSelfBuilt)).collect(Collectors.toList());
+        return dbhsmDbUsersResult.stream().sorted(Comparator.comparing(DbhsmDbUser::getIsSelfBuilt).thenComparing(DbhsmDbUser::getId)).collect(Collectors.toList());
     }
 
-    private DbhsmDbUser getDbUser(ResultSet resultSet, DbhsmDbInstance instance, DbInstanceGetConnDTO connDTO, List<DbhsmDbUser> dbhsmDbUsers) throws SQLException, ZAYKException, ParseException {
+    private DbhsmDbUser getDbUser(ResultSet resultSet, DbhsmDbInstance instance, DbInstanceGetConnDTO connDTO, List<DbhsmDbUser> dbhsmDbUsers,Long id) throws SQLException, ZAYKException, ParseException {
         DbhsmDbUser dbUser = new DbhsmDbUser();
         String dbType = instance.getDatabaseType();
         dbUser.setDatabaseType(dbType);
         switch (dbType) {
             case DbConstants.DB_TYPE_ORACLE:
+                dbUser.setId(id);
                 dbUser.setUserName(resultSet.getString("userName"));
                 dbUser.setUserId(resultSet.getString("user_id"));
                 dbUser.setCreated(resultSet.getDate("created"));
@@ -195,14 +199,17 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 dbUser.setImplicit(resultSet.getString("implicit"));
                 break;
             case DbConstants.DB_TYPE_SQLSERVER:
+                dbUser.setId(id);
                 dbUser.setUserName(resultSet.getString("name"));
                 dbUser.setUserId(resultSet.getString("principal_id"));
                 dbUser.setCreated(resultSet.getDate("create_date"));
                 break;
             case DbConstants.DB_TYPE_MYSQL:
+                dbUser.setId(id);
                 dbUser.setUserName(resultSet.getString("User"));
                 break;
             case DbConstants.DB_TYPE_POSTGRESQL:
+                dbUser.setId(id);
                 dbUser.setUserName(resultSet.getString("usename"));
                 break;
             default:

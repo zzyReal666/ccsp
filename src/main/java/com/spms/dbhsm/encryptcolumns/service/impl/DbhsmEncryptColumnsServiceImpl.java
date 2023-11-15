@@ -34,6 +34,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.sql.*;
 import java.util.*;
 
@@ -642,5 +645,21 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         }
 
         return "";
+    }
+
+    /**
+     * 探测网络是否可以访问数据库
+     * @param host
+     * @param port
+     * @param timeout 超时时间秒
+     * @return
+     */
+    public static boolean isDatabaseServerReachable(String host, int port, int timeout) {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(host, port), timeout);
+            return false;
+        } catch (IOException e) {
+            return true;
+        }
     }
 }
