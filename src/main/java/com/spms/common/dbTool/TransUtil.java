@@ -158,7 +158,7 @@ public class TransUtil {
                 * DEALLOCATE c
          */
         StringBuffer transSql = new StringBuffer();
-
+        String alg = zaDatabaseEncryptColumns.getEncryptionAlgorithm();
         // 替换成表名和字段名
         transSql.append("CREATE OR ALTER  TRIGGER "+ schemaName + ".tr_" + zaDatabaseEncryptColumns.getDbTable() + "_" + zaDatabaseEncryptColumns.getEncryptColumns()+"_" + DbConstants.algMapping(zaDatabaseEncryptColumns.getEncryptionAlgorithm()) + "_encrypt");
         transSql.append(System.getProperty("line.separator"));
@@ -246,13 +246,16 @@ public class TransUtil {
         transSql.append(" set @encryptlen = @rawstringlen");
         transSql.append(System.getProperty("line.separator"));
 
-        transSql.append(" set @encryptdata = " + zaDatabaseEncryptColumns.getDatabaseServerName()+ "." +schemaName + ".func_string_encrypt_ex( @policy_id,@policy_url,@user_ipaddr,");
+        if (!DbConstants.SGD_SM4.equals(alg)) {
+            transSql.append(" set @radix =" + Integer.parseInt(alg));
+        }
+        transSql.append(" set @encryptdata = " + zaDatabaseEncryptColumns.getDatabaseServerName()+ "." +schemaName + ".func_"+DbConstants.algMappingStrOrFpe(alg)+"_encrypt_ex( @policy_id,@policy_url,@user_ipaddr,");
         transSql.append(System.getProperty("line.separator"));
 
         transSql.append("@db_instance_name,@db_name,@db_table_name,@db_column_name,@db_user_name,");
         transSql.append(System.getProperty("line.separator"));
 
-        transSql.append("@rawstring,@rawstringlen,@offset,@length,@encryptlen)");
+        transSql.append("@rawstring,@rawstringlen,@offset,@length,@encryptlen"+(DbConstants.SGD_SM4.equals(alg)?"":", @radix")+")");
         transSql.append(System.getProperty("line.separator"));
 
         transSql.append(" update " + schemaName + "." + zaDatabaseEncryptColumns.getDbTable() + " set " + zaDatabaseEncryptColumns.getEncryptColumns() + " = @encryptdata where " + zaDatabaseEncryptColumns.getEncryptColumns() + " = @rawstring");
