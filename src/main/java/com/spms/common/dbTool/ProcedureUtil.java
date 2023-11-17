@@ -198,7 +198,7 @@ public class ProcedureUtil {
         transSql.append("  length IN NATURAL)\n");
         transSql.append("RETURN VARCHAR2\n");
         transSql.append("AS\n");
-        transSql.append("   ovalue varchar2(500);\n");
+        transSql.append("   ovalue varchar2(32767);\n");
         transSql.append("begin\n");
         transSql.append("    c_oci_trans_string_decrypt_p(pid, purl, ipaddr, instancename,\n");
         transSql.append("    dbname, tablename, columnname, username,\n");
@@ -355,7 +355,7 @@ public class ProcedureUtil {
         transSQL.append("@db_column_name NVARCHAR(50),@db_user_name NVARCHAR(50),");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("@rawstring NVARCHAR(50), @rawstringlen INT,");
+        transSQL.append("@rawstring NVARCHAR(max), @rawstringlen INT,");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("@offset INT, @length INT, @encryptstringlen INT");
@@ -364,7 +364,7 @@ public class ProcedureUtil {
         transSQL.append(")");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("RETURNS NVARCHAR(50)");
+        transSQL.append("RETURNS NVARCHAR(max)");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("AS");
@@ -427,7 +427,7 @@ public class ProcedureUtil {
         transSQL.append("@db_column_name NVARCHAR(50),@db_user_name NVARCHAR(50),");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("@rawstring NVARCHAR(50), @rawstringlen INT,");
+        transSQL.append("@rawstring NVARCHAR(max), @rawstringlen INT,");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("@offset INT, @length INT, @encryptstringlen INT");
@@ -436,7 +436,7 @@ public class ProcedureUtil {
         transSQL.append(")");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("RETURNS NVARCHAR(50)");
+        transSQL.append("RETURNS NVARCHAR(max)");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("AS");
@@ -497,7 +497,7 @@ public class ProcedureUtil {
         transSQL.append("@db_column_name NVARCHAR(50),@db_user_name NVARCHAR(50),");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("@rawstring NVARCHAR(50), @rawstringlen INT,");
+        transSQL.append("@rawstring NVARCHAR(max), @rawstringlen INT,");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("@offset INT, @length INT, @encryptstringlen INT, @radix INT");
@@ -506,7 +506,7 @@ public class ProcedureUtil {
         transSQL.append(")");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("RETURNS NVARCHAR(50)");
+        transSQL.append("RETURNS NVARCHAR(max)");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("AS");
@@ -569,7 +569,7 @@ public class ProcedureUtil {
         transSQL.append("@db_column_name NVARCHAR(50),@db_user_name NVARCHAR(50),");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("@rawstring NVARCHAR(50), @rawstringlen INT,");
+        transSQL.append("@rawstring NVARCHAR(max), @rawstringlen INT,");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("@offset INT, @length INT, @encryptstringlen INT, @radix INT");
@@ -578,7 +578,7 @@ public class ProcedureUtil {
         transSQL.append(")");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("RETURNS NVARCHAR(50)");
+        transSQL.append("RETURNS NVARCHAR(max)");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("AS");
@@ -676,7 +676,7 @@ public class ProcedureUtil {
         transSQL.append("CREATE OR REPLACE FUNCTION ");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append(dbhsmDbUser.getDbSchema() + ".pgext_func_string_encrypt (");
+        transSQL.append("\""+dbhsmDbUser.getDbSchema() + "\".pgext_func_string_encrypt (");
         transSQL.append("text,--策略唯一标识类型");
         transSQL.append(System.getProperty("line.separator"));
         transSQL.append("text,--策略下载地址类型");
@@ -751,7 +751,7 @@ public class ProcedureUtil {
         transSQL.append("CREATE OR REPLACE FUNCTION ");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append(dbhsmDbUser.getDbSchema() + ".pgext_func_string_decrypt(");
+        transSQL.append("\""+dbhsmDbUser.getDbSchema() + "\".pgext_func_string_decrypt(");
         transSQL.append(System.getProperty("line.separator"));
         transSQL.append("text,--策略唯一标识类型");
         transSQL.append(System.getProperty("line.separator"));
@@ -825,7 +825,7 @@ public class ProcedureUtil {
         transSQL.append("CREATE OR REPLACE FUNCTION ");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append(dbhsmDbUser.getDbSchema() + ".pgext_func_fpe_encrypt(");
+        transSQL.append("\""+dbhsmDbUser.getDbSchema() + "\".pgext_func_fpe_encrypt(");
         transSQL.append(System.getProperty("line.separator"));
         transSQL.append("text,--策略唯一标识类型");
         transSQL.append(System.getProperty("line.separator"));
@@ -900,7 +900,7 @@ public class ProcedureUtil {
         transSQL.append("CREATE OR REPLACE FUNCTION ");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append(dbhsmDbUser.getDbSchema() + ".pgext_func_fpe_decrypt(");
+        transSQL.append("\""+dbhsmDbUser.getDbSchema() + "\".pgext_func_fpe_decrypt(");
         transSQL.append(System.getProperty("line.separator"));
         transSQL.append("text,--策略唯一标识类型");
         transSQL.append(System.getProperty("line.separator"));

@@ -1,5 +1,6 @@
 package com.spms.dbhsm.secretService.controller;
 
+import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.poi.ExcelUtil;
 import com.ccsp.common.core.web.controller.BaseController;
 import com.ccsp.common.core.web.domain.AjaxResult;
@@ -102,7 +103,14 @@ public class DbhsmSecretServiceController extends BaseController
     @Log(title = "密码服务", businessType = BusinessType.UPDATE)
     @PutMapping
     public AjaxResult edit(@RequestBody DbhsmSecretService dbhsmSecretService) throws IOException {
-        return toAjax(dbhsmSecretServiceService.updateDbhsmSecretService(dbhsmSecretService));
+        int i = 0;
+        try {
+            i=dbhsmSecretServiceService.updateDbhsmSecretService(dbhsmSecretService);
+        } catch (ZAYKException e) {
+            e.printStackTrace();
+            return AjaxResult.error(e.getMessage());
+        }
+        return toAjax(i);
     }
 
     /**

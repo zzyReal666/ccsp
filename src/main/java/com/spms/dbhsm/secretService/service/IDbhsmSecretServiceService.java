@@ -1,5 +1,6 @@
 package com.spms.dbhsm.secretService.service;
 
+import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.web.domain.AjaxResult;
 import com.spms.dbhsm.secretService.domain.DbhsmSecretService;
 
@@ -44,7 +45,7 @@ public interface IDbhsmSecretServiceService
      * @param dbhsmSecretService 密码服务
      * @return 结果
      */
-    public int updateDbhsmSecretService(DbhsmSecretService dbhsmSecretService) throws IOException;
+    public int updateDbhsmSecretService(DbhsmSecretService dbhsmSecretService) throws IOException, ZAYKException;
 
     /**
      * 批量删除密码服务

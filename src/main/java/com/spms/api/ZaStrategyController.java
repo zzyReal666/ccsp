@@ -1,7 +1,11 @@
 package com.spms.api;
 
+import cn.hutool.core.util.ObjectUtil;
+import com.ccsp.common.core.domain.R;
 import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.StringUtils;
+import com.ccsp.system.api.hsmSvsTsaApi.RemoteSecretKeyService;
+import com.ccsp.system.api.hsmSvsTsaApi.domain.HsmSymmetricSecretKey;
 import com.spms.common.JSONDataUtil;
 import com.spms.common.constant.DbConstants;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
@@ -51,6 +55,8 @@ public class ZaStrategyController {
     IDbhsmSecretServiceService serviceService;
     @Autowired
     IDbhsmSecretKeyManageService secretKeyManageService;
+    @Autowired
+    RemoteSecretKeyService secretKeyService;
 
     @Autowired
     private IDbhsmEncryptColumnsService encryptColumnsService;
@@ -297,14 +303,27 @@ public class ZaStrategyController {
         ZaykManageClass mgr = new ZaykManageClass();
         Integer ret = mgr.Initialize(crytoCartTypeSInt);
         if (DbConstants.KEY_SOURCE_SECRET_CARD.equals(keySource)) {
-            //密钥来源为密码卡，导出密钥
-            Map<String, String> exportKey = mgr.ZaykExportKeyPair(secretKeyManage.getSecretKeyType(), secretKeyIndex.intValue());
-            if (null == exportKey) {
-                log.error("加密列配置的"+secretKeyIndex+"号对称密钥不存在,请重新生成密钥。");
-                throw new IOException();
+            int keyGenerationMode = JSONDataUtil.getSecretKeyGenerateType(DbConstants.SYSDATA_ALGORITHM_TYPE_SYK);
+            if (keyGenerationMode == DbConstants.HARD_SECRET_KEY) {
+                //密钥来源为密码卡，导出密钥
+                Map<String, String> exportKey = mgr.ZaykExportKeyPair(secretKeyManage.getSecretKeyType(), secretKeyIndex.intValue());
+                if (null == exportKey) {
+                    log.error("加密列配置的" + secretKeyIndex + "号对称密钥不存在,请重新生成密钥。");
+                    throw new IOException();
+                }
+                symmKey = exportKey.get("privateKey");
+            }else {
+                //大容量密钥从数据库获取
+                R<HsmSymmetricSecretKey> symmetricSecretKeyR = secretKeyService.selectSymSecretKeyInfo(Math.toIntExact(secretKeyIndex));
+                if (ObjectUtil.isEmpty(symmetricSecretKeyR.getData())) {
+                    throw new Exception("获取密钥失败！");
+                }
+                if( StringUtils.isEmpty(symmetricSecretKeyR.getData().getPrivateKey())){
+                    throw new Exception("获取密钥为空");
+                }
+                symmKey = symmetricSecretKeyR.getData().getPrivateKey();
             }
-            symmKey = exportKey.get("privateKey");
-        } else {
+        } else if(DbConstants.KEY_SOURCE_KMIP.equals(keySource)) {
             //密钥来源KMIP
             String keyMaterial = secretKeyManage.getSecretKey();
             if (StringUtils.isEmpty(keyMaterial)){

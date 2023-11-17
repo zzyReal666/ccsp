@@ -27,6 +27,10 @@ public class DbConstants {
     /**字典类型*/
     public static final String DBHSM_DB_TYPE = "dbhsm_db_type";
     public static final String DB_SQL_POSTGRESQL_USER_QUERY = "select  * from pg_user";
+    /**
+     * 请求成功
+     */
+    public static int SUCCESS = 200;
     //密码卡类型
     public static String cryptoCardType = "cryptoCardType";
     //三未信安
@@ -85,10 +89,18 @@ public class DbConstants {
 
     public static final Integer SECRET_KEY_TYPE_SYM = 3;
 
-    /** 密钥来源1：密码卡；2：KMIP  */
+    /** 密钥来源1：密码卡；2：KMIP  3：大容量密钥*/
     public static final Integer KEY_SOURCE_SECRET_CARD = 1;
     public static final Integer KEY_SOURCE_KMIP = 2;
-
+    /**密钥生成方式软实现
+     *
+     * 0：软实现
+     * 1：硬实现
+     * 2：大容量
+     * */
+    // public static final int SOFT_SECRET_KEY = 0;
+    public static final int HARD_SECRET_KEY = 1;
+    public static final int BULK_SECRET_KEY = 2;
     //KMIP配置路径
     public static final String KMIP_INI_PATH="/opt/config_file/jsonfile";
     //KMIP配置文件相关
@@ -202,4 +214,16 @@ public class DbConstants {
         }
         return 0;
     }
+
+    public static final String jsonPath = "jsonPath";
+    /**
+     * 三合一配置文件路径
+     */
+    public static final String SPMS_CONFIG_FILE_PATH = "spms_config_file_path";
+    //系统配置SysData
+    public static final String SysData = "SysData";
+
+    public static String SYSDATA_ALGORITHM_TYPE_SYK = "CardKeySYK";
+
+
 }

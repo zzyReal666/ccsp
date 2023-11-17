@@ -185,13 +185,13 @@ public class TransUtil {
         transSql.append("@db_column_name NVARCHAR(50), @db_user_name NVARCHAR(50),");
         transSql.append(System.getProperty("line.separator"));
 
-        transSql.append("@rawstring nvarchar(50),@rawstringlen int,");
+        transSql.append("@rawstring nvarchar(max),@rawstringlen int,");
         transSql.append(System.getProperty("line.separator"));
 
         transSql.append("   @offset int,@length int,");
         transSql.append(System.getProperty("line.separator"));
 
-        transSql.append("   @encryptdata nvarchar(50),@encryptlen int");
+        transSql.append("   @encryptdata nvarchar(max),@encryptlen int"+(DbConstants.SGD_SM4.equals(alg)?"":",@radix int"));
         transSql.append(System.getProperty("line.separator"));
 
         transSql.append(" open c");

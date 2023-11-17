@@ -465,7 +465,9 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 instanceMap.put("title", instance.getDatabaseServerName() + getDataBaseName(instance.getDatabaseType(), dictDatas));
                 instanceMap.put("level", 1);
                 instancetTrees.add(instanceMap);
-
+                if(isDatabaseServerReachable(connDTO.getDatabaseIp(),Integer.parseInt(connDTO.getDatabasePort()),5)) {
+                    continue;
+                }
                 DbhsmDbUser dbUser = new DbhsmDbUser();
                 dbUser.setDatabaseInstanceId(instance.getId());
                 dbUser.setDbInstanceGetConnDTO(connDTO);

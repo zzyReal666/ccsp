@@ -1,14 +1,19 @@
 package com.spms.dbhsm.secretKey.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.ccsp.common.core.domain.R;
 import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.DateUtils;
 import com.ccsp.common.core.utils.StringUtils;
+import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.ccsp.common.security.utils.SecurityUtils;
+import com.ccsp.system.api.hsmSvsTsaApi.RemoteSecretKeyService;
+import com.ccsp.system.api.hsmSvsTsaApi.domain.HsmSymmetricSecretKey;
 import com.sc.kmip.client.KMSClientInterface;
 import com.sc.kmip.container.KMIPContainer;
 import com.sc.kmip.kmipenum.EnumCryptographicAlgorithm;
 import com.spms.common.JSONDataUtil;
+import com.spms.common.KeyPairInfo;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.kmip.KmipServicePoolFactory;
 import com.spms.common.kmip.ZaKmipUtil;
@@ -21,9 +26,11 @@ import com.spms.dbhsm.secretService.domain.DbhsmSecretService;
 import com.spms.dbhsm.secretService.mapper.DbhsmSecretServiceMapper;
 import com.zayk.ciphercard.ZaykManageClass;
 import lombok.extern.slf4j.Slf4j;
+import org.bouncycastle.util.encoders.Base64;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,7 +51,8 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
 
     @Autowired
     DbhsmEncryptColumnsMapper dbhsmEncryptColumnsMapper;
-
+    @Autowired
+    private RemoteSecretKeyService remoteSecretKeyService;
     /**
      * 查询数据库密钥
      *
@@ -88,7 +96,12 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
 
         //如果密钥来源为卡内密钥，切该索引密钥未生成，则生成卡内密钥，如果为KMIP则只保存密钥关系
         if(DbConstants.KEY_SOURCE_SECRET_CARD.intValue() == dbhsmSecretKeyManage.getSecretKeySource().intValue()) {
-            generatorSym(dbhsmSecretKeyManage.getSecretKeyType(),dbhsmSecretKeyManage.getSecretKeyIndex().intValue(), dbhsmSecretKeyManage.getSecretKeyLength());
+            int keyGenerationMode = JSONDataUtil.getSecretKeyGenerateType(DbConstants.SYSDATA_ALGORITHM_TYPE_SYK);
+            if (keyGenerationMode == DbConstants.HARD_SECRET_KEY) {
+                generatorSym(dbhsmSecretKeyManage.getSecretKeyType(), dbhsmSecretKeyManage.getSecretKeyIndex().intValue(), dbhsmSecretKeyManage.getSecretKeyLength());
+            }else {
+                generatorBulkKey(dbhsmSecretKeyManage);
+            }
         }else if(DbConstants.KEY_SOURCE_KMIP.intValue() == dbhsmSecretKeyManage.getSecretKeySource().intValue()) {
             //调用KMIP
             KMSClientInterface kmipService = KmipServicePoolFactory.getKmipServicePool(dbhsmSecretKeyManage.getSecretKeyServer());
@@ -154,6 +167,54 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
         dbhsmSecretKeyManage.setCreateTime(DateUtils.getNowDate());
         dbhsmSecretKeyManage.setCreateBy(SecurityUtils.getUsername());
         return dbhsmSecretKeyManageMapper.insertDbhsmSecretKeyManage(dbhsmSecretKeyManage);
+    }
+
+    private void generatorBulkKey(DbhsmSecretKeyManage dbhsmSecretKeyManage) throws ZAYKException {
+        int generatorKeyPair = -1;
+        int secretKeyLength=dbhsmSecretKeyManage.getSecretKeyLength();
+        Long keyIndex = dbhsmSecretKeyManage.getSecretKeyIndex();
+        Integer secretKeyType = dbhsmSecretKeyManage.getSecretKeyType();
+        Integer crytoCartTypeSInt = null;
+
+        //获取卡类型
+        Object crytoCartTypeObj = JSONDataUtil.getSysDataToDB(DbConstants.cryptoCardType);
+        if (null != crytoCartTypeObj) {
+            crytoCartTypeSInt = Integer.parseInt(crytoCartTypeObj.toString());
+        }
+        // 调用jna接口
+        ZaykManageClass mgr = new ZaykManageClass();
+        if(ObjectUtil.isEmpty(crytoCartTypeObj)){
+            throw new ZAYKException("获取卡类型失败，请检查数据库配置");
+        }
+        mgr.Initialize(crytoCartTypeSInt);
+        KeyPairInfo keyPairInfo = new KeyPairInfo();
+
+        // 大容量密钥--对称
+        byte[] random = new byte[secretKeyLength];
+        generatorKeyPair = mgr.GenerateRandom(secretKeyLength, random);
+        keyPairInfo.setPrivateKey(Base64.toBase64String(random));
+        keyPairInfo.setPublicKey(Base64.toBase64String(random));
+        keyPairInfo.setSecretKeyIndex(Math.toIntExact(keyIndex));
+        keyPairInfo.setSecretKeyUsage(1);
+        keyPairInfo.setSecretKeyModuleLength(secretKeyLength);
+        keyPairInfo.setSecretKeyType(secretKeyType.toString());
+        mgr.finalize();
+        //插入数据库
+        ArrayList<HsmSymmetricSecretKey> secretKeyArrayList = new ArrayList<>();
+        HsmSymmetricSecretKey symmetricSecretKey = new HsmSymmetricSecretKey();
+        symmetricSecretKey.setSecretKeyId(UUID.randomUUID().toString());
+        symmetricSecretKey.setSecretKeyIndex(String.valueOf(keyPairInfo.getSecretKeyIndex()));
+        symmetricSecretKey.setSecretKeyModuleLength(secretKeyLength);
+        symmetricSecretKey.setSecretKeyUsage(keyPairInfo.getSecretKeyUsage());
+        symmetricSecretKey.setPublicKey(keyPairInfo.getPublicKey());
+        symmetricSecretKey.setPrivateKey(keyPairInfo.getPrivateKey());
+        symmetricSecretKey.setCreateTime(DateUtils.getNowDate());
+        secretKeyArrayList.add(symmetricSecretKey);
+        R<AjaxResult2> batchR = remoteSecretKeyService.insertHsmSymSecretKeyBatch(secretKeyArrayList);
+        if (batchR.getCode() != DbConstants.SUCCESS) {
+            log.error(" insertHsmSymSecretKeyBatch error :" + batchR.getMsg());
+        }
+        return;
     }
 
     /**
@@ -252,6 +313,11 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
                 throw new ZAYKException("密钥ID为:"+secretKeyManage.getSecretKeyId()+"的密钥已被加密列使用,请先删除加密列");
             }
             i = deleteDbhsmSecretKeyManageById(id);
+            //根据索引删除对称密钥
+            int keyGenerationMode = JSONDataUtil.getSecretKeyGenerateType(DbConstants.SYSDATA_ALGORITHM_TYPE_SYK);
+            if (keyGenerationMode == DbConstants.BULK_SECRET_KEY) {
+                remoteSecretKeyService.removeSymKey(String.valueOf(secretKeyManage.getSecretKeyIndex()));
+            }
         }
         return i;
         //return dbhsmSecretKeyManageMapper.deleteDbhsmSecretKeyManageByIds(ids);

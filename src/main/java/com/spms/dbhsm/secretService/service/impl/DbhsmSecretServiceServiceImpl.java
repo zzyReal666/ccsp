@@ -1,5 +1,6 @@
 package com.spms.dbhsm.secretService.service.impl;
 
+import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.DateUtils;
 import com.ccsp.common.core.utils.StringUtils;
 import com.ccsp.common.core.web.domain.AjaxResult;
@@ -162,8 +163,9 @@ public class DbhsmSecretServiceServiceImpl implements IDbhsmSecretServiceService
      * @return 结果
      */
     @Override
-    public int updateDbhsmSecretService(DbhsmSecretService dbhsmSecretService) throws IOException {
+    public int updateDbhsmSecretService(DbhsmSecretService dbhsmSecretService) throws IOException, ZAYKException {
         DbhsmSecretService dbhsmSecretService1 = dbhsmSecretServiceMapper.selectDbhsmSecretServiceById(dbhsmSecretService.getId());
+        //如果参数没有变化，则不修改配置文件
         if (dbhsmSecretService1.getSecretService().equals(dbhsmSecretService.getSecretService())
                 && dbhsmSecretService1.getSecretKeyIndex().equals(dbhsmSecretService.getSecretKeyIndex())
                 && dbhsmSecretService1.getUserName().equals(dbhsmSecretService.getUserName())
@@ -173,7 +175,16 @@ public class DbhsmSecretServiceServiceImpl implements IDbhsmSecretServiceService
                 && dbhsmSecretService1.getServicePort().equals(dbhsmSecretService.getServicePort())) {
             return 1;
         }
-
+        //如果修改后的ip和port已存在则禁止修改
+        DbhsmSecretService dbhsmSecretService2 = new DbhsmSecretService();
+        dbhsmSecretService2.setServiceIp(dbhsmSecretService.getServiceIp());
+        dbhsmSecretService2.setServicePort(dbhsmSecretService.getServicePort());
+        List<DbhsmSecretService> serviceList = dbhsmSecretServiceMapper.selectDbhsmSecretServiceList(dbhsmSecretService2);
+        if (serviceList.size() > 0 &&!dbhsmSecretService.getId().equals(serviceList.get(0).getId())
+                && serviceList.get(0).getServiceIp().equals(dbhsmSecretService.getServiceIp())
+                && serviceList.get(0).getServicePort().equals(dbhsmSecretService.getServicePort())) {
+            throw new ZAYKException("密管服务已存在，请勿重复添加");
+        }
         dbhsmSecretService.setUpdateTime(DateUtils.getNowDate());
         int ret = dbhsmSecretServiceMapper.updateDbhsmSecretService(dbhsmSecretService);
         modifySecretServiceIniFile(dbhsmSecretService);
