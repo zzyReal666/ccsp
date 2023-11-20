@@ -264,6 +264,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         }
         String dbType = instance.getDatabaseType();
         dbhsmDbUser.setDatabaseType(dbType);
+        dbhsmDbUser.setEncLibapiPath(instance.getEncLibapiPath());
         switch (dbType) {
             case DbConstants.DB_TYPE_ORACLE:
                 return insertOracleUser(dbhsmDbUser, instance);
@@ -468,6 +469,9 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
             }
         } catch (SQLException e) {
             e.printStackTrace();
+            if (StringUtils.isNotEmpty(e.getMessage())&& e.getMessage().contains("Operation CREATE USER failed for")){
+                throw new ZAYKException(dbhsmDbUser.getUserName()+"用户已存在！");
+            }
             throw new ZAYKException(e.getMessage());
         } finally {
             //释放资源
@@ -879,11 +883,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
 
     @Override
     public AjaxResult2 treeData() {
-        List<DbhsmDbUser> usersList = new ArrayList<>();
         SysDictData sysDictData;
-        DbhsmDbUser user;
-        String tableName;
-        Connection conn = null;
         List<Map<String, Object>> instancetTrees = new ArrayList<Map<String, Object>>();
         List<SysDictData> dbTypeDictData = remoteDicDataService.romoteDictType(DbConstants.DBHSM_DB_TYPE, SecurityConstants.INNER).getData();
 

@@ -338,6 +338,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         return dbhsmDbInstanceMapper.deleteDbhsmDbInstanceById(id);
     }
 
+    /**查询表空间*/
     @Override
     public List<SelectOption>  getDbTablespace(Long id) {
         Connection conn = null;
@@ -355,7 +356,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
                     conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
                     if (Optional.ofNullable(conn).isPresent()) {
                         stmt = conn.createStatement();
-                        resultSet = stmt.executeQuery("select tablespace_name from dba_data_files");
+                        resultSet = stmt.executeQuery("select tablespace_name from dba_data_files where tablespace_name!='UNDOTBS1' and tablespace_name!='SYSTEM' and tablespace_name!='SYSAUX'");
                         while (resultSet.next()) {
                             SelectOption option = new SelectOption();
                             option.setId(i++);

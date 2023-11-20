@@ -204,7 +204,7 @@ public class ViewUtil {
 
         String columns = "";
         for (Map<String, String> map : allColumnsInfo) {
-            columns += map.get(DbConstants.DB_COLUMN_NAME) + ",";
+            columns += "["+map.get(DbConstants.DB_COLUMN_NAME) + "],";
         }
 
         columns = columns.substring(0, columns.length() - 1);
@@ -245,7 +245,7 @@ public class ViewUtil {
         } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(encryptColumns.getDatabaseType())) {
             delViewSql = "DROP VIEW IF EXISTS " + encryptColumns.getDatabaseServerName() + ".v_" + encryptColumns.getDbTable();
         }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(encryptColumns.getDatabaseType())) {
-            delViewSql = "DROP VIEW  IF EXISTS  " + dbSchema + ".v_" + encryptColumns.getDbTable();
+            delViewSql = "DROP VIEW  IF EXISTS  \"" + dbSchema + "\".v_" + encryptColumns.getDbTable();
         }
         log.info("deleteOracleView:" + delViewSql);
         //执行删除语句
@@ -408,7 +408,7 @@ public class ViewUtil {
         if (allColumnsInfo == null || allColumnsInfo.size() == 0) {
             return false;
         }
-
+        dbSchema = "\""+dbSchema+"\"";
         //查询出加密字段
         DbhsmEncryptColumns encryptColumnDto = new DbhsmEncryptColumns();
         encryptColumnDto.setDbInstanceId(encryptColumns.getDbInstanceId());

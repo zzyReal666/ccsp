@@ -19,9 +19,9 @@ public final class DBUtil {
      * 查询获取数据库所有表名
      */
     public static List<String> findAllTables(Connection conn, String userName,String dbType) {
-        return findAllTables(conn,userName,dbType,"");
+        return findAllTables(conn,userName,dbType,"","");
     }
-    public static List<String> findAllTables(Connection conn, String userName,String dbType,String dbName) {
+    public static List<String> findAllTables(Connection conn, String userName,String dbType,String dbName,String schema) {
         Statement stmt = null;
         List<String> tableNamesList = new ArrayList<String>();
         try {
@@ -46,7 +46,7 @@ public final class DBUtil {
                 }
                 resultSet.close();
             }else  if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(dbType)){
-                String sql = "select tablename from pg_tables where schemaname = 'public'";
+                String sql = "select tablename from pg_tables where schemaname = '"+schema+"'";
                 ResultSet resultSet = stmt.executeQuery(sql);
                 while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
                     tableNamesList.add(resultSet.getString("tablename"));

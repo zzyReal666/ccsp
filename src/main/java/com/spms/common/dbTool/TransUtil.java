@@ -160,7 +160,7 @@ public class TransUtil {
         StringBuffer transSql = new StringBuffer();
         String alg = zaDatabaseEncryptColumns.getEncryptionAlgorithm();
         // 替换成表名和字段名
-        transSql.append("CREATE OR ALTER  TRIGGER "+ schemaName + ".tr_" + zaDatabaseEncryptColumns.getDbTable() + "_" + zaDatabaseEncryptColumns.getEncryptColumns()+"_" + DbConstants.algMapping(zaDatabaseEncryptColumns.getEncryptionAlgorithm()) + "_encrypt");
+        transSql.append("CREATE OR ALTER  TRIGGER "+ schemaName + ".tr_" + zaDatabaseEncryptColumns.getDbTable() + "_" + zaDatabaseEncryptColumns.getEncryptColumns()+"_" + DbConstants.algMapping(alg) + "_encrypt");
         transSql.append(System.getProperty("line.separator"));
 
         transSql.append("   ON " + zaDatabaseEncryptColumns.getDatabaseServerName()+ "." +schemaName + "." + zaDatabaseEncryptColumns.getDbTable() + "");
@@ -237,10 +237,10 @@ public class TransUtil {
         transSql.append("set @rawstringlen =DATALENGTH( @rawstring)/2");
         transSql.append(System.getProperty("line.separator"));
 
-        transSql.append(" set @offset = 0");
+        transSql.append(" set @offset = "+(DbConstants.SGD_SM4.equals(alg)?"0":zaDatabaseEncryptColumns.getEncryptionOffset()-1));
         transSql.append(System.getProperty("line.separator"));
 
-        transSql.append(" set @length = @rawstringlen");
+        transSql.append(" set @length = "+(DbConstants.SGD_SM4.equals(alg)?"@rawstringlen":zaDatabaseEncryptColumns.getEncryptionLength()));
         transSql.append(System.getProperty("line.separator"));
 
         transSql.append(" set @encryptlen = @rawstringlen");
@@ -420,9 +420,11 @@ public class TransUtil {
          */
         Statement statement = null;
         String  alg = dbhsmEncryptColumnsAdd.getEncryptionAlgorithm();
-        String funName = user.getDbSchema() + ".tr_" + DbConstants.algMapping(alg) + "_" + user.getUserName() + "_" + dbhsmEncryptColumnsAdd.getDbTable()+ "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
-        String funName$ = "tr_" + user.getUserName() + "_"  + user.getDbSchema() + "_"  + dbhsmEncryptColumnsAdd.getDbTable() + "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
+        //String userSchema = "'"+user.getDbSchema()+"'";
         String userSchema = user.getDbSchema();
+         userSchema = user.getDbSchema();
+        String funName = "\""+userSchema + "\".tr_" + DbConstants.algMapping(alg) + "_" + user.getUserName() + "_" + dbhsmEncryptColumnsAdd.getDbTable()+ "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
+        String funName$ = "tr_" + user.getUserName() + "_"  + userSchema + "_"  + dbhsmEncryptColumnsAdd.getDbTable() + "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
         try {
             // 1、定义触发器函数
             log.info("创建PostgreSql触发器函数start");
@@ -507,7 +509,7 @@ public class TransUtil {
         Statement statement = null;
         String funName = "tr_" + DbConstants.algMapping(dbhsmEncryptColumnsAdd.getEncryptionAlgorithm()) + "_" + user.getUserName() + "_" + dbhsmEncryptColumnsAdd.getDbTable()+ "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
         String transName = "tr_" + DbConstants.algMapping(dbhsmEncryptColumnsAdd.getEncryptionAlgorithm()) + "_" + dbhsmEncryptColumnsAdd.getDbTable()+ "_" + dbhsmEncryptColumnsAdd.getEncryptColumns() ;
-        String userSchema = user.getDbSchema();
+        String userSchema = "\""+user.getDbSchema()+"\"";
         try {
             // 1、创建触发器，设置所触发的条件和执行的函数
             log.info("创建PostgreSql触发器start");

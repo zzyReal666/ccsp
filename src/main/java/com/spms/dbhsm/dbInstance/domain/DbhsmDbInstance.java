@@ -58,6 +58,10 @@ public class DbhsmDbInstance extends BaseEntity
     @Excel(name = "密码服务")
     private String secretService;
 
+    /** 加密插件地址 */
+    @Excel(name = "加密插件地址")
+    private String encLibapiPath;
+
     /** 数据库版本号
     0:11g及以前版本,
     1:12.1.0.1.0-V38500 for linux x86,
@@ -197,6 +201,14 @@ public class DbhsmDbInstance extends BaseEntity
         return userCreateMode;
     }
 
+    public String getEncLibapiPath() {
+        return encLibapiPath;
+    }
+
+    public void setEncLibapiPath(String encLibapiPath) {
+        this.encLibapiPath = encLibapiPath;
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this,ToStringStyle.MULTI_LINE_STYLE)
@@ -215,6 +227,7 @@ public class DbhsmDbInstance extends BaseEntity
             .append("secretService", getSecretService())
             .append("databaseEdition", getDatabaseEdition())
             .append("userCreateMode", getUserCreateMode())
+            .append("encLibapiPath", getEncLibapiPath())
             .toString();
     }
 
@@ -265,6 +278,9 @@ public class DbhsmDbInstance extends BaseEntity
         if (getDatabaseEdition() != null ? !getDatabaseEdition().equals(instance.getDatabaseEdition()) : instance.getDatabaseEdition() != null) {
             return false;
         }
+        if (getEncLibapiPath() != null ? !getEncLibapiPath().equals(instance.getEncLibapiPath()) : instance.getEncLibapiPath() != null) {
+            return false;
+        }
         return getUserCreateMode() != null ? getUserCreateMode().equals(instance.getUserCreateMode()) : instance.getUserCreateMode() == null;
     }
 
@@ -283,6 +299,7 @@ public class DbhsmDbInstance extends BaseEntity
         result = 31 * result + (getSecretService() != null ? getSecretService().hashCode() : 0);
         result = 31 * result + (getDatabaseEdition() != null ? getDatabaseEdition().hashCode() : 0);
         result = 31 * result + (getUserCreateMode() != null ? getUserCreateMode().hashCode() : 0);
+        result = 31 * result + (getEncLibapiPath() != null ? getEncLibapiPath().hashCode() : 0);
         return result;
     }
 }

@@ -489,7 +489,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                         instancetTrees.add(userMap);
                         conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
                         if (Optional.ofNullable(conn).isPresent()) {
-                            List<String> tableNameList = DBUtil.findAllTables(conn, user.getUserName(), instance.getDatabaseType(),instance.getDatabaseServerName());
+                            List<String> tableNameList = DBUtil.findAllTables(conn, user.getUserName(), instance.getDatabaseType(),instance.getDatabaseServerName(),user.getDbSchema());
                             for (int k = 0; k < tableNameList.size(); k++) {
                                 tableName = tableNameList.get(k);
                                 Map<String, Object> dbTableMetaMap = new HashMap<String, Object>();

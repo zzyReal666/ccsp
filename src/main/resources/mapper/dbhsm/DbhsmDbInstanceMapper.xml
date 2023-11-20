@@ -20,6 +20,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="secretService"    column="secret_service"    />
         <result property="databaseEdition"    column="database_edition"    />
         <result property="userCreateMode"    column="user_create_mode"    />
+        <result property="encLibapiPath"    column="enc_libapi_path"    />
     </resultMap>
     <resultMap id="InstanceServerNameResultVO" type="com.spms.dbhsm.dbInstance.domain.VO.InstanceServerNameVO">
         <result column="id" property="id"/>
@@ -27,7 +28,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="databaseType"    column="database_type"    />
     </resultMap>
     <sql id="selectDbhsmDbInstanceVo">
-        select id, database_type, database_ip, database_port, database_server_name, database_example_type, database_dba, database_dba_password, password_service_ip, password_service_port, create_time, update_time, secret_service, database_edition, user_create_mode from dbhsm_db_instance
+        select id, database_type, database_ip, database_port, database_server_name, database_example_type, database_dba, database_dba_password, password_service_ip, password_service_port, create_time, update_time, secret_service, database_edition, user_create_mode,enc_libapi_path from dbhsm_db_instance
     </sql>
 
     <select id="selectDbhsmDbInstanceList" parameterType="com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance" resultMap="DbhsmDbInstanceResult">
@@ -46,6 +47,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="secretService != null  and secretService != ''"> and secret_service = #{secretService}</if>
             <if test="databaseEdition != null  and databaseEdition != ''"> and database_edition = #{databaseEdition}</if>
             <if test="userCreateMode != null "> and user_create_mode = #{userCreateMode}</if>
+            <if test="encLibapiPath != null "> and enc_libapi_path = #{encLibapiPath}</if>
         </where>
     </select>
 
@@ -59,7 +61,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         from dbhsm_db_instance
     </select>
     <select id="selectDbhsmDbInstanceByUserId" parameterType="Long" resultMap="DbhsmDbInstanceResult">
-        select id, database_type, database_ip, database_port, database_server_name, database_example_type, database_dba, database_dba_password, password_service_ip, password_service_port, create_time, update_time, secret_service, database_edition, user_create_mode
+        select id, database_type, database_ip, database_port, database_server_name, database_example_type, database_dba, database_dba_password, password_service_ip, password_service_port, create_time, update_time, secret_service, database_edition, user_create_mode,enc_libapi_path
         from dbhsm_db_instance i
         left join dbhsm_user_db_instance ui
         on i.id = ui.instance_id
@@ -83,6 +85,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="secretService != null">secret_service,</if>
             <if test="databaseEdition != null">database_edition,</if>
             <if test="userCreateMode != null">user_create_mode,</if>
+            <if test="encLibapiPath != null">enc_libapi_path,</if>
          </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="databaseType != null">#{databaseType},</if>
@@ -99,6 +102,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="secretService != null">#{secretService},</if>
             <if test="databaseEdition != null">#{databaseEdition},</if>
             <if test="userCreateMode != null">#{userCreateMode},</if>
+            <if test="encLibapiPath != null">#{encLibapiPath},</if>
          </trim>
     </insert>
 
@@ -119,6 +123,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="secretService != null">secret_service = #{secretService},</if>
             <if test="databaseEdition != null">database_edition = #{databaseEdition},</if>
             <if test="userCreateMode != null">user_create_mode = #{userCreateMode},</if>
+            <if test="encLibapiPath != null">enc_libapi_path = #{encLibapiPath},</if>
         </trim>
         where id = #{id}
     </update>
