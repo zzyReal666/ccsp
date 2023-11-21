@@ -149,7 +149,7 @@ public class ViewUtil {
                     view.append(" " + columnName + "," + "0,0" + ") as " + columnName + (counter == columns.size() ? "" : ","));
                 } else {
                     if (DbConstants.ESTABLISH_RULES_YES.equals(establishRules)) {
-                        view.append(" " + columnName + "," + (offset - 1) + "," + length + "," + algorithm + ") as " + columnName + (counter == columns.size() ? "" : ","));
+                        view.append(" " + columnName + "," + (offset - 1) + "," + (length-(offset - 1)) + "," + algorithm + ") as " + columnName + (counter == columns.size() ? "" : ","));
                     } else {
                         view.append(" " + columnName + ",0,0," + algorithm + ") as " + columnName + (counter == columns.size() ? "" : ","));
                     }
@@ -344,7 +344,7 @@ public class ViewUtil {
                         if (DbConstants.ESTABLISH_RULES_YES.equals(encryptColumns.getEstablishRules())) {
                             item.append( columnName + "," + //加密列
                                     (encryptColumns.getEncryptionOffset() -1 ) + "," + //偏移量
-                                    encryptColumns.getEncryptionLength() +") #---- 加密列 --偏移量 --加密长度\n");
+                                    (encryptColumns.getEncryptionLength()-(encryptColumns.getEncryptionOffset() -1 )) +") #---- 加密列 --偏移量 --加密长度\n");
                         } else {
                             item.append( columnName + "," + "0,0) #---- 加密列 --偏移量 --加密长度\n");
                         }
@@ -448,17 +448,17 @@ public class ViewUtil {
                     item.append(System.getProperty("line.separator"));
                     item.append("'http://" + encryptColumns.getIpAndPort() + "/api/datahsm/v1/strategy/get', ");
                     item.append(System.getProperty("line.separator"));
-                    item.append("CAST(inet_client_addr() as char),");
+                    item.append("CAST(inet_client_addr() as text),");
                     item.append(System.getProperty("line.separator"));
-                    item.append("CAST(current_catalog as char),");
+                    item.append("CAST(current_catalog as text),");
                     item.append(System.getProperty("line.separator"));
-                    item.append("CAST(current_catalog as char),");
+                    item.append("CAST(current_catalog as text),");
                     item.append(System.getProperty("line.separator"));
                     item.append("'" + encryptColumn1.getDbTable() + "',");
                     item.append(System.getProperty("line.separator"));
                     item.append("'" + encryptColumn1.getEncryptColumns() + "',");
                     item.append(System.getProperty("line.separator"));
-                    item.append("CAST(user AS CHAR),");
+                    item.append("CAST(user AS text),");
                     item.append(System.getProperty("line.separator"));
 
                     if (DbConstants.SGD_SM4.equals(encryptColumn1.getEncryptionAlgorithm())) {
@@ -467,7 +467,7 @@ public class ViewUtil {
                         if (DbConstants.ESTABLISH_RULES_YES.equals(encryptColumn1.getEstablishRules())) {
                             item.append( encryptColumn1.getEncryptColumns() + "," + //加密列
                                     (encryptColumn1.getEncryptionOffset() -1 ) + "," + //偏移量
-                                    encryptColumn1.getEncryptionLength() +"," +//加密长度
+                                    (encryptColumn1.getEncryptionLength()-(encryptColumn1.getEncryptionOffset() -1 )) +"," +//加密长度
                                     encryptColumn1.getEncryptionAlgorithm() + ")"+(haveEncColumn ? ")" : "")+"\n");
                         } else {
                             item.append( encryptColumn1.getEncryptColumns() + ",0,0,"+encryptColumn1.getEncryptionAlgorithm() + ")"+(haveEncColumn ? ")" : "")+"\n");
@@ -500,10 +500,12 @@ public class ViewUtil {
             preparedStatement.execute();
             String viemName=dbSchema+".v_" + encryptColumns.getDbTable();
             String permssionSql = "GRANT SELECT ON "+ viemName+" TO " +  encryptColumns.getDbUserName();
+            log.info("给用户授权查询视图权限Sql:" + permssionSql);
             preparedStatement = conn.prepareStatement(permssionSql);
             preparedStatement.execute();
             return true;
         } catch (Exception e) {
+            log.info("给用户授权查询视图权限失败！");
             e.printStackTrace();
             return false;
         } finally {

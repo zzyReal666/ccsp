@@ -316,13 +316,13 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
 
                         userSchema=user.getDbSchema();
                         String transName = "tr_" + DbConstants.algMapping(encryptColumns.getEncryptionAlgorithm()) + "_" + encryptColumns.getDbTable()+ "_" + encryptColumns.getEncryptColumns() ;
-                        sql = "DROP TRIGGER IF EXISTS " + transName + " on " + encryptColumns.getDbTable();
+                        sql = "DROP TRIGGER IF EXISTS " + transName + " on " + encryptColumns.getDbTable() + " CASCADE";
                         log.info(sql);
                         preparedStatement = connection.prepareStatement(sql);
                         resultSet = preparedStatement.executeUpdate();
 
                         String funName = user.getDbSchema() + ".tr_" + DbConstants.algMapping(encryptColumns.getEncryptionAlgorithm()) + "_" + user.getUserName() + "_" + encryptColumns.getDbTable()+ "_" + encryptColumns.getEncryptColumns();
-                        sql = "DROP FUNCTION " + funName;
+                        sql = "DROP FUNCTION " + funName +" CASCADE;";
                         preparedStatement = connection.prepareStatement(sql);
                          resultSet = preparedStatement.executeUpdate();
                     }
@@ -400,7 +400,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         String osName = System.getProperty("os.name");
         String ip = "";
          if (osName.toLowerCase().startsWith("linux")) {
-             ip = CommandUtil.exeCmd("ip a| grep " + ethernetPort + " |grep inet |awk '{print $2}'|awk -F '/' '{print $1}'");
+             ip = CommandUtil.exeCmd("ip a| grep " + ethernetPort.split("@")[0] + " |grep inet |awk '{print $2}'|awk -F '/' '{print $1}'");
              if (StringUtils.isEmpty(ip)) {
                  throw new Exception(ethernetPort + "口IP不存在,请先进行配置IP");
              }
@@ -417,6 +417,11 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         return ip;
     }
 
+    public static void main(String[] args) {
+        String ethernetPort="eth0";
+            ethernetPort=ethernetPort.split("@")[0];
+        System.out.println(ethernetPort);
+    }
     /**
      * 删除数据库加密列信息
      *

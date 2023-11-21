@@ -74,7 +74,7 @@ public class TransUtil {
         transSql.append("    '" + encryptColumns.getDbTable() + "',--表名\n");
         transSql.append("    '" + encryptColumns.getEncryptColumns() + "',--列名，以列名 name 为例\n");
         transSql.append("    USER(),--用户名\n");
-        transSql.append("    :NEW." + encryptColumns.getEncryptColumns().toUpperCase() + "," + (ObjectUtils.isEmpty(encryptColumns.getEncryptionOffset()) ? 0 : encryptColumns.getEncryptionOffset() - 1) + "," + (ObjectUtils.isEmpty(encryptColumns.getEncryptionLength()) ? 0 : encryptColumns.getEncryptionLength()) + ", :NEW." + encryptColumns.getEncryptColumns().toUpperCase() + ",--变换的列，此处为变换 name 列6,8分别为偏移量和加密长度\n");
+        transSql.append("    :NEW." + encryptColumns.getEncryptColumns().toUpperCase() + "," + (ObjectUtils.isEmpty(encryptColumns.getEncryptionOffset()) ? 0 : encryptColumns.getEncryptionOffset() - 1) + "," + (ObjectUtils.isEmpty(encryptColumns.getEncryptionLength()) ? 0 : encryptColumns.getEncryptionLength()-(encryptColumns.getEncryptionOffset() - 1)) + ", :NEW." + encryptColumns.getEncryptColumns().toUpperCase() + ",--变换的列，此处为变换 name 列6,8分别为偏移量和加密长度\n");
         transSql.append("    " + encryptColumns.getEncryptionAlgorithm() + ");\n");
         transSql.append("END;\n");
         Statement statement = null;
@@ -237,12 +237,19 @@ public class TransUtil {
         transSql.append("set @rawstringlen =DATALENGTH( @rawstring)/2");
         transSql.append(System.getProperty("line.separator"));
 
-        transSql.append(" set @offset = "+(DbConstants.SGD_SM4.equals(alg)?"0":zaDatabaseEncryptColumns.getEncryptionOffset()-1));
-        transSql.append(System.getProperty("line.separator"));
+        if (!DbConstants.SGD_SM4.equals(alg) && DbConstants.ESTABLISH_RULES_YES.equals(zaDatabaseEncryptColumns.getEstablishRules())) {
+            transSql.append(" set @offset = "+(zaDatabaseEncryptColumns.getEncryptionOffset()-1));
+            transSql.append(System.getProperty("line.separator"));
 
-        transSql.append(" set @length = "+(DbConstants.SGD_SM4.equals(alg)?"@rawstringlen":zaDatabaseEncryptColumns.getEncryptionLength()));
-        transSql.append(System.getProperty("line.separator"));
+            transSql.append(" set @length = "+(zaDatabaseEncryptColumns.getEncryptionLength()-(zaDatabaseEncryptColumns.getEncryptionOffset()-1)));
+            transSql.append(System.getProperty("line.separator"));
+        } else {
+            transSql.append(" set @offset = 0");
+            transSql.append(System.getProperty("line.separator"));
 
+            transSql.append(" set @length = @rawstringlen");
+            transSql.append(System.getProperty("line.separator"));
+        }
         transSql.append(" set @encryptlen = @rawstringlen");
         transSql.append(System.getProperty("line.separator"));
 
@@ -358,7 +365,7 @@ public class TransUtil {
             if (DbConstants.ESTABLISH_RULES_YES.equals(encryptColumns.getEstablishRules())) {
                 transSql.append("NEW." + encryptColumns.getEncryptColumns() + "," + //加密列
                         (encryptColumns.getEncryptionOffset() -1 ) + "," + //偏移量
-                        encryptColumns.getEncryptionLength() +");\n");
+                        (encryptColumns.getEncryptionLength()-(encryptColumns.getEncryptionOffset() -1 )) +");\n");
             } else {
                 transSql.append("NEW." + encryptColumns.getEncryptColumns() + "," + "0,0); \n");
             }
@@ -442,17 +449,17 @@ public class TransUtil {
             transFun.append(System.getProperty("line.separator"));
             transFun.append("'http://" + dbhsmEncryptColumnsAdd.getIpAndPort()+ "/api/datahsm/v1/strategy/get',");
             transFun.append(System.getProperty("line.separator"));
-            transFun.append("CAST(inet_client_addr() as char),");
+            transFun.append("CAST(inet_client_addr() as text),");
             transFun.append(System.getProperty("line.separator"));
-            transFun.append("CAST(current_catalog as char),");
+            transFun.append("CAST(current_catalog as text),");
             transFun.append(System.getProperty("line.separator"));
-            transFun.append("CAST(current_catalog as char),");
+            transFun.append("CAST(current_catalog as text),");
             transFun.append(System.getProperty("line.separator"));
             transFun.append("'" + dbhsmEncryptColumnsAdd.getDbTable() + "',");
             transFun.append(System.getProperty("line.separator"));
             transFun.append("'" + dbhsmEncryptColumnsAdd.getEncryptColumns() + "',");
             transFun.append(System.getProperty("line.separator"));
-            transFun.append("CAST(user AS CHAR),");
+            transFun.append("CAST(user AS text),");
             transFun.append(System.getProperty("line.separator"));
 
             if (DbConstants.SGD_SM4.equals(dbhsmEncryptColumnsAdd.getEncryptionAlgorithm())) {
@@ -461,7 +468,7 @@ public class TransUtil {
                 if (DbConstants.ESTABLISH_RULES_YES.equals(dbhsmEncryptColumnsAdd.getEstablishRules())) {
                     transFun.append("NEW." + dbhsmEncryptColumnsAdd.getEncryptColumns() + "," + //加密列
                             (dbhsmEncryptColumnsAdd.getEncryptionOffset() -1 ) + "," + //偏移量
-                            dbhsmEncryptColumnsAdd.getEncryptionLength() +"," +//加密长度
+                            (dbhsmEncryptColumnsAdd.getEncryptionLength()-(dbhsmEncryptColumnsAdd.getEncryptionOffset() -1 )) +"," +//加密长度
                             dbhsmEncryptColumnsAdd.getEncryptionAlgorithm() + ");\n");
                 } else {
                     transFun.append("NEW." + dbhsmEncryptColumnsAdd.getEncryptColumns() + ",0,0,"+ dbhsmEncryptColumnsAdd.getEncryptionAlgorithm() +");\n");
