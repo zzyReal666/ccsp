@@ -615,7 +615,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         } catch (SQLException e) {
             log.error(e.getMessage());
             e.printStackTrace();
-            throw new ZAYKException(e.getMessage());
+            throw new ZAYKException(e.getMessage().startsWith("服务器主体")?"用户已存在":e.getMessage());
         } finally {
             //释放资源
             if (preparedStatement != null) {
@@ -659,9 +659,9 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 //获取用户创建模式 0：创建无容器数据库用户 1：创建CDB容器中的公共用户
                 int userCreateMode = instance.getUserCreateMode();
                 if (userCreateMode == DbConstants.USER_CREATE_MODE_CDB) {
-                    sql = "CREATE USER c##" + username + " IDENTIFIED BY " + password + " DEFAULT tablespace users";
+                    sql = "CREATE USER c##" + username + " IDENTIFIED BY \"" + password + "\" DEFAULT tablespace users";
                 } else {
-                    sql = "CREATE USER " + username + " IDENTIFIED BY " + password + " DEFAULT TABLESPACE \"" + tableSpace + "\" TEMPORARY TABLESPACE \"TEMP\"";
+                    sql = "CREATE USER " + username + " IDENTIFIED BY \"" + password + "\" DEFAULT TABLESPACE \"" + tableSpace + "\" TEMPORARY TABLESPACE \"TEMP\"";
                 }
                 preparedStatement = conn.prepareStatement(sql);
                 preparedStatement.executeUpdate();

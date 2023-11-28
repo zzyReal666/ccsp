@@ -314,17 +314,18 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                         }
                         DbhsmDbUser user = dbhsmDbUsers.get(0);
 
-                        userSchema=user.getDbSchema();
+                        userSchema="\"" + user.getDbSchema() +"\"";
                         String transName = "tr_" + DbConstants.algMapping(encryptColumns.getEncryptionAlgorithm()) + "_" + encryptColumns.getDbTable()+ "_" + encryptColumns.getEncryptColumns() ;
                         sql = "DROP TRIGGER IF EXISTS " + transName + " on " + encryptColumns.getDbTable() + " CASCADE";
                         log.info(sql);
                         preparedStatement = connection.prepareStatement(sql);
                         resultSet = preparedStatement.executeUpdate();
 
-                        String funName = user.getDbSchema() + ".tr_" + DbConstants.algMapping(encryptColumns.getEncryptionAlgorithm()) + "_" + user.getUserName() + "_" + encryptColumns.getDbTable()+ "_" + encryptColumns.getEncryptColumns();
+                        String funName = userSchema + ".tr_" + DbConstants.algMapping(encryptColumns.getEncryptionAlgorithm()) + "_" + user.getUserName() + "_" + encryptColumns.getDbTable()+ "_" + encryptColumns.getEncryptColumns();
                         sql = "DROP FUNCTION " + funName +" CASCADE;";
                         preparedStatement = connection.prepareStatement(sql);
                          resultSet = preparedStatement.executeUpdate();
+                        connection.commit();
                     }
 
                     //执行删除触发器

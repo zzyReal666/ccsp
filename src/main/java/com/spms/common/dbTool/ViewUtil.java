@@ -499,7 +499,7 @@ public class ViewUtil {
             preparedStatement = conn.prepareStatement(viewSql.toString());
             preparedStatement.execute();
             String viemName=dbSchema+".v_" + encryptColumns.getDbTable();
-            String permssionSql = "GRANT SELECT ON "+ viemName+" TO " +  encryptColumns.getDbUserName();
+            String permssionSql = "GRANT SELECT ON "+ viemName+" TO  \"" +  encryptColumns.getDbUserName() +"\"";
             log.info("给用户授权查询视图权限Sql:" + permssionSql);
             preparedStatement = conn.prepareStatement(permssionSql);
             preparedStatement.execute();
