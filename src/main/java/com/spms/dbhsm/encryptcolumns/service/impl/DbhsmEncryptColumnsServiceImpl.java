@@ -213,7 +213,8 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 throw new Exception("根据实例ID和用户名未获取到用户信息,用户名：" + dbUser.getUserName());
             }
             user = dbhsmDbUsers.get(0);
-
+            //存量数据加密
+            //EncryptionColumnsHelper.encryptionExistingData(conn,dbhsmEncryptColumnsAdd,user);
             //sm4/fpe触发器函数
             TransUtil.transEncryptFunToPostgreSql(conn,dbhsmEncryptColumnsAdd,user);
             //触发器
@@ -464,9 +465,9 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             try {
                 DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
                 BeanUtils.copyProperties(instance, connDTO);
-
+                String idPrefix = "$"+getInstance(instance);
                 Map<String, Object> instanceMap = new HashMap<String, Object>();
-                instanceMap.put("id", instance.getId());
+                instanceMap.put("id", instance.getId()+idPrefix);
                 instanceMap.put("pId", "0");
                 instanceMap.put("title", instance.getDatabaseServerName() + getDataBaseName(instance.getDatabaseType(), dictDatas));
                 instanceMap.put("level", 1);
@@ -488,8 +489,8 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
 
                         //只有通过web创建的用户才允许创建加密列
                         Map<String, Object> userMap = new HashMap<String, Object>();
-                        userMap.put("id", user.getId());
-                        userMap.put("pId", instance.getId());
+                        userMap.put("id", user.getId()+idPrefix);
+                        userMap.put("pId", instance.getId()+idPrefix);
                         userMap.put("title", user.getUserName());
                         userMap.put("level", 2);
                         instancetTrees.add(userMap);
@@ -499,8 +500,8 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                             for (int k = 0; k < tableNameList.size(); k++) {
                                 tableName = tableNameList.get(k);
                                 Map<String, Object> dbTableMetaMap = new HashMap<String, Object>();
-                                dbTableMetaMap.put("id", tableName);
-                                dbTableMetaMap.put("pId", user.getId());
+                                dbTableMetaMap.put("id", tableName+idPrefix);
+                                dbTableMetaMap.put("pId", user.getId()+idPrefix);
                                 dbTableMetaMap.put("title", tableName);
                                 dbTableMetaMap.put("level", 3);
                                 instancetTrees.add(dbTableMetaMap);
