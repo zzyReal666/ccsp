@@ -254,7 +254,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public int insertDbhsmDbUsers(DbhsmDbUser dbhsmDbUser) throws ZAYKException, SQLException {
+    public int insertDbhsmDbUsers(DbhsmDbUser dbhsmDbUser) throws Exception {
         //根据实例id获取数据库实例
         int i = 0;
         DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(dbhsmDbUser.getDatabaseInstanceId());
@@ -281,78 +281,93 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
     }
     //postgresql 新增用户
     @Transactional(rollbackFor = ZAYKException.class)
-    public int insertPostgreSqlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException {
+    public int insertPostgreSqlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException, SQLException {
         String sqlCreateUser,username, password, sql;
         PreparedStatement preparedStatement = null;
         Connection connection = null;
         //Long permissionGroupId = dbhsmDbUser.getPermissionGroupId();
         username = dbhsmDbUser.getUserName();
         password = dbhsmDbUser.getPassword();
+        boolean execute= false;
         //根据实例获取数据库连接
-        try {
-            connection = DbConnectionPoolFactory.getInstance().getConnection(instance);
-            if (Optional.ofNullable(connection).isPresent()) {
-                //创建postgresql用户sql
-                sqlCreateUser="CREATE USER \"" + username + "\" WITH PASSWORD '" + password + "'";
+             connection = DbConnectionPoolFactory.getInstance().getConnection(instance);
+            if (!Optional.ofNullable(connection).isPresent()) {
+                throw new ZAYKException("获取数据库连接失败！");
+            }
+            //创建postgresql用户sql
+            try {
+                sqlCreateUser = "CREATE USER \"" + username + "\" WITH PASSWORD '" + password + "'";
                 preparedStatement = connection.prepareStatement(sqlCreateUser);
-                boolean execute = preparedStatement.execute();
-                if(!execute){
-                    int result = insertDbUsers(dbhsmDbUser);
-                    if (result != 1) {
-                        log.error("创建用户失败!");
-                        throw new ZAYKException("创建用户失败!");
+                execute = preparedStatement.execute();
+            } catch (Exception e) {
+                //释放资源
+                if (preparedStatement != null) {
+                    try {
+                        preparedStatement.close();
+                    } catch (SQLException throwables) {
+                        throwables.printStackTrace();
                     }
                 }
-                //根据权限组id查询权限组对应的所有权限SQL：
-                //List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
-                //赋权
-                //String permissionsSql = null;
-                try {
-                    //for (String permission : permissionsSqlList) {
-                    //    permissionsSql = permission.toLowerCase();
-                    //    if (!(permissionsSql.startsWith("grant") && !(permissionsSql.startsWith("revoke")))) {
-                    //        log.info("不支持的授权SQL:" + permissionsSql);
-                    //        throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
-                    //    }
-                    //    sql = permission.trim() + " ON SCHEMA " + dbhsmDbUser.getDbSchema() + " to \"" + username + "\"";
-                    //    preparedStatement = connection.prepareStatement(sql);
-                    //    preparedStatement.executeUpdate();
-                    //}
-                    sql = "GRANT ALL ON SCHEMA  \"" + dbhsmDbUser.getDbSchema() + "\" to \"" + username + "\"";
-                    preparedStatement = connection.prepareStatement(sql);
-                    preparedStatement.executeUpdate();
-                    //将schema下的所有表赋权给用户
-                    TablePermissionsGrantedToUsers(connection,dbhsmDbUser.getDbSchema(),username);
-                    //加解密函数
-                    ProcedureUtil.pgextFuncStringEncrypt(connection, dbhsmDbUser);
-                    ProcedureUtil.pgextFuncStringDecrypt(connection, dbhsmDbUser);
-                    //fpe函数
-                    ProcedureUtil.pgextFuncFPEEncrypt(connection, dbhsmDbUser);
-                    ProcedureUtil.pgextFuncFPEDecrypt(connection, dbhsmDbUser);
-                    connection.commit();
-                } catch (SQLException throwables) {
-                    throwables.printStackTrace();
-                    throw new ZAYKException("授权失败!"+ throwables.getMessage());
+                if (connection != null) {
+                    try {
+                        connection.close();
+                    } catch (SQLException throwables) {
+                        throwables.printStackTrace();
+                    }
+                }
+                throw new ZAYKException(e.getMessage());
+            }
+            if (!execute) {
+                int result = insertDbUsers(dbhsmDbUser);
+                if (result != 1) {
+                    log.error("创建用户失败!");
+                    throw new ZAYKException("创建用户失败!");
                 }
             }
-        } catch (SQLException | ZAYKException e) {
-            dbhsmDbUsersMapper.deleteDbhsmDbUsersById(dbhsmDbUser.getId());
+            //根据权限组id查询权限组对应的所有权限SQL：
+            //List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
+            //赋权
+            //String permissionsSql = null;
             try {
-                // 回滚事务
-                assert connection != null;
-                connection.rollback();
-                //删除创建的用户
-                sql = "drop OWNED BY \"" + username + "\";drop user \"" + username + "\"";
-                log.info("删除数据库用户执行SQL:{}", sql);
+                //for (String permission : permissionsSqlList) {
+                //    permissionsSql = permission.toLowerCase();
+                //    if (!(permissionsSql.startsWith("grant") && !(permissionsSql.startsWith("revoke")))) {
+                //        log.info("不支持的授权SQL:" + permissionsSql);
+                //        throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
+                //    }
+                //    sql = permission.trim() + " ON SCHEMA " + dbhsmDbUser.getDbSchema() + " to \"" + username + "\"";
+                //    preparedStatement = connection.prepareStatement(sql);
+                //    preparedStatement.executeUpdate();
+                //}
+                sql = "GRANT ALL ON SCHEMA  \"" + dbhsmDbUser.getDbSchema() + "\" to \"" + username + "\"";
                 preparedStatement = connection.prepareStatement(sql);
                 preparedStatement.executeUpdate();
+                //将schema下的所有表赋权给用户
+                TablePermissionsGrantedToUsers(connection, dbhsmDbUser.getDbSchema(), username);
+                //加解密函数
+                ProcedureUtil.pgextFuncStringEncrypt(connection, dbhsmDbUser);
+                ProcedureUtil.pgextFuncStringDecrypt(connection, dbhsmDbUser);
+                //fpe函数
+                ProcedureUtil.pgextFuncFPEEncrypt(connection, dbhsmDbUser);
+                ProcedureUtil.pgextFuncFPEDecrypt(connection, dbhsmDbUser);
                 connection.commit();
-            }catch (SQLException sqlException){
-                sqlException.printStackTrace();
-            }
-            e.printStackTrace();
-            throw new ZAYKException(e.getMessage());
-        } finally {
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+                try {
+                    // 回滚事务
+                    assert connection != null;
+                    connection.rollback();
+                    //删除创建的用户
+                    sql = "drop OWNED BY \"" + username + "\";drop user \"" + username + "\"";
+                    log.info("删除数据库用户执行SQL:{}", sql);
+                    preparedStatement = connection.prepareStatement(sql);
+                    preparedStatement.executeUpdate();
+                    connection.commit();
+                }catch (SQLException e){
+                    throw new ZAYKException("授权失败！删除用户失败！");
+                }
+                throw new ZAYKException("授权失败!" + throwables.getMessage());
+            } finally {
             //释放资源
             if (preparedStatement != null) {
                 try {
@@ -401,78 +416,103 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
     }
 
     @Transactional(rollbackFor = ZAYKException.class)
-    int insertMysqlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException {
-        String sqlCreateUser,username, password, sql;
+    int insertMysqlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException, SQLException {
+        String sqlCreateUser, username, password, sql;
         PreparedStatement preparedStatement = null;
         Connection connection = null;
         Long permissionGroupId = dbhsmDbUser.getPermissionGroupId();
         int executeUpdate = 0;
+        boolean execute = false;
         //根据实例获取数据库连接
+        connection = DbConnectionPoolFactory.getInstance().getConnection(instance);
+        if (!Optional.ofNullable(connection).isPresent()) {
+            throw new ZAYKException("数据库连接失败！");
+        }
+        username = dbhsmDbUser.getUserName();
+        password = dbhsmDbUser.getPassword();
+
         try {
-            connection = DbConnectionPoolFactory.getInstance().getConnection(instance);
-            if (Optional.ofNullable(connection).isPresent()) {
-                username = dbhsmDbUser.getUserName();
-                password = dbhsmDbUser.getPassword();
-                //创建用户sql
-                sqlCreateUser = "CREATE USER ?@'%' IDENTIFIED BY ?";
-                preparedStatement = connection.prepareStatement(sqlCreateUser);
-                preparedStatement.setString(1, username);
-                preparedStatement.setString(2, password);
-                boolean execute = preparedStatement.execute();
-                if(!execute){
-                    int result = insertDbUsers(dbhsmDbUser);
-                    if (result != 1) {
-                        log.error("创建用户失败!");
-                        throw new ZAYKException("创建用户失败!");
-                    }
-                }
-                //根据权限组id查询权限组对应的所有权限SQL：
-                List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
-                //赋权
-                String permissionsSql = null;
+            //创建用户sql
+            sqlCreateUser = "CREATE USER ?@'%' IDENTIFIED BY ?";
+            preparedStatement = connection.prepareStatement(sqlCreateUser);
+            preparedStatement.setString(1, username);
+            preparedStatement.setString(2, password);
+            execute = preparedStatement.execute();
+        } catch (Exception e) {
+            //释放资源
+            if (preparedStatement != null) {
                 try {
-                    for (String permission : permissionsSqlList) {
-                        if(StringUtils.isNotEmpty(permission)){
-                            permissionsSql = permission.toLowerCase();
-                            if (!(permissionsSql.startsWith("grant") && !(permissionsSql.startsWith("revoke")))) {
-                                log.info("不支持的授权SQL:" + permissionsSql);
-                                throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
-                            }
-                            sql = permission.trim() + " on " + instance.getDatabaseServerName() + ".* to '" + username + "'@'%'";
-                            preparedStatement = connection.prepareStatement(sql);
-                            preparedStatement.executeUpdate();
-                        }
-                    }
-                    //sql = " GRANT ALL ON  " + instance.getDatabaseServerName() + ".* TO  " + username;
-                    //preparedStatement = connection.prepareStatement(sql);
-                    //preparedStatement.executeUpdate();
+                    preparedStatement.close();
                 } catch (SQLException throwables) {
                     throwables.printStackTrace();
-                    // 回滚事务
-                    connection.rollback();
-                    // 撤销创建的用户
-                    sql = "DROP USER '" + username + "'@'%'";
+                }
+            }
+            try {
+                connection.close();
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
+            if (StringUtils.isNotEmpty(e.getMessage()) && e.getMessage().contains("Operation CREATE USER failed for")) {
+                throw new ZAYKException(dbhsmDbUser.getUserName() + "用户已存在！");
+            }
+        }
+        if (!execute) {
+            int result = insertDbUsers(dbhsmDbUser);
+            if (result != 1) {
+                log.error("创建用户失败!");
+                throw new ZAYKException("创建用户失败!");
+            }
+        }
+        //根据权限组id查询权限组对应的所有权限SQL：
+        List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
+        //赋权
+        String permissionsSql = null;
+        try {
+            for (String permission : permissionsSqlList) {
+                if (StringUtils.isNotEmpty(permission)) {
+                    permissionsSql = permission.toLowerCase();
+                    if (!(permissionsSql.startsWith("grant") && !(permissionsSql.startsWith("revoke")))) {
+                        log.info("不支持的授权SQL:" + permissionsSql);
+                        throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
+                    }
+                    sql = permission.trim() + " on " + instance.getDatabaseServerName() + ".* to '" + username + "'@'%'";
                     preparedStatement = connection.prepareStatement(sql);
                     preparedStatement.executeUpdate();
-                    throw new ZAYKException("创建用户失败：授权失败，MySQL不支持的授权SQL: " + permissionsSql );
                 }
-                sql ="FLUSH PRIVILEGES;";
-                preparedStatement = connection.prepareStatement(sql);
-                executeUpdate = preparedStatement.executeUpdate();
-                //创建加解密函数
-                try {
-                    FunctionUtil.createEncryptDecryptFunction(connection,instance);
-                }catch (Exception e) {
-                    log.info("创建加解密函数失败！加密吗函数已存在？"+e.getMessage());
-                }
-                connection.commit();
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            if (StringUtils.isNotEmpty(e.getMessage())&& e.getMessage().contains("Operation CREATE USER failed for")){
-                throw new ZAYKException(dbhsmDbUser.getUserName()+"用户已存在！");
+            //sql = " GRANT ALL ON  " + instance.getDatabaseServerName() + ".* TO  " + username;
+            //preparedStatement = connection.prepareStatement(sql);
+            //preparedStatement.executeUpdate();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            // 回滚事务
+            connection.rollback();
+            // 撤销创建的用户
+            sql = "DROP USER '" + username + "'@'%'";
+            preparedStatement = connection.prepareStatement(sql);
+            preparedStatement.executeUpdate();
+            //释放资源
+            try {
+                preparedStatement.close();
+            } catch (SQLException e) {
+                throwables.printStackTrace();
             }
-            throw new ZAYKException(e.getMessage());
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                throwables.printStackTrace();
+            }
+            throw new ZAYKException("创建用户失败：授权失败，MySQL不支持的授权SQL: " + permissionsSql);
+        }
+        sql = "FLUSH PRIVILEGES;";
+        preparedStatement = connection.prepareStatement(sql);
+        executeUpdate = preparedStatement.executeUpdate();
+        //创建加解密函数
+        try {
+            FunctionUtil.createEncryptDecryptFunction(connection, instance);
+            connection.commit();
+        } catch (Exception e) {
+            log.info("创建加解密函数失败！加密吗函数已存在？" + e.getMessage());
         } finally {
             //释放资源
             if (preparedStatement != null) {
@@ -495,127 +535,141 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    int insertSqlServerlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException {
-        String sqlCreateLoginName, sqlCreateUser, sqlEmpowerment,sql;
+    int insertSqlServerlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws Exception {
+        String sqlCreateLoginName, sqlCreateUser, sqlEmpowerment, sql;
         String username;
         String password;
         PreparedStatement preparedStatement = null;
         Connection connection = null;
+        boolean execute = false;
         //根据实例获取数据库连接
+        connection = DbConnectionPoolFactory.getInstance().getConnection(instance);
+        if (!Optional.ofNullable(connection).isPresent()) {
+            throw new ZAYKException("数据库连接获取失败");
+        }
+        String dbName = instance.getDatabaseServerName();
+        username = dbhsmDbUser.getUserName();
+        password = dbhsmDbUser.getPassword();
         try {
-            connection = DbConnectionPoolFactory.getInstance().getConnection(instance);
-            if (Optional.ofNullable(connection).isPresent()) {
-                username = dbhsmDbUser.getUserName();
-                password = dbhsmDbUser.getPassword();
-
-                sqlEmpowerment = "ALTER DATABASE [" + instance.getDatabaseServerName() + "] SET TRUSTWORTHY ON;";
-                preparedStatement = connection.prepareStatement(sqlEmpowerment);
-                preparedStatement.execute();
-                connection.commit();
-                //创建登录名sql
-                String dbName = instance.getDatabaseServerName();
-                sqlCreateLoginName = "USE " + dbName + ";CREATE LOGIN " + username + " WITH PASSWORD = '" + password + "',default_database=" + dbName;
-                //创建用户sql
-                sqlCreateUser = "CREATE USER " + username + " FOR LOGIN " + username + " with default_schema=dbo";
-                preparedStatement = connection.prepareStatement(sqlCreateLoginName);
-                boolean execute1 = preparedStatement.execute();
-                preparedStatement = connection.prepareStatement(sqlCreateUser);
-                boolean execute = preparedStatement.execute();
-                if (!execute) {
-                    int result = insertDbUsers(dbhsmDbUser);
-                    if (result != 1) {
-                        log.error("创建用户失败!");
-                        throw new ZAYKException("创建用户失败!");
-                    }
-                }
-                //赋权
-                sqlEmpowerment = "exec sp_addrolemember 'db_datareader','" + username + "'";
-                preparedStatement = connection.prepareStatement(sqlEmpowerment);
-                preparedStatement.execute();
-
-                sqlEmpowerment = "exec sp_addrolemember 'db_datawriter','" + username + "'";
-                preparedStatement = connection.prepareStatement(sqlEmpowerment);
-                preparedStatement.execute();
-
-                sqlEmpowerment = "exec sp_addrolemember 'db_ddladmin','" + username + "'";
-                preparedStatement = connection.prepareStatement(sqlEmpowerment);
-                preparedStatement.execute();
+            sqlEmpowerment = "ALTER DATABASE [" + instance.getDatabaseServerName() + "] SET TRUSTWORTHY ON;";
+            preparedStatement = connection.prepareStatement(sqlEmpowerment);
+            preparedStatement.execute();
+            connection.commit();
+            //创建登录名sql
+            sqlCreateLoginName = "USE " + dbName + ";CREATE LOGIN " + username + " WITH PASSWORD = '" + password + "',default_database=" + dbName;
+            //创建用户sql
+            sqlCreateUser = "CREATE USER " + username + " FOR LOGIN " + username + " with default_schema=dbo";
+            preparedStatement = connection.prepareStatement(sqlCreateLoginName);
+            boolean execute1 = preparedStatement.execute();
+            preparedStatement = connection.prepareStatement(sqlCreateUser);
+            execute = preparedStatement.execute();
+        } catch (Exception e) {
+            //释放资源
+            if (preparedStatement != null) {
                 try {
-                    //创建SQLserver程序集
-                    ProcedureUtil.transSQLServerAssembly(connection, instance.getDatabaseServerName(), dbhsmDbUser.getEncLibapiPath());
-                    //创建sm4加解密方法 fpe方法
-                    FunctionUtil.createSqlServerFunction(connection);
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-
-                sqlEmpowerment = "USE " + dbName + "; GRANT REFERENCES ON ASSEMBLY::libsqlextdll TO " + username;
-                preparedStatement = connection.prepareStatement(sqlEmpowerment);
-                preparedStatement.execute();
-                log.info(sqlEmpowerment);
-
-                sqlEmpowerment = "USE master; GRANT VIEW SERVER STATE TO " + username;
-                preparedStatement = connection.prepareStatement(sqlEmpowerment);
-                preparedStatement.execute();
-                log.info(sqlEmpowerment);
-
-                //给用户赋执行sm4加解密方法 fpe方法权限
-                sqlEmpowerment = "USE " + dbName + " ;GRANT EXECUTE ON dbo.func_string_encrypt_ex TO " + username;
-                preparedStatement = connection.prepareStatement(sqlEmpowerment);
-                preparedStatement.execute();
-                log.info(sqlEmpowerment);
-                sqlEmpowerment = "USE " + dbName + " ;GRANT EXECUTE ON dbo.func_string_decrypt_ex TO " + username;
-                preparedStatement = connection.prepareStatement(sqlEmpowerment);
-                preparedStatement.execute();
-                log.info(sqlEmpowerment);
-                sqlEmpowerment = "USE " + dbName + " ;GRANT EXECUTE ON dbo.func_fpe_encrypt_ex TO " + username;
-                preparedStatement = connection.prepareStatement(sqlEmpowerment);
-                preparedStatement.execute();
-                log.info(sqlEmpowerment);
-                sqlEmpowerment = "USE " + dbName + " ;GRANT EXECUTE ON dbo.func_fpe_decrypt_ex TO " + username;
-                preparedStatement = connection.prepareStatement(sqlEmpowerment);
-                preparedStatement.execute();
-                log.info(sqlEmpowerment);
-                //connection.commit();
-
-                Long permissionGroupId = dbhsmDbUser.getPermissionGroupId();
-                //根据权限组id查询权限组对应的所有权限SQL：
-                List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
-                //赋权
-                String permissionsSql = null;
-                try {
-                    for (String permission : permissionsSqlList) {
-                        if(StringUtils.isNotEmpty(permission)) {
-                            permissionsSql = permission.toLowerCase();
-                            if (!(permissionsSql.startsWith("grant") && !(permissionsSql.startsWith("revoke")))) {
-                                log.info("不支持的授权SQL:" + permissionsSql);
-                                throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
-                            }
-                            sql = "USE " + dbName + " ;" + "EXEC sp_MSforeachtable '" + permission.trim() + " ON ? TO " + username + "'";
-                            preparedStatement = connection.prepareStatement(sql);
-                            preparedStatement.executeUpdate();
-                        }
-                    }
-                    connection.commit();
+                    preparedStatement.close();
                 } catch (SQLException throwables) {
                     throwables.printStackTrace();
-                    // 回滚事务
-                    connection.rollback();
-                    try {
-                        sql = "drop user " + username + ";drop login " + username;
-                        preparedStatement = connection.prepareStatement(sql);
-                        preparedStatement.execute();
-                        connection.commit();
-                    } catch (SQLException sqlException) {
-                        sqlException.printStackTrace();
-                    }
-                    throw new ZAYKException("创建用户失败：授权失败，SQL Server不支持的授权SQL: " + permissionsSql );
                 }
             }
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException throwables) {
+                    throwables.printStackTrace();
+                }
+            }
+            throw new ZAYKException(e.getMessage().startsWith("服务器主体") ? "用户已存在" : e.getMessage());
+        }
+        if (!execute) {
+            int result = insertDbUsers(dbhsmDbUser);
+            if (result != 1) {
+                log.error("创建用户失败!");
+                throw new ZAYKException("创建用户失败!");
+            }
+        }
+        //赋权
+        sqlEmpowerment = "exec sp_addrolemember 'db_datareader','" + username + "'";
+        preparedStatement = connection.prepareStatement(sqlEmpowerment);
+        preparedStatement.execute();
+
+        sqlEmpowerment = "exec sp_addrolemember 'db_datawriter','" + username + "'";
+        preparedStatement = connection.prepareStatement(sqlEmpowerment);
+        preparedStatement.execute();
+
+        sqlEmpowerment = "exec sp_addrolemember 'db_ddladmin','" + username + "'";
+        preparedStatement = connection.prepareStatement(sqlEmpowerment);
+        preparedStatement.execute();
+        try {
+            //创建SQLserver程序集
+            ProcedureUtil.transSQLServerAssembly(connection, instance.getDatabaseServerName(), dbhsmDbUser.getEncLibapiPath());
+            //创建sm4加解密方法 fpe方法
+            FunctionUtil.createSqlServerFunction(connection);
         } catch (SQLException e) {
-            log.error(e.getMessage());
             e.printStackTrace();
-            throw new ZAYKException(e.getMessage().startsWith("服务器主体")?"用户已存在":e.getMessage());
+        }
+
+        sqlEmpowerment = "USE " + dbName + "; GRANT REFERENCES ON ASSEMBLY::libsqlextdll TO " + username;
+        preparedStatement = connection.prepareStatement(sqlEmpowerment);
+        preparedStatement.execute();
+        log.info(sqlEmpowerment);
+
+        sqlEmpowerment = "USE master; GRANT VIEW SERVER STATE TO " + username;
+        preparedStatement = connection.prepareStatement(sqlEmpowerment);
+        preparedStatement.execute();
+        log.info(sqlEmpowerment);
+
+        //给用户赋执行sm4加解密方法 fpe方法权限
+        sqlEmpowerment = "USE " + dbName + " ;GRANT EXECUTE ON dbo.func_string_encrypt_ex TO " + username;
+        preparedStatement = connection.prepareStatement(sqlEmpowerment);
+        preparedStatement.execute();
+        log.info(sqlEmpowerment);
+        sqlEmpowerment = "USE " + dbName + " ;GRANT EXECUTE ON dbo.func_string_decrypt_ex TO " + username;
+        preparedStatement = connection.prepareStatement(sqlEmpowerment);
+        preparedStatement.execute();
+        log.info(sqlEmpowerment);
+        sqlEmpowerment = "USE " + dbName + " ;GRANT EXECUTE ON dbo.func_fpe_encrypt_ex TO " + username;
+        preparedStatement = connection.prepareStatement(sqlEmpowerment);
+        preparedStatement.execute();
+        log.info(sqlEmpowerment);
+        sqlEmpowerment = "USE " + dbName + " ;GRANT EXECUTE ON dbo.func_fpe_decrypt_ex TO " + username;
+        preparedStatement = connection.prepareStatement(sqlEmpowerment);
+        preparedStatement.execute();
+        log.info(sqlEmpowerment);
+        //connection.commit();
+
+        Long permissionGroupId = dbhsmDbUser.getPermissionGroupId();
+        //根据权限组id查询权限组对应的所有权限SQL：
+        List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
+        //赋权
+        String permissionsSql = null;
+        try {
+            for (String permission : permissionsSqlList) {
+                if (StringUtils.isNotEmpty(permission)) {
+                    permissionsSql = permission.toLowerCase();
+                    if (!(permissionsSql.startsWith("grant") && !(permissionsSql.startsWith("revoke")))) {
+                        log.info("不支持的授权SQL:" + permissionsSql);
+                        throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
+                    }
+                    sql = "USE " + dbName + " ;" + "EXEC sp_MSforeachtable '" + permission.trim() + " ON ? TO " + username + "'";
+                    preparedStatement = connection.prepareStatement(sql);
+                    preparedStatement.executeUpdate();
+                }
+            }
+            connection.commit();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            // 回滚事务
+            connection.rollback();
+            try {
+                sql = "drop user " + username + ";drop login " + username;
+                preparedStatement = connection.prepareStatement(sql);
+                preparedStatement.execute();
+                connection.commit();
+            } catch (SQLException sqlException) {
+                sqlException.printStackTrace();
+            }
+            throw new ZAYKException("创建用户失败：授权失败，SQL Server不支持的授权SQL: " + permissionsSql);
         } finally {
             //释放资源
             if (preparedStatement != null) {
@@ -637,11 +691,11 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    int insertOracleUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException, SQLException {
+    int insertOracleUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws Exception {
         Connection conn = null;
         PreparedStatement preparedStatement = null;
         int executeUpdate = 0;
-        String username, password, tableSpace, sql,permissionsSql = null;
+        String username, password, tableSpace, sql, permissionsSql = null;
         dbhsmDbUser.setUserName(dbhsmDbUser.getUserName().toUpperCase());
         int result = insertDbUsers(dbhsmDbUser);
         if (result != 1) {
@@ -652,78 +706,113 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         password = dbhsmDbUser.getPassword();
         tableSpace = dbhsmDbUser.getTableSpace();
         Long permissionGroupId = dbhsmDbUser.getPermissionGroupId();
+        //根据实例获取数据库连接
+        conn = DbConnectionPoolFactory.getInstance().getConnection(instance);
+        if (!Optional.ofNullable(conn).isPresent()) {
+            throw new ZAYKException("获取数据库连接失败!");
+        }
         try {
-            //根据实例获取数据库连接
-            conn = DbConnectionPoolFactory.getInstance().getConnection(instance);
-            if (Optional.ofNullable(conn).isPresent()) {
-                //获取用户创建模式 0：创建无容器数据库用户 1：创建CDB容器中的公共用户
-                int userCreateMode = instance.getUserCreateMode();
-                if (userCreateMode == DbConstants.USER_CREATE_MODE_CDB) {
-                    sql = "CREATE USER c##" + username + " IDENTIFIED BY \"" + password + "\" DEFAULT tablespace users";
-                } else {
-                    sql = "CREATE USER " + username + " IDENTIFIED BY \"" + password + "\" DEFAULT TABLESPACE \"" + tableSpace + "\" TEMPORARY TABLESPACE \"TEMP\"";
-                }
-                preparedStatement = conn.prepareStatement(sql);
-                preparedStatement.executeUpdate();
-                //根据权限组id查询权限组对应的所有权限SQL：
-                List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
-                //赋权
+            //获取用户创建模式 0：创建无容器数据库用户 1：创建CDB容器中的公共用户
+            int userCreateMode = instance.getUserCreateMode();
+            //if (userCreateMode == DbConstants.USER_CREATE_MODE_CDB) {
+            //    sql = "CREATE USER c##" + username + " IDENTIFIED BY \"" + password + "\" DEFAULT tablespace users";
+            //} else {
+                sql = "CREATE USER " + username + " IDENTIFIED BY \"" + password + "\" DEFAULT TABLESPACE \"" + tableSpace + "\" TEMPORARY TABLESPACE \"TEMP\"";
+            //}
+            preparedStatement = conn.prepareStatement(sql);
+            preparedStatement.executeUpdate();
+        } catch (Exception e) {
+            //释放资源
+            if (preparedStatement != null) {
                 try {
-                    for (int i = 0; i < permissionsSqlList.size(); i++) {
-                        permissionsSql=permissionsSqlList.get(i);
-                        if(StringUtils.isNotEmpty(permissionsSql)) {
-                            if (!(permissionsSql.toLowerCase().startsWith("grant") && !(permissionsSql.toLowerCase().startsWith("revoke")))) {
-                                log.info("不支持的授权SQL:" + permissionsSql);
-                                throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
-                            }
-                            if (permissionsSql.toLowerCase().startsWith("grant")) {
-                                sql = permissionsSql.trim() + " to " + username;
-                            } else {
-                                sql = permissionsSql.trim() + " from " + username;
-                            }
-                            preparedStatement = conn.prepareStatement(sql);
-                            executeUpdate = preparedStatement.executeUpdate();
-                        }
-                    }
-                } catch (ZAYKException e) {
-                    e.printStackTrace();
-                } catch (SQLException sqlException) {
-                    // 回滚事务
-                    conn.rollback();
-                    // 撤销创建的用户
-                    sql = "DROP USER " + username + " cascade";
-                    preparedStatement = conn.prepareStatement(sql);
-                    preparedStatement.executeUpdate();
-                    sqlException.printStackTrace();
-                    throw new ZAYKException("创建用户失败：授权失败，Oracle不支持的授权SQL:" + permissionsSql);
+                    preparedStatement.close();
+                } catch (SQLException throwables) {
+                    throwables.printStackTrace();
                 }
-                conn.commit();
-
-                //加密
-                ProcedureUtil.cOciTransStringEncrypt(conn, instance.getDatabaseDba(), username);
-                //FPE加密
-                ProcedureUtil.cOciTransFPEEncrypt(conn, instance.getDatabaseDba(), username);
-                //解密
-                ProcedureUtil.cOciTransStringDecryptP(conn, instance.getDatabaseDba(), username);
-                ProcedureUtil.cOciTransStringDecryptF(conn, username);
-                ProcedureUtil.cOciTransFpeDecryptF(conn, username);
-                //FPE解密
-                ProcedureUtil.cOciTransFPEDecrypt(conn, instance.getDatabaseDba(), username);
-                conn.commit();
-
-                //赋执行库文件liboraextapi的权限
-                sql = "CREATE OR REPLACE LIBRARY liboraextapi AS '" + dbhsmDbUser.getEncLibapiPath() + "'";
-                log.info("赋执行库文件liboraextapi的权限sql: {}", sql);
-                preparedStatement = conn.prepareStatement(sql);
-                preparedStatement.execute();
-
-                sql = "grant execute on liboraextapi to " + username;
-                log.info("赋执行库文件liboraextapi的权限给用户 sql: {}", sql);
-                preparedStatement = conn.prepareStatement(sql);
-                preparedStatement.execute();
-                conn.commit();
             }
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException throwables) {
+                    throwables.printStackTrace();
+                }
+            }
+            throw new Exception(e);
+        }
+        //根据权限组id查询权限组对应的所有权限SQL：
+        List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
+        //赋权
+        try {
+            for (int i = 0; i < permissionsSqlList.size(); i++) {
+                permissionsSql = permissionsSqlList.get(i);
+                if (StringUtils.isNotEmpty(permissionsSql)) {
+                    if (!(permissionsSql.toLowerCase().startsWith("grant") && !(permissionsSql.toLowerCase().startsWith("revoke")))) {
+                        log.info("不支持的授权SQL:" + permissionsSql);
+                        throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
+                    }
+                    if (permissionsSql.toLowerCase().startsWith("grant")) {
+                        sql = permissionsSql.trim() + " to " + username;
+                    } else {
+                        sql = permissionsSql.trim() + " from " + username;
+                    }
+                    preparedStatement = conn.prepareStatement(sql);
+                    executeUpdate = preparedStatement.executeUpdate();
+                }
+            }
+        }catch (SQLException sqlException) {
+            // 回滚事务
+            conn.rollback();
+            // 撤销创建的用户
+            sql = "DROP USER " + username + " cascade";
+            preparedStatement = conn.prepareStatement(sql);
+            preparedStatement.executeUpdate();
+            sqlException.printStackTrace();
+            //释放资源
+            try {
+                preparedStatement.close();
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
+            try {
+                conn.close();
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
+            throw new ZAYKException("创建用户失败：授权失败，Oracle不支持的授权SQL:" + permissionsSql);
+        }
+        try {
+            conn.commit();
+            //加密
+            ProcedureUtil.cOciTransStringEncrypt(conn, instance.getDatabaseDba(), username);
+            //FPE加密
+            ProcedureUtil.cOciTransFPEEncrypt(conn, instance.getDatabaseDba(), username);
+            //解密
+            ProcedureUtil.cOciTransStringDecryptP(conn, instance.getDatabaseDba(), username);
+            ProcedureUtil.cOciTransStringDecryptF(conn, username);
+            ProcedureUtil.cOciTransFpeDecryptF(conn, username);
+            //FPE解密
+            ProcedureUtil.cOciTransFPEDecrypt(conn, instance.getDatabaseDba(), username);
+            conn.commit();
+
+            //赋执行库文件liboraextapi的权限
+            sql = "CREATE OR REPLACE LIBRARY liboraextapi AS '" + dbhsmDbUser.getEncLibapiPath() + "'";
+            log.info("赋执行库文件liboraextapi的权限sql: {}", sql);
+            preparedStatement = conn.prepareStatement(sql);
+            preparedStatement.execute();
+
+            sql = "grant execute on liboraextapi to " + username;
+            log.info("赋执行库文件liboraextapi的权限给用户 sql: {}", sql);
+            preparedStatement = conn.prepareStatement(sql);
+            preparedStatement.execute();
+            conn.commit();
         } catch (SQLException e) {
+            e.printStackTrace();
+            // 回滚事务
+            conn.rollback();
+            // 撤销创建的用户
+            sql = "DROP USER " + username + " cascade";
+            preparedStatement = conn.prepareStatement(sql);
+            preparedStatement.executeUpdate();
             e.printStackTrace();
             throw new SQLException(e);
         } finally {

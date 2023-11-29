@@ -18,14 +18,39 @@ import java.sql.Statement;
 @Slf4j
 public class EncryptionColumnsHelper {
 
-
+    /**
+     * 加密存量数据
+     * create or replace function testuser1.tr_string_stock_testuser1_table1_name()
+     * returns trigger as $$
+     * begin
+     *   NEW.name := testuser1.pgext_func_string_encrypt(
+     *  '443970420010520576', --确保与配置加密列所设置的pid相同
+     *  'http://192.168.6.88:10013/api/datahsm/v1/strategy/get',  --确保与配置加密列所设置的url相同
+     *   CAST(inet_client_addr() as text),
+     *  --ip
+     *   CAST(current_catalog as text),
+     *  --实例名
+     *   CAST(current_catalog as text),
+     *  --库名
+     *  'TABLE1',
+     *   --表名
+     *  'name',
+     *   --列名，以列名 name 为例
+     *  CAST(user as text),
+     *   --用户名
+     *  OLD.name,0,0);
+     *   --OLD.name 加密列， --0 offset --0 加密长度，0为默认加密全部;
+     *  return NEW;
+     * end; $$
+     * language 'plpgsql';
+     */
     public static void encryptionExistingData(Connection conn, DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd, DbhsmDbUser user) throws Exception {
         Statement statement = null;
         String  alg = dbhsmEncryptColumnsAdd.getEncryptionAlgorithm();
         //String userSchema = "'"+user.getDbSchema()+"'";
         String userSchema = user.getDbSchema();
         userSchema = user.getDbSchema();
-        String funName = "\""+userSchema + "\".tr_" + DbConstants.algMapping(alg) + "_" + user.getUserName() + "_" + dbhsmEncryptColumnsAdd.getDbTable()+ "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
+        String funName = "\""+userSchema + "\".tr_" + DbConstants.algMappingStrOrFpe(alg) + "_stock_" + user.getUserName() + "_" + dbhsmEncryptColumnsAdd.getDbTable()+ "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
         String funName$ = "tr_" + user.getUserName() + "_"  + userSchema + "_"  + dbhsmEncryptColumnsAdd.getDbTable() + "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
         try {
             // 1、定义触发器函数
@@ -33,9 +58,7 @@ public class EncryptionColumnsHelper {
             //函数名是动态的
             StringBuffer transFun = new StringBuffer("create or replace function " + funName + "()");
             transFun.append(System.getProperty("line.separator"));
-            transFun.append("returns trigger as");
-            transFun.append(System.getProperty("line.separator"));
-            transFun.append("$" + funName$ + "$");
+            transFun.append("returns trigger as $$");
             transFun.append(System.getProperty("line.separator"));
             transFun.append("begin");
             transFun.append(System.getProperty("line.separator"));

@@ -245,9 +245,9 @@ public class ViewUtil {
         } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(encryptColumns.getDatabaseType())) {
             delViewSql = "DROP VIEW IF EXISTS " + encryptColumns.getDatabaseServerName() + ".v_" + encryptColumns.getDbTable();
         }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(encryptColumns.getDatabaseType())) {
-            delViewSql = "DROP VIEW  IF EXISTS  \"" + dbSchema + "\".v_" + encryptColumns.getDbTable();
+            delViewSql = "DROP VIEW  IF EXISTS  " + dbSchema + ".v_" + encryptColumns.getDbTable();
         }
-        log.info("deleteOracleView:" + delViewSql);
+        log.info("deleteView:" + delViewSql);
         //执行删除语句
         try {
             //删除之前的视图

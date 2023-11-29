@@ -223,7 +223,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         }
 
         //先删除之前的视图
-        ViewUtil.deleteView(conn, dbhsmEncryptColumnsAdd,user.getDbSchema());
+        ViewUtil.deleteView(conn, dbhsmEncryptColumnsAdd,"\""+user.getDbSchema()+"\"");
         //创建视图
         boolean viewRet = ViewUtil.operView(conn, dbhsmEncryptColumnsAdd, dbhsmEncryptColumnsMapper,user.getDbSchema());
         if (viewRet) {

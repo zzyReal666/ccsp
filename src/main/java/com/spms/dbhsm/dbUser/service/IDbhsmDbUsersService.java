@@ -38,7 +38,7 @@ public interface IDbhsmDbUsersService
      * @param dbhsmDbUser 数据库用户
      * @return 结果
      */
-    public int insertDbhsmDbUsers(DbhsmDbUser dbhsmDbUser) throws ZAYKException, SQLException;
+    public int insertDbhsmDbUsers(DbhsmDbUser dbhsmDbUser) throws Exception;
 
     /**
      * 修改数据库用户

@@ -96,7 +96,7 @@ public class DbhsmDbUsersController extends BaseController {
         int i = 0;
         try {
             i = dbhsmDbUsersService.insertDbhsmDbUsers(dbhsmDbUser);
-        } catch (ZAYKException | SQLException  e) {
+        } catch (Exception  e) {
             e.printStackTrace();
             return AjaxResult.error(e.getMessage().contains("ORA") ? e.getMessage().split(":")[1] +": "+e.getMessage().split(":")[2] : e.getMessage());
         }
