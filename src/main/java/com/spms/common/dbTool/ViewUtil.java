@@ -408,7 +408,6 @@ public class ViewUtil {
         if (allColumnsInfo == null || allColumnsInfo.size() == 0) {
             return false;
         }
-        dbSchema = "\""+dbSchema+"\"";
         //查询出加密字段
         DbhsmEncryptColumns encryptColumnDto = new DbhsmEncryptColumns();
         encryptColumnDto.setDbInstanceId(encryptColumns.getDbInstanceId());
@@ -492,7 +491,7 @@ public class ViewUtil {
         viewSql.append(encColumns);
         viewSql.append(System.getProperty("line.separator"));
 
-        viewSql.append(" from " + dbSchema+"."+encryptColumns.getDbTable());
+        viewSql.append(" from " + dbSchema+".\""+encryptColumns.getDbTable() +"\"");
         PreparedStatement preparedStatement = null;
         log.info("PostgreSQL create view:" + viewSql);
         try {

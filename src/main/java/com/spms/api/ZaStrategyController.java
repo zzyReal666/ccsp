@@ -1,11 +1,11 @@
 package com.spms.api;
 
 import cn.hutool.core.util.ObjectUtil;
-import com.ccsp.common.core.domain.R;
 import com.ccsp.common.core.exception.ZAYKException;
+import com.ccsp.common.core.utils.PaddUtils;
 import com.ccsp.common.core.utils.StringUtils;
+import com.ccsp.common.redis.service.RedisService;
 import com.ccsp.system.api.hsmSvsTsaApi.RemoteSecretKeyService;
-import com.ccsp.system.api.hsmSvsTsaApi.domain.HsmSymmetricSecretKey;
 import com.spms.common.JSONDataUtil;
 import com.spms.common.constant.DbConstants;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
@@ -17,6 +17,7 @@ import com.spms.dbhsm.secretKey.domain.DbhsmSecretKeyManage;
 import com.spms.dbhsm.secretKey.service.IDbhsmSecretKeyManageService;
 import com.spms.dbhsm.secretService.service.IDbhsmSecretServiceService;
 import com.zayk.ciphercard.ZaykManageClass;
+import com.zayk.ciphercard.factory.zayk.ZaSDSUtils;
 import com.zayk.ciphercard.util.BitOperator;
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.asn1.*;
@@ -60,6 +61,27 @@ public class ZaStrategyController {
 
     @Autowired
     private IDbhsmEncryptColumnsService encryptColumnsService;
+
+    @Autowired
+    private RedisService redisService;
+
+    static int SDR_SYS_MASTER_KEY_NO_EXIST = 0x1200008;
+    private static ZaykManageClass mgr = new ZaykManageClass();
+    private static int crytoCartTypeSInt = 0;
+    public static final String cryptoCardType = "cryptoCardType";
+    public static String ALGORITHM_TYPE_SYK = "SYK";
+
+    static {
+        try {
+            Object crytoCartType = JSONDataUtil.getSysData(cryptoCardType);
+            if (crytoCartType != null) {
+                crytoCartTypeSInt = Integer.parseInt(crytoCartType.toString());
+                mgr.Initialize(crytoCartTypeSInt);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     public static byte[] readInputStream(InputStream inStream) throws Exception {
         ByteArrayOutputStream outSteam = new ByteArrayOutputStream();
@@ -314,14 +336,20 @@ public class ZaStrategyController {
                 symmKey = exportKey.get("privateKey");
             }else {
                 //大容量密钥从数据库获取
-                R<HsmSymmetricSecretKey> symmetricSecretKeyR = secretKeyService.selectSymSecretKeyInfo(Math.toIntExact(secretKeyIndex));
-                if (ObjectUtil.isEmpty(symmetricSecretKeyR.getData())) {
-                    throw new Exception("获取密钥失败！");
-                }
-                if( StringUtils.isEmpty(symmetricSecretKeyR.getData().getPrivateKey())){
-                    throw new Exception("获取密钥为空");
-                }
-                symmKey = symmetricSecretKeyR.getData().getPrivateKey();
+                //R<HsmSymmetricSecretKey> symmetricSecretKeyR = secretKeyService.selectSymSecretKeyInfo(Math.toIntExact(secretKeyIndex));
+                //if (ObjectUtil.isEmpty(symmetricSecretKeyR.getData())) {
+                //    throw new Exception("获取密钥失败！");
+                //}
+                //if( StringUtils.isEmpty(symmetricSecretKeyR.getData().getPrivateKey())){
+                //    throw new Exception("获取密钥为空");
+                //}
+                //symmKey = symmetricSecretKeyR.getData().getPrivateKey();
+                ////主密钥解密
+                //symmKey = SMKDecryptMethod(symmKey);
+                //大容量密钥从redis获取
+                String symmKeyIndex = getCacheNameDefaultSym(ALGORITHM_TYPE_SYK, Math.toIntExact(secretKeyIndex));
+                Map<String, Object> cachedMap  = redisService.getCacheObject(symmKeyIndex);
+                symmKey = cachedMap.get("symKey").toString();
             }
         } else if(DbConstants.KEY_SOURCE_KMIP.equals(keySource)) {
             //密钥来源KMIP
@@ -352,6 +380,33 @@ public class ZaStrategyController {
         return symmKey;
     }
 
+    public static String getCacheNameDefaultSym(String keyType, int keyId) {
+        return keyType + ":" + keyId;
+    }
+    /**
+     * 使用系统主密钥解密
+     * @param
+     ** @return
+     * @throws ZAYKException
+     */
+    private String  SMKDecryptMethod(String plaintext) throws ZAYKException {
+        byte[] ciphertext = Base64.decode(plaintext);
+
+        if (ObjectUtil.isEmpty(mgr)) {
+            mgr = new ZaykManageClass();
+            mgr.Initialize(crytoCartTypeSInt);
+        }
+        byte[] pucOutData = new byte[ciphertext.length];
+        int ret = mgr.SMKDecrypt(ZaSDSUtils.SGD_SM4_ECB, ciphertext, pucOutData);
+        if (ret != 0) {
+            if(ret==SDR_SYS_MASTER_KEY_NO_EXIST) {
+                log.debug("Warning:请检查是否已生成系统主密钥！");
+            }
+            throw new ZAYKException("ERROR:SM4 decryption failed！error code=" + ret);
+        }
+        byte[] unpad = PaddUtils.unpad(pucOutData, 16);
+        return new String(unpad);
+    }
     //获取实例信息
     private DbhsmDbInstance getDbInstanceInfo(Long instanceId) throws ZAYKException {
         DbhsmDbInstance dbInstanceQueryParam = new DbhsmDbInstance();

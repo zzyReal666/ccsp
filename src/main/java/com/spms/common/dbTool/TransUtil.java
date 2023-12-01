@@ -429,7 +429,6 @@ public class TransUtil {
         String  alg = dbhsmEncryptColumnsAdd.getEncryptionAlgorithm();
         //String userSchema = "'"+user.getDbSchema()+"'";
         String userSchema = user.getDbSchema();
-         userSchema = user.getDbSchema();
         String funName = "\""+userSchema + "\".tr_" + DbConstants.algMapping(alg) + "_" + user.getUserName() + "_" + dbhsmEncryptColumnsAdd.getDbTable()+ "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
         String funName$ = "tr_" + user.getUserName() + "_"  + userSchema + "_"  + dbhsmEncryptColumnsAdd.getDbTable() + "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
         try {
@@ -444,7 +443,7 @@ public class TransUtil {
             transFun.append(System.getProperty("line.separator"));
             transFun.append("begin");
             transFun.append(System.getProperty("line.separator"));
-            transFun.append("NEW." + dbhsmEncryptColumnsAdd.getEncryptColumns() + " := "+ userSchema +".pgext_func_"+DbConstants.algMappingStrOrFpe(alg)+"_encrypt(");
+            transFun.append("NEW." + dbhsmEncryptColumnsAdd.getEncryptColumns() + " := \""+ userSchema +"\".pgext_func_"+DbConstants.algMappingStrOrFpe(alg)+"_encrypt(");
             transFun.append("'" + dbhsmEncryptColumnsAdd.getId() + "',");
             transFun.append(System.getProperty("line.separator"));
             transFun.append("'http://" + dbhsmEncryptColumnsAdd.getIpAndPort()+ "/api/datahsm/v1/strategy/get',");
@@ -523,7 +522,7 @@ public class TransUtil {
 
             StringBuffer transSql = new StringBuffer("create trigger " + transName);
             transSql.append(System.getProperty("line.separator"));
-            transSql.append("before insert or update of \"" + dbhsmEncryptColumnsAdd.getEncryptColumns() + "\" on " + userSchema + ".\"" + dbhsmEncryptColumnsAdd.getDbTable() + "\"");
+            transSql.append("before insert on " + userSchema + ".\"" + dbhsmEncryptColumnsAdd.getDbTable() + "\"");
             transSql.append(System.getProperty("line.separator"));
             transSql.append("for each row");
             transSql.append(System.getProperty("line.separator"));

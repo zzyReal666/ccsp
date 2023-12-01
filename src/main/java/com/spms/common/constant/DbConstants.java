@@ -27,6 +27,12 @@ public class DbConstants {
     /**字典类型*/
     public static final String DBHSM_DB_TYPE = "dbhsm_db_type";
     public static final String DB_SQL_POSTGRESQL_USER_QUERY = "select  * from pg_user";
+    /**存量数据加密解密 加密true，解密false*/
+    public static final Boolean STOCK_DATA_ENCRYPTION = true;
+    public static final Boolean STOCK_DATA_DECRYPTION = false;
+    /**0解密 1加密*/
+    public static final int DEC_FLAG = 0;
+    public static final int ENC_FLAG = 1;
     /**
      * 请求成功
      */
