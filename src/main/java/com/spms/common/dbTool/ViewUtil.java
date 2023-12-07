@@ -7,6 +7,7 @@ import com.spms.common.constant.DbConstants;
 import com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsAdd;
 import com.spms.dbhsm.encryptcolumns.mapper.DbhsmEncryptColumnsMapper;
+import io.seata.common.util.CollectionUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -46,7 +47,7 @@ public class ViewUtil {
                 return operViewToOracle(conn, zaDatabaseEncryptColumns, zaDatabaseEncryptColumnsMapper);
 
             } else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(zaDatabaseEncryptColumns.getDatabaseType())) {
-                return operViewToSqlServer(conn, zaDatabaseEncryptColumns);
+                return operViewToSqlServer(conn, zaDatabaseEncryptColumns, zaDatabaseEncryptColumnsMapper);
             } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(zaDatabaseEncryptColumns.getDatabaseType())) {
                 return operViewToMySql(conn, zaDatabaseEncryptColumns, zaDatabaseEncryptColumnsMapper);
             }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(zaDatabaseEncryptColumns.getDatabaseType())) {
@@ -171,7 +172,7 @@ public class ViewUtil {
      * @param zaDatabaseEncryptColumns
      * @return
      */
-    public static boolean operViewToSqlServer(Connection conn, DbhsmEncryptColumnsAdd zaDatabaseEncryptColumns) throws SQLException {
+    public static boolean operViewToSqlServerOld(Connection conn, DbhsmEncryptColumnsAdd zaDatabaseEncryptColumns) throws SQLException {
 
         /**
          *
@@ -229,6 +230,136 @@ public class ViewUtil {
             }
         }
     }
+    /**
+     * @param conn
+     * @param
+     * @return
+     */
+    public static boolean operViewToSqlServer(Connection conn, DbhsmEncryptColumnsAdd encryptColumns, DbhsmEncryptColumnsMapper encryptColumnsMapper) throws SQLException {
+
+        log.info("创建sqlserver视图start: database:{},table:{}", encryptColumns.getDatabaseServerName(), encryptColumns.getDbTable());
+        String sqlserverSchema = getSqlserverSchema(conn, encryptColumns);
+        List<Map<String, String>> allColumnsInfo = DBUtil.findAllColumnsInfo(conn, encryptColumns.getDbTable(), encryptColumns.getDatabaseType());
+
+        if (CollectionUtils.isEmpty(allColumnsInfo) || allColumnsInfo.size() == 0) {
+            return false;
+        }
+
+        //查询出加密字段
+        DbhsmEncryptColumns encryptColumnDto = new DbhsmEncryptColumns();
+        encryptColumnDto.setDbInstanceId(encryptColumns.getDbInstanceId());
+        encryptColumnDto.setDbTable(encryptColumns.getDbTable());
+        List<DbhsmEncryptColumns> dbhsmEncryptColumns = encryptColumnsMapper.selectDbhsmEncryptColumnsList(encryptColumnDto);
+
+        if (StringUtils.isEmpty(dbhsmEncryptColumns)) {
+            dbhsmEncryptColumns = new ArrayList<>();
+        }
+        DbhsmEncryptColumns encryptColumn = new DbhsmEncryptColumns();
+        BeanUtils.copyProperties(encryptColumns, encryptColumn);
+        dbhsmEncryptColumns.add(encryptColumn);
+
+        StringBuffer viewSql = new StringBuffer();
+
+        viewSql.append("CREATE OR alter view " + sqlserverSchema + ".v_" + encryptColumns.getDbTable());
+        viewSql.append(System.getProperty("line.separator"));
+        viewSql.append("as SELECT ");
+        viewSql.append(System.getProperty("line.separator"));
+
+        //拼接字段
+        String encColumns = "";
+        long encLength = 0;
+        boolean haveEncColumn = false;
+        for (int i = 0; i < allColumnsInfo.size(); i++) {
+            Map<String, String> map = allColumnsInfo.get(i);
+            //防止列名为mysql关键字添加``
+            String columnName = "["+map.get(DbConstants.DB_COLUMN_NAME)+"]";
+            String colName = map.get(DbConstants.DB_COLUMN_NAME);
+            StringBuffer item = new StringBuffer();
+            boolean isEncColumn = false;
+            for (DbhsmEncryptColumns encryptColumn1 : dbhsmEncryptColumns) {
+                Integer establishRules = encryptColumn1.getEstablishRules();
+                boolean haveRules =DbConstants.ESTABLISH_RULES_YES.equals(establishRules);
+                if(haveRules) {
+                    encLength = encryptColumn1.getEncryptionLength()-(encryptColumn1.getEncryptionOffset()-1);
+                }
+                String funNameDec = encryptColumns.getDatabaseServerName() + "." + sqlserverSchema + "." + "func_"+DbConstants.algMappingStrOrFpe(encryptColumn1.getEncryptionAlgorithm()) + "_decrypt_ex(";
+                if (colName.equalsIgnoreCase(encryptColumn1.getEncryptColumns())) {
+                    if(haveEncColumn){
+                        item.append("(select ");
+                    }
+                    item.append(funNameDec);
+                    item.append(System.getProperty("line.separator"));
+                    item.append("'" + encryptColumn1.getId() +  "',");
+                    item.append(System.getProperty("line.separator"));
+                    item.append("'http://" + encryptColumns.getIpAndPort() + "/api/datahsm/v1/strategy/get',");
+                    item.append(System.getProperty("line.separator"));
+                    item.append("'ip_addr',");
+                    item.append(System.getProperty("line.separator"));
+                    item.append("CAST(@@ServerName as nvarchar(50)),");
+                    item.append(System.getProperty("line.separator"));
+                    item.append("db_name(),");
+                    item.append(System.getProperty("line.separator"));
+                    item.append("'" + encryptColumn1.getDbTable() + "',");
+                    item.append(System.getProperty("line.separator"));
+                    item.append("'" + encryptColumn1.getEncryptColumns() + "',");
+                    item.append(System.getProperty("line.separator"));
+                    item.append("suser_name(),");
+                    item.append(System.getProperty("line.separator"));
+                    item.append(encryptColumn1.getEncryptColumns() + ",");
+                    item.append(System.getProperty("line.separator"));
+                    item.append("LEN("+encryptColumn1.getEncryptColumns() +"),");
+                    item.append(System.getProperty("line.separator"));
+
+                    if (DbConstants.SGD_SM4.equals(encryptColumn1.getEncryptionAlgorithm())) {
+                        item.append("0,\n");
+                        item.append((haveRules ? encLength : "LEN("+encryptColumn1.getEncryptColumns() +")") + ",-- * 加密长度，与web配置的长度保持一致\n");
+                        item.append("LEN("+encryptColumn1.getEncryptColumns() +"))"+ (haveEncColumn ? ")" : "")+"\n");
+                    } else {
+                        if (DbConstants.ESTABLISH_RULES_YES.equals(encryptColumn1.getEstablishRules())) {
+                            item.append((encryptColumn1.getEncryptionOffset() -1 ) +",\n");
+                        } else {
+                            item.append( "0,\n");
+                        }
+                        item.append((haveRules ? encLength : "LEN("+encryptColumn1.getEncryptColumns() +")") + ",-- * 加密长度，与web配置的长度保持一致\n");
+                        item.append("LEN("+encryptColumn1.getEncryptColumns() +"),\n");
+                        item.append(encryptColumn1.getEncryptionAlgorithm()+")"+ (haveEncColumn ? ")" : "")+"\n");
+                    }
+                    item.append(System.getProperty("line.separator"));
+
+                    item.append(" as [" + encryptColumn1.getEncryptColumns() + "] ,");
+                    isEncColumn = true;
+                    haveEncColumn = true;
+                    break;
+                }
+            }
+            if (!isEncColumn){
+                item.append(columnName + " ,");
+            }
+            encColumns += item.toString();
+        }
+
+        if (encColumns.length() > 1) {
+            encColumns = encColumns.substring(0, encColumns.length() - 1);
+        }
+        viewSql.append(encColumns);
+        viewSql.append(System.getProperty("line.separator"));
+
+        viewSql.append(" from " + encryptColumns.getDatabaseServerName() +"."+sqlserverSchema+ ".[" + encryptColumns.getDbTable()+"]");
+        PreparedStatement preparedStatement = null;
+        log.info("sqlserver create view:" + viewSql);
+        try {
+            preparedStatement = conn.prepareStatement(viewSql.toString());
+            preparedStatement.execute();
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            if (preparedStatement != null) {
+                preparedStatement.close();
+            }
+        }
+    }
 
     public static boolean deleteView(Connection conn, DbhsmEncryptColumnsAdd encryptColumns) throws SQLException {
        return deleteView(conn,encryptColumns,null);
@@ -239,7 +370,7 @@ public class ViewUtil {
         String delViewSql = null;
         //创建删除语句
         if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(encryptColumns.getDatabaseType())) {
-            delViewSql = "DROP VIEW IF EXISTS " + encryptColumns.getDbUserName() + ".v_" + encryptColumns.getDbTable();
+            delViewSql = "DROP VIEW IF EXISTS " + getSqlserverSchema(conn,encryptColumns) + ".v_" + encryptColumns.getDbTable();
         } else if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(encryptColumns.getDatabaseType())) {
             delViewSql = "DROP VIEW " + encryptColumns.getDbUserName() + ".v_" + encryptColumns.getDbTable();
         } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(encryptColumns.getDatabaseType())) {
@@ -266,6 +397,14 @@ public class ViewUtil {
         }
     }
 
+    static String getSqlserverSchema(Connection conn, DbhsmEncryptColumnsAdd encryptColumns) {
+        Map<String, String> schemaMap = DBUtil.findSchemaByTable(conn, encryptColumns.getDbTable());
+        String schemaName = "dbo";
+        if (schemaMap.containsKey("schemaName")) {
+            schemaName = schemaMap.get("schemaName");
+        }
+        return schemaName;
+    }
     /**
      * mysql创建视图
      *
@@ -342,8 +481,10 @@ public class ViewUtil {
                         item.append(columnName + "," + "0,0) #---- 加密列 --偏移量 --加密长度\n");
                     } else {
                         if (DbConstants.ESTABLISH_RULES_YES.equals(encryptColumns.getEstablishRules())) {
-                            item.append( columnName + "," + //加密列
-                                    (encryptColumns.getEncryptionOffset() -1 ) + "," + //偏移量
+                            //加密列
+                            item.append( columnName + "," +
+                                    //偏移量
+                                    (encryptColumns.getEncryptionOffset() -1 ) + "," +
                                     (encryptColumns.getEncryptionLength()-(encryptColumns.getEncryptionOffset() -1 )) +") #---- 加密列 --偏移量 --加密长度\n");
                         } else {
                             item.append( columnName + "," + "0,0) #---- 加密列 --偏移量 --加密长度\n");
@@ -371,7 +512,7 @@ public class ViewUtil {
         viewSql.append(" from " + encryptColumns.getDatabaseServerName() + "." + encryptColumns.getDbTable());
         PreparedStatement preparedStatement = null;
         log.info("Mysql create view:" + viewSql);
-        try {
+        try{
             preparedStatement = conn.prepareStatement(viewSql.toString());
             preparedStatement.execute();
             return true;

@@ -301,8 +301,9 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
      * @return 结果
      */
     @Override
-    public int deleteDbhsmSecretKeyManageByIds(Long[] ids) throws ZAYKException {
+    public AjaxResult2 deleteDbhsmSecretKeyManageByIds(Long[] ids) throws ZAYKException {
         int i = 0;
+        List<String> secretKeyIds = new ArrayList<>();
         for (Long id : ids) {
             DbhsmSecretKeyManage secretKeyManage = selectDbhsmSecretKeyManageById(id);
             //判断是否已被加密列使用
@@ -310,7 +311,8 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
             dbhsmEncryptColumns.setSecretKeyId(secretKeyManage.getSecretKeyId());
             List<DbhsmEncryptColumns> list = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsList(dbhsmEncryptColumns);
             if(list.size() > 0){
-                throw new ZAYKException("密钥ID为:"+secretKeyManage.getSecretKeyId()+"的密钥已被加密列使用,请先删除加密列");
+                secretKeyIds.add(secretKeyManage.getSecretKeyId());
+                continue;
             }
             i = deleteDbhsmSecretKeyManageById(id);
             //根据索引删除对称密钥
@@ -319,7 +321,7 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
                 remoteSecretKeyService.removeSymKey(String.valueOf(secretKeyManage.getSecretKeyIndex()));
             }
         }
-        return i;
+        return AjaxResult2.error("密钥ID为:"+String.join(",", secretKeyIds)+"的密钥已被加密列使用,请先删除加密列");
         //return dbhsmSecretKeyManageMapper.deleteDbhsmSecretKeyManageByIds(ids);
     }
 

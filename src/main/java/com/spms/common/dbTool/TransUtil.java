@@ -142,7 +142,7 @@ public class TransUtil {
                 * set @db_table_name ='table1'-- 加密表
                 * set @db_column_name ='name'-- 加密列
                 * set @db_user_name =suser_name()
-                * set @rawstringlen =DATALENGTH( @rawstring)/2
+                * set @rawstringlen =LEN( @rawstring)/2
                 * set @offset =0
                 * set @length =@rawstringlen
          *set @encryptlen =@rawstringlen
@@ -234,7 +234,7 @@ public class TransUtil {
         transSql.append("set @db_user_name =suser_name()");
         transSql.append(System.getProperty("line.separator"));
 
-        transSql.append("set @rawstringlen =DATALENGTH( @rawstring)/2");
+        transSql.append("set @rawstringlen =LEN(@rawstring)");
         transSql.append(System.getProperty("line.separator"));
 
         if (!DbConstants.SGD_SM4.equals(alg) && DbConstants.ESTABLISH_RULES_YES.equals(zaDatabaseEncryptColumns.getEstablishRules())) {

@@ -169,10 +169,9 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
     @Override
     public int insertDbhsmEncryptColumns(DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd) throws Exception {
         insertDbEncryptColumns(dbhsmEncryptColumnsAdd);
-        stockDataEnc(dbhsmEncryptColumnsAdd);
         Thread thread = new Thread(() -> {
             try {
-
+                stockDataEnc(dbhsmEncryptColumnsAdd);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -183,7 +182,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
     }
 
     @Transactional(rollbackFor = Exception.class)
-     void stockDataEnc(DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd) throws Exception {
+     public void stockDataEnc(DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd) throws Exception {
         // 使用DBA创建连接
         DbhsmDbInstance instance = instanceMapper.selectDbhsmDbInstanceById(dbhsmEncryptColumnsAdd.getDbInstanceId());
         dbhsmEncryptColumnsAdd.setDatabaseType(instance.getDatabaseType());
@@ -197,8 +196,6 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             String ip = getIp(dbhsmEncryptColumnsAdd.getEthernetPort());
             dbhsmEncryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);
             dbhsmEncryptColumnsAdd.setEncryptionStatus(DbConstants.ENCRYPTED);
-            dbhsmEncryptColumnsAdd.setId(SnowFlakeUtil.getSnowflakeId());
-
             dbhsmEncryptColumnsAdd.setCreateTime(DateUtils.getNowDate());
             dbhsmEncryptColumnsAdd.setCreateBy(SecurityUtils.getUsername());
             DbhsmEncryptColumns dbhsmEncryptColumns = new DbhsmEncryptColumns();
@@ -377,11 +374,13 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                     BeanUtils.copyProperties(encryptColumns, encryptColumnsAdd);
                     String ip = getIp(encryptColumnsAdd.getEthernetPort());
                     encryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);
-
+                    encryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
                     if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
                         sql = "DROP TRIGGER IF EXISTS tr_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns()+"_" + DbConstants.algMapping(encryptColumns.getEncryptionAlgorithm()) + "_encrypt";
                         preparedStatement = connection.prepareStatement(sql);
                         resultSet = preparedStatement.executeUpdate();
+                        //删除加密列时存量数据解密
+                        SqlServerStock.sqlserverStockEncOrDec(connection, encryptColumnsAdd,DbConstants.DEC_FLAG);
                     } else if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
                         sql = "DROP TRIGGER " + encryptColumns.getDbUserName() + ".tr" + flag + encryptColumns.getDbUserName() + "_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
                         preparedStatement = connection.prepareStatement(sql);
@@ -390,7 +389,6 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                         sql = "DROP TRIGGER tri_"  + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
                         preparedStatement = connection.prepareStatement(sql);
                         resultSet = preparedStatement.executeUpdate();
-                        SqlServerStock.sqlserverStockEncOrDec(connection, encryptColumnsAdd,DbConstants.ENC_FLAG);
 
                     }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
                         DbhsmDbUser dbUser = new DbhsmDbUser();

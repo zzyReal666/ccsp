@@ -416,7 +416,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
     }
 
     @Transactional(rollbackFor = ZAYKException.class)
-    int insertMysqlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException, SQLException {
+    public int insertMysqlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException, SQLException {
         String sqlCreateUser, username, password, sql;
         PreparedStatement preparedStatement = null;
         Connection connection = null;
@@ -535,7 +535,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    int insertSqlServerlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws Exception {
+    public int insertSqlServerlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws Exception {
         String sqlCreateLoginName, sqlCreateUser, sqlEmpowerment, sql;
         String username;
         String password;
@@ -691,7 +691,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    int insertOracleUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws Exception {
+    public int insertOracleUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws Exception {
         Connection conn = null;
         PreparedStatement preparedStatement = null;
         int executeUpdate = 0;

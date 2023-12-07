@@ -1,6 +1,7 @@
 package com.spms.dbhsm.secretKey.service;
 
 import com.ccsp.common.core.exception.ZAYKException;
+import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.spms.dbhsm.secretKey.domain.DbhsmSecretKeyManage;
 
 import java.util.List;
@@ -51,7 +52,7 @@ public interface IDbhsmSecretKeyManageService
      * @param ids 需要删除的数据库密钥主键集合
      * @return 结果
      */
-    public int deleteDbhsmSecretKeyManageByIds(Long[] ids) throws ZAYKException;
+    public AjaxResult2 deleteDbhsmSecretKeyManageByIds(Long[] ids) throws ZAYKException;
 
     /**
      * 删除数据库密钥信息

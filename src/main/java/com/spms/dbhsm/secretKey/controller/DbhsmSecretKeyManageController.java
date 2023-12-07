@@ -5,6 +5,7 @@ import com.ccsp.common.core.utils.StringUtils;
 import com.ccsp.common.core.utils.poi.ExcelUtil;
 import com.ccsp.common.core.web.controller.BaseController;
 import com.ccsp.common.core.web.domain.AjaxResult;
+import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.ccsp.common.core.web.page.TableDataInfo;
 import com.ccsp.common.log.annotation.Log;
 import com.ccsp.common.log.enums.BusinessType;
@@ -117,15 +118,15 @@ public class DbhsmSecretKeyManageController extends BaseController
     @RequiresPermissions("dbhsm:secretKey:remove")
     @Log(title = "数据库密钥", businessType = BusinessType.DELETE)
 	@DeleteMapping("/{ids}")
-    public AjaxResult remove(@PathVariable Long[] ids)
+    public AjaxResult2 remove(@PathVariable Long[] ids)
     {
-        int i = 0;
+        AjaxResult2 ajaxResult2= new AjaxResult2();
         try {
-            i = dbhsmSecretKeyManageService.deleteDbhsmSecretKeyManageByIds(ids);
+            ajaxResult2 = dbhsmSecretKeyManageService.deleteDbhsmSecretKeyManageByIds(ids);
         } catch (ZAYKException e) {
             e.printStackTrace();
-            return AjaxResult.error("null".equals(e.getMessage()) ? "删除失败":e.getMessage());
+            return AjaxResult2.error("null".equals(e.getMessage()) ? "删除失败":e.getMessage());
         }
-        return toAjax(i);
+        return ajaxResult2;
     }
 }
