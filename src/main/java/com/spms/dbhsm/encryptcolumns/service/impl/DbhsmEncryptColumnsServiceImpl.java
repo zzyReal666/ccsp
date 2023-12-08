@@ -343,8 +343,10 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
     public int deleteDbhsmEncryptColumnsByIds(String[] ids) throws Exception {
         DbhsmEncryptColumns certView = null;
         String userSchema = "";
+        DbhsmEncryptColumns encryptColumns =new DbhsmEncryptColumns();
+        DbhsmDbInstance instance = new DbhsmDbInstance();
         for (int i = 0; i < ids.length; i++) {
-            DbhsmEncryptColumns encryptColumns = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsById(ids[i]);
+            encryptColumns = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsById(ids[i]);
             if (encryptColumns == null) {
                 log.error("未获取到ID为{}的加密列信息" , ids[i]);
                 continue;
@@ -357,7 +359,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 certView.setDbTable(encryptColumns.getDbTable());
             }
 
-            DbhsmDbInstance instance = instanceMapper.selectDbhsmDbInstanceById(encryptColumns.getDbInstanceId());
+            instance = instanceMapper.selectDbhsmDbInstanceById(encryptColumns.getDbInstanceId());
             Connection connection = null;
             //如果是SQLserver需要删除对应的触发器
             PreparedStatement preparedStatement = null;
@@ -380,7 +382,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                         preparedStatement = connection.prepareStatement(sql);
                         resultSet = preparedStatement.executeUpdate();
                         //删除加密列时存量数据解密
-                        SqlServerStock.sqlserverStockEncOrDec(connection, encryptColumnsAdd,DbConstants.DEC_FLAG);
+                        //sqlserverStockEncOrDec(connection, encryptColumnsAdd);
                     } else if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
                         sql = "DROP TRIGGER " + encryptColumns.getDbUserName() + ".tr" + flag + encryptColumns.getDbUserName() + "_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
                         preparedStatement = connection.prepareStatement(sql);
@@ -415,12 +417,9 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                         connection.commit();
 
                         //存量数据解密
-                        PostgreSQLStock.postgreSQLStockEncOrDec(connection, encryptColumnsAdd, user, DbConstants.STOCK_DATA_DECRYPTION);
-                        connection.commit();
+                        //postgreSQLStockEncOrDec(connection,encryptColumnsAdd, user);
                     }
-
                     //执行删除视图
-
                     try{
                         encryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
                         encryptColumnsAdd.setDatabaseType(instance.getDatabaseType());
@@ -440,9 +439,9 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                     if (preparedStatement != null) {
                         preparedStatement.close();
                     }
-                    if (connection != null) {
-                        connection.close();
-                    }
+                    //if (connection != null) {
+                    //    connection.close();
+                    //}
                 }
         }
 
@@ -451,7 +450,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             //重新创建视图
             List<DbhsmEncryptColumns> dbhsmEncryptColumns = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsList(certView);
             if (StringUtils.isNotEmpty(dbhsmEncryptColumns)) {
-                DbhsmDbInstance instance = instanceMapper.selectDbhsmDbInstanceById(certView.getDbInstanceId());
+                instance = instanceMapper.selectDbhsmDbInstanceById(certView.getDbInstanceId());
                 DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
                 BeanUtils.copyProperties(instance, connDTO);
                 Connection connection = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
@@ -466,19 +465,117 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                     boolean viewRet = ViewUtil.operView(connection, dbhsmEncryptColumnsAdd, dbhsmEncryptColumnsMapper,userSchema);
                     if (viewRet) {
                         connection.commit();
-                        connection.close();
+                        //connection.close();
                     } else {
-                        if (connection != null) {
-                            connection.close();
-                        }
+                        //if (connection != null) {
+                        //    connection.close();
+                        //}
                         log.error("创建视图异常");
                         throw new Exception("创建视图异常");
                     }
 
                 //}
             }
+
         }
+        //存量数据解密
+        stockEnc(encryptColumns,instance);
         return ret;
+    }
+
+    private void stockEnc(DbhsmEncryptColumns encryptColumns,DbhsmDbInstance instance) throws Exception {
+            Connection connection = null;
+            //如果是SQLserver需要删除对应的触发器
+            PreparedStatement preparedStatement = null;
+            try {
+                DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
+                BeanUtils.copyProperties(instance, connDTO);
+                connection = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
+
+                DbhsmEncryptColumnsAdd encryptColumnsAdd = new DbhsmEncryptColumnsAdd();
+                BeanUtils.copyProperties(encryptColumns, encryptColumnsAdd);
+                String ip = getIp(encryptColumnsAdd.getEthernetPort());
+                encryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);
+                encryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
+                if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
+                    //删除加密列时存量数据解密
+                    sqlserverStockEncOrDec(connection, encryptColumnsAdd);
+                } else if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
+
+                } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
+
+                } else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
+                    DbhsmDbUser dbUser = new DbhsmDbUser();
+                    dbUser.setUserName(encryptColumns.getDbUserName());
+                    dbUser.setDatabaseInstanceId(encryptColumns.getDbInstanceId());
+                    List<DbhsmDbUser> dbhsmDbUsers = dbUsersMapper.selectDbhsmDbUsersList(dbUser);
+                    if (StringUtils.isEmpty(dbhsmDbUsers)) {
+                        log.error("根据实例ID和用户名未获取到用户信息, InstanceId：{}，DbUserName：{}", dbUser.getDatabaseInstanceId(), dbUser.getUserName());
+                        throw new Exception("根据实例ID和用户名未获取到用户信息,用户名：" + dbUser.getUserName());
+                    }
+                    DbhsmDbUser user = dbhsmDbUsers.get(0);
+                    //存量数据解密
+                    postgreSQLStockEncOrDec(connection, encryptColumnsAdd, user);
+                }
+
+            } catch (SQLException e) {
+                //触发器不存在异常不抛出，其他异常抛出
+                if (!e.getMessage().contains("不存在")) {
+                    e.printStackTrace();
+                    throw new SQLException(e.getMessage());
+                }
+            } finally {
+                //释放资源
+                if (preparedStatement != null) {
+                    preparedStatement.close();
+                }
+
+            }
+        }
+
+    private void sqlserverStockEncOrDec(Connection connection, DbhsmEncryptColumnsAdd encryptColumnsAdd) throws Exception {
+        Thread thread = new Thread(() -> {
+            try {
+                //存量数据解密
+                SqlServerStock.sqlserverStockEncOrDec(connection, encryptColumnsAdd,DbConstants.DEC_FLAG);
+                connection.commit();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }finally {
+                if (connection != null) {
+                    try {
+                        connection.close();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+        thread.setDaemon(true);
+        thread.start();
+
+    }
+
+    private void postgreSQLStockEncOrDec(Connection finalConnection,DbhsmEncryptColumnsAdd encryptColumnsAdd,DbhsmDbUser user ) {
+        Thread thread = new Thread(() -> {
+            try {
+                //存量数据解密
+                PostgreSQLStock.postgreSQLStockEncOrDec(finalConnection, encryptColumnsAdd, user, DbConstants.STOCK_DATA_DECRYPTION);
+                finalConnection.commit();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }finally {
+                if (finalConnection != null) {
+                    try {
+                        finalConnection.close();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+        thread.setDaemon(true);
+        thread.start();
     }
 
     /**
