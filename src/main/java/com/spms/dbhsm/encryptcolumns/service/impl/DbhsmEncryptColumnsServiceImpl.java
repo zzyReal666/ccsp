@@ -11,10 +11,13 @@ import com.ccsp.common.security.utils.DictUtils;
 import com.ccsp.common.security.utils.SecurityUtils;
 import com.ccsp.system.api.systemApi.domain.SysDictData;
 import com.spms.common.CommandUtil;
+import com.spms.common.JSONDataUtil;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.dbTool.DBUtil;
 import com.spms.common.dbTool.TransUtil;
 import com.spms.common.dbTool.ViewUtil;
+import com.spms.common.dbTool.stockDataProcess.mysql.MysqlStock;
+import com.spms.common.dbTool.stockDataProcess.oracle.OraclelStock;
 import com.spms.common.dbTool.stockDataProcess.postgresql.PostgreSQLStock;
 import com.spms.common.dbTool.stockDataProcess.sqlserver.SqlServerStock;
 import com.spms.common.pool.hikariPool.DbConnectionPoolFactory;
@@ -32,7 +35,6 @@ import com.spms.dbhsm.encryptcolumns.service.IDbhsmEncryptColumnsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -64,9 +66,16 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
     private DbhsmDbUsersMapper dbUsersMapper;
 
 
-    @Value("${server.port:10013}")
-    private int dbhsmPort;
+    //@Value("${server.port:10013}")
+    private static int dbhsmPort =80;
 
+    static {
+            String sysDataToDB = JSONDataUtil.getSysDataToDB(DbConstants.DBENC_WEB_PORT);
+            if (StringUtils.isNotEmpty(sysDataToDB)){
+                assert sysDataToDB != null;
+                dbhsmPort = Integer.parseInt(sysDataToDB);
+            }
+    }
     /**
      * 查询数据库加密列
      *
@@ -202,11 +211,11 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             BeanUtils.copyProperties(dbhsmEncryptColumnsAdd, dbhsmEncryptColumns);
             DbhsmDbUser user = new DbhsmDbUser();
             if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
-
+                OraclelStock.oracleStockEncOrDec(conn, dbhsmEncryptColumnsAdd, DbConstants.STOCK_DATA_ENCRYPTION);
             } else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
                 SqlServerStock.sqlserverStockEncOrDec(conn, dbhsmEncryptColumnsAdd,DbConstants.ENC_FLAG);
             } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
-
+                MysqlStock.mysqlStockEncOrDec(conn, dbhsmEncryptColumnsAdd,DbConstants.STOCK_DATA_ENCRYPTION);
             }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
                 //改成使用用户的连接
                 DbhsmDbUser dbUser = new DbhsmDbUser();
@@ -478,12 +487,12 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             }
 
         }
-        //存量数据解密
-        stockEnc(encryptColumns,instance);
+        //存量数据解密（放到最后为了删除时不等待，直接给到线程，放到删除之前会等待创建视图影响体验）
+        stockDecBeforeDel(encryptColumns,instance);
         return ret;
     }
 
-    private void stockEnc(DbhsmEncryptColumns encryptColumns,DbhsmDbInstance instance) throws Exception {
+    private void stockDecBeforeDel(DbhsmEncryptColumns encryptColumns,DbhsmDbInstance instance) throws Exception {
             Connection connection = null;
             //如果是SQLserver需要删除对应的触发器
             PreparedStatement preparedStatement = null;
@@ -499,11 +508,11 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 encryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
                 if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
                     //删除加密列时存量数据解密
-                    sqlserverStockEncOrDec(connection, encryptColumnsAdd);
+                    stockDec(connection, encryptColumnsAdd,instance);
                 } else if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
-
+                    stockDec(connection, encryptColumnsAdd,instance);
                 } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
-
+                    stockDec(connection, encryptColumnsAdd,instance);
                 } else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
                     DbhsmDbUser dbUser = new DbhsmDbUser();
                     dbUser.setUserName(encryptColumns.getDbUserName());
@@ -533,11 +542,17 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             }
         }
 
-    private void sqlserverStockEncOrDec(Connection connection, DbhsmEncryptColumnsAdd encryptColumnsAdd) throws Exception {
+    private void stockDec(Connection connection, DbhsmEncryptColumnsAdd encryptColumnsAdd,DbhsmDbInstance instance) throws Exception {
         Thread thread = new Thread(() -> {
             try {
-                //存量数据解密
-                SqlServerStock.sqlserverStockEncOrDec(connection, encryptColumnsAdd,DbConstants.DEC_FLAG);
+                if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
+                    //存量数据解密
+                    SqlServerStock.sqlserverStockEncOrDec(connection, encryptColumnsAdd,DbConstants.DEC_FLAG);
+                } else if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
+                    OraclelStock.oracleStockEncOrDec(connection, encryptColumnsAdd,DbConstants.STOCK_DATA_DECRYPTION);
+                } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
+                    MysqlStock.mysqlStockEncOrDec(connection, encryptColumnsAdd,DbConstants.STOCK_DATA_DECRYPTION);
+                }
                 connection.commit();
             } catch (Exception e) {
                 e.printStackTrace();

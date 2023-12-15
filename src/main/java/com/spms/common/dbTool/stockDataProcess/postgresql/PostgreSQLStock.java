@@ -40,7 +40,7 @@ public class PostgreSQLStock {
      * begin
      *   NEW.name := testuser1.pgext_func_string_encrypt(
      *  '443970420010520576', --确保与配置加密列所设置的pid相同
-     *  'http://192.168.6.88:10013/api/datahsm/v1/strategy/get',  --确保与配置加密列所设置的url相同
+     *  'http://192.168.6.88:10013/prod-api/dbhsm/api/datahsm/v1/strategy/get',  --确保与配置加密列所设置的url相同
      *   CAST(inet_client_addr() as text),
      *  --ip
      *   CAST(current_catalog as text),
@@ -78,7 +78,7 @@ public class PostgreSQLStock {
             transFun.append("NEW." + dbhsmEncryptColumnsAdd.getEncryptColumns() + " := "+ userSchema +".pgext_func_"+DbConstants.algMappingStrOrFpe(alg)+encOrdecStr);
             transFun.append("'" + dbhsmEncryptColumnsAdd.getId() + "',");
             transFun.append(System.getProperty("line.separator"));
-            transFun.append("'http://" + dbhsmEncryptColumnsAdd.getIpAndPort()+ "/api/datahsm/v1/strategy/get',");
+            transFun.append("'http://" + dbhsmEncryptColumnsAdd.getIpAndPort()+ "/prod-api/dbhsm/api/datahsm/v1/strategy/get',");
             transFun.append(System.getProperty("line.separator"));
             transFun.append("CAST(inet_client_addr() as text),");
             transFun.append(System.getProperty("line.separator"));
@@ -201,6 +201,7 @@ public class PostgreSQLStock {
 
         } catch (Exception e) {
             e.printStackTrace();
+            throw new Exception(e.getMessage());
         }finally {
             if (statement != null) {
                 statement.close();
@@ -227,6 +228,7 @@ public class PostgreSQLStock {
 
         } catch (Exception e) {
             e.printStackTrace();
+            throw new Exception(e.getMessage());
         }
 
     }

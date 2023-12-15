@@ -28,19 +28,54 @@ public class FunctionUtil {
      * */
     public static void createMysqlStringEncryptDecryptFunction(Connection connection) throws SQLException {
         String stringEncryptFunction = "CREATE FUNCTION StringEncrypt RETURNS STRING SONAME 'mysqldll.dll'";
-        String stringDecryptFunction =  "CREATE FUNCTION StringDecrypt RETURNS STRING SONAME 'mysqldll.dll'";
+        String stringDecryptFunction = "CREATE FUNCTION StringDecrypt RETURNS STRING SONAME 'mysqldll.dll'";
+        String fpeEncryptFunction = "CREATE FUNCTION FpeStringEncrypt RETURNS STRING SONAME 'mysqldll.dll'";
+        String fpeDecryptFunction = "CREATE FUNCTION FpeStringDecrypt RETURNS STRING SONAME 'mysqldll.dll'";
         PreparedStatement preparedStatement = null;
         try {
             log.info("CREATE MYSQL STRINGENCRYPT  Function INFO：\n" + stringEncryptFunction);
             preparedStatement = connection.prepareStatement(stringEncryptFunction);
             preparedStatement.execute();
-
+        } catch (SQLException e) {
+            e.printStackTrace();
+            log.info("创建加解密函数失败！加密函数StringEncrypt已存在？" + e.getMessage());
+        } finally {
+            if (preparedStatement != null) {
+                preparedStatement.close();
+            }
+        }
+        try {
             log.info("CREATE MYSQL  STRINGDECRYPT FUNCTION INFO：\n" + stringDecryptFunction);
             preparedStatement = connection.prepareStatement(stringDecryptFunction);
             preparedStatement.execute();
         } catch (SQLException e) {
             e.printStackTrace();
-            throw new SQLException(e);
+            log.info("创建加解密函数失败！解密函数StringDecrypt已存在？" + e.getMessage());
+        } finally {
+            if (preparedStatement != null) {
+                preparedStatement.close();
+            }
+        }
+
+        try{
+            log.info("CREATE MYSQL  FpeStringEncrypt FUNCTION INFO：\n" + fpeEncryptFunction);
+            preparedStatement = connection.prepareStatement(fpeEncryptFunction);
+            preparedStatement.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            log.info("创建加解密函数失败！加密函数FpeStringEncrypt已存在？" + e.getMessage());
+        } finally {
+            if (preparedStatement != null) {
+                preparedStatement.close();
+            }
+        }
+        try{
+            log.info("CREATE MYSQL  FpeStringDecrypt FUNCTION INFO：\n" + fpeDecryptFunction);
+            preparedStatement = connection.prepareStatement(fpeDecryptFunction);
+            preparedStatement.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            log.info("创建加解密函数失败！解密函数FpeStringDecrypt已存在？" + e.getMessage());
         } finally {
             if (preparedStatement != null) {
                 preparedStatement.close();

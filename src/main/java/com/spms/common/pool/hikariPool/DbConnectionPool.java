@@ -68,6 +68,7 @@ public class DbConnectionPool {
         // Set the SQL limit for the prepared statement cache ，driver缓存的statement 最大长度
         config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
         config.setMaximumPoolSize(MAX_CONNECTIONS);
+        config.setConnectionTimeout(20 * 1000);
         try {
             return new HikariDataSource(config);
         }catch (HikariPool.PoolInitializationException  e){

@@ -321,7 +321,7 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
                 remoteSecretKeyService.removeSymKey(String.valueOf(secretKeyManage.getSecretKeyIndex()));
             }
         }
-        return AjaxResult2.error("密钥ID为:"+String.join(",", secretKeyIds)+"的密钥已被加密列使用,请先删除加密列");
+        return secretKeyIds.size() > 0 ? AjaxResult2.error("密钥ID为:" + String.join(",", secretKeyIds) + "的密钥已被加密列使用,请先删除加密列") : AjaxResult2.success();
         //return dbhsmSecretKeyManageMapper.deleteDbhsmSecretKeyManageByIds(ids);
     }
 

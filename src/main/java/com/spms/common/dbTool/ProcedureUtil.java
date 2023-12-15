@@ -630,7 +630,7 @@ public class ProcedureUtil {
         transSQL.append("create ASSEMBLY libsqlextdll");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("FROM '" + libsqlextPath + "libsqlserverdll.dll'");
+        transSQL.append("FROM '" + libsqlextPath + ".dll'");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("WITH permission_set = UnSafe;");

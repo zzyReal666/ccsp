@@ -139,7 +139,7 @@ public class ViewUtil {
                     view.append("    c_oci_trans_fpe_decrypt_f(\n");
                 }
                 view.append("    '" + encJson.getStr(columnName + "pid") + "',\n");
-                view.append("    'http://" + encJson.getStr(columnName + "ip") + "/api/datahsm/v1/strategy/get',\n");
+                view.append("    'http://" + encJson.getStr(columnName + "ip") + "/prod-api/dbhsm/api/datahsm/v1/strategy/get',\n");
                 view.append("    SYS_CONTEXT('USERENV', 'IP_ADDRESS'),\n");
                 view.append("    SYS_CONTEXT('USERENV', 'INSTANCE_NAME'),\n");
                 view.append("    SYS_CONTEXT('USERENV', 'DB_NAME'),\n");
@@ -167,69 +167,7 @@ public class ViewUtil {
     }
 
 
-    /**
-     * @param conn
-     * @param zaDatabaseEncryptColumns
-     * @return
-     */
-    public static boolean operViewToSqlServerOld(Connection conn, DbhsmEncryptColumnsAdd zaDatabaseEncryptColumns) throws SQLException {
 
-        /**
-         *
-         * USE [db_test1]
-         * GO
-         *
-         *
-         *SET ANSI_NULLS ON
-         * GO
-         *
-         *SET QUOTED_IDENTIFIER ON
-         * GO
-         *
-         *CREATE OR ALTER view[ dbo].[table1_view](NAME, ENCRYPTSTRING)
-         *as SELECT NAME, ENCRYPTSTRING
-         * from db_test1.dbo.table1
-         * GO
-         */
-
-        List<Map<String, String>> allColumnsInfo = DBUtil.findAllColumnsInfo(conn, zaDatabaseEncryptColumns.getDbTable(), zaDatabaseEncryptColumns.getDatabaseType());
-
-        if (allColumnsInfo == null || allColumnsInfo.size() == 0) {
-            return false;
-        }
-
-        StringBuffer viewSql = new StringBuffer();
-
-        viewSql.append("CREATE OR ALTER view v_" + zaDatabaseEncryptColumns.getDbTable() + "(");
-        viewSql.append(System.getProperty("line.separator"));
-
-        String columns = "";
-        for (Map<String, String> map : allColumnsInfo) {
-            columns += "["+map.get(DbConstants.DB_COLUMN_NAME) + "],";
-        }
-
-        columns = columns.substring(0, columns.length() - 1);
-        viewSql.append(columns + ")");
-        viewSql.append(System.getProperty("line.separator"));
-
-        viewSql.append("as SELECT " + columns);
-        viewSql.append(System.getProperty("line.separator"));
-        viewSql.append("from " + zaDatabaseEncryptColumns.getDatabaseServerName() + ".dbo." + zaDatabaseEncryptColumns.getDbTable());
-        PreparedStatement preparedStatement = null;
-        log.info("sql server create view:" + viewSql.toString());
-        try {
-            preparedStatement = conn.prepareStatement(viewSql.toString());
-            preparedStatement.execute();
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        } finally {
-            if (preparedStatement != null) {
-                preparedStatement.close();
-            }
-        }
-    }
     /**
      * @param conn
      * @param
@@ -291,7 +229,7 @@ public class ViewUtil {
                     item.append(System.getProperty("line.separator"));
                     item.append("'" + encryptColumn1.getId() +  "',");
                     item.append(System.getProperty("line.separator"));
-                    item.append("'http://" + encryptColumns.getIpAndPort() + "/api/datahsm/v1/strategy/get',");
+                    item.append("'http://" + encryptColumns.getIpAndPort() + "/prod-api/dbhsm/api/datahsm/v1/strategy/get',");
                     item.append(System.getProperty("line.separator"));
                     item.append("'ip_addr',");
                     item.append(System.getProperty("line.separator"));
@@ -449,6 +387,7 @@ public class ViewUtil {
 
         //拼接字段
         String encColumns = "";
+        boolean haveEncColumn = false;
         for (int i = 0; i < allColumnsInfo.size(); i++) {
             Map<String, String> map = allColumnsInfo.get(i);
             //防止列名为mysql关键字添加``
@@ -458,11 +397,16 @@ public class ViewUtil {
             boolean isEncColumn = false;
             for (DbhsmEncryptColumns encryptColumn1 : dbhsmEncryptColumns) {
                 if (colName.equalsIgnoreCase(encryptColumn1.getEncryptColumns())) {
-                    item.append("StringDecrypt(");
+                    String algorithm = encryptColumn1.getEncryptionAlgorithm();
+                    String funName = DbConstants.SGD_SM4.equals(algorithm)?"StringDecrypt(":"FpeStringDecrypt(";
+                    if(haveEncColumn){
+                        item.append("(select ");
+                    }
+                    item.append(funName);
                     item.append(System.getProperty("line.separator"));
                     item.append("'" + encryptColumn1.getId() +  "',");
                     item.append(System.getProperty("line.separator"));
-                    item.append("'http://" + encryptColumns.getIpAndPort() + "/api/datahsm/v1/strategy/get', #--'http://192.168.6.31:8080/api/datahsm/v1/strategy/get',策略下载地址");
+                    item.append("'http://" + encryptColumns.getIpAndPort() + "/prod-api/dbhsm/api/datahsm/v1/strategy/get', #--'http://192.168.6.31:8080/prod-api/dbhsm/api/datahsm/v1/strategy/get',策略下载地址");
                     item.append(System.getProperty("line.separator"));
                     item.append("'ip_address',#--IP");
                     item.append(System.getProperty("line.separator"));
@@ -478,22 +422,23 @@ public class ViewUtil {
                     item.append(System.getProperty("line.separator"));
 
                     if (DbConstants.SGD_SM4.equals(encryptColumn1.getEncryptionAlgorithm())) {
-                        item.append(columnName + "," + "0,0) #---- 加密列 --偏移量 --加密长度\n");
+                        item.append(columnName + "," + "0,0)"+ (haveEncColumn ? ")" : "")+"\n");
                     } else {
                         if (DbConstants.ESTABLISH_RULES_YES.equals(encryptColumns.getEstablishRules())) {
                             //加密列
                             item.append( columnName + "," +
                                     //偏移量
                                     (encryptColumns.getEncryptionOffset() -1 ) + "," +
-                                    (encryptColumns.getEncryptionLength()-(encryptColumns.getEncryptionOffset() -1 )) +") #---- 加密列 --偏移量 --加密长度\n");
+                                    (encryptColumns.getEncryptionLength()-(encryptColumns.getEncryptionOffset() -1 )) +","+algorithm+ ")"+(haveEncColumn ? ")" : "")+"\n");
                         } else {
-                            item.append( columnName + "," + "0,0) #---- 加密列 --偏移量 --加密长度\n");
+                            item.append( columnName + "," + "0,0,"+algorithm + ")"+(haveEncColumn ? ")" : "")+"\n");
                         }
                     }
                     item.append(System.getProperty("line.separator"));
 
                     item.append(" as `" + encryptColumn1.getEncryptColumns() + "` ,");
                     isEncColumn = true;
+                    haveEncColumn = true;
                     break;
                 }
             }
@@ -586,7 +531,7 @@ public class ViewUtil {
                     item.append(dbSchema + ".pgext_func_"+DbConstants.algMappingStrOrFpe(encryptColumn1.getEncryptionAlgorithm())+"_decrypt(");
                     item.append("'" + encryptColumn1.getId() + "',");
                     item.append(System.getProperty("line.separator"));
-                    item.append("'http://" + encryptColumns.getIpAndPort() + "/api/datahsm/v1/strategy/get', ");
+                    item.append("'http://" + encryptColumns.getIpAndPort() + "/prod-api/dbhsm/api/datahsm/v1/strategy/get', ");
                     item.append(System.getProperty("line.separator"));
                     item.append("CAST(inet_client_addr() as text),");
                     item.append(System.getProperty("line.separator"));

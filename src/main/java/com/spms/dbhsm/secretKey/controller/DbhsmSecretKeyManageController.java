@@ -43,6 +43,16 @@ public class DbhsmSecretKeyManageController extends BaseController
         List<DbhsmSecretKeyManage> list = dbhsmSecretKeyManageService.selectDbhsmSecretKeyManageList(dbhsmSecretKeyManage);
         return getDataTable(list);
     }
+    /**
+     * 查询数据库密钥列表加密列下拉使用
+     */
+    @RequiresPermissions("dbhsm:secretKey:list")
+    @GetMapping("/listForDropDownBox")
+    public TableDataInfo listForDropDownBox(DbhsmSecretKeyManage dbhsmSecretKeyManage)
+    {
+        List<DbhsmSecretKeyManage> list = dbhsmSecretKeyManageService.selectDbhsmSecretKeyManageList(dbhsmSecretKeyManage);
+        return getDataTable(list);
+    }
 
     /**
      * 导出数据库密钥列表

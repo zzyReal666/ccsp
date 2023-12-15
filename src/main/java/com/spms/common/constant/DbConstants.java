@@ -33,6 +33,8 @@ public class DbConstants {
     /**0解密 1加密*/
     public static final int DEC_FLAG = 0;
     public static final int ENC_FLAG = 1;
+    /**数据库加密网关web端口key*/
+    public static final String DBENC_WEB_PORT =  "dbencWebPort";
     /**
      * 请求成功
      */
@@ -125,6 +127,7 @@ public class DbConstants {
     /** 查询表 */
     public static final String DB_SQL_SQLSERVER_TABLE_QUERY = "select name from sysobjects where xtype='U'" ;
 
+    public static final String STRATEGY_URI = "prod-api/dbhsm/api/datahsm/v1/strategy/get";
 
     /**
      *  是否建立加密规则 1：是 0：否

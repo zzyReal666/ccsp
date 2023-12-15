@@ -795,7 +795,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
             conn.commit();
 
             //赋执行库文件liboraextapi的权限
-            sql = "CREATE OR REPLACE LIBRARY liboraextapi AS '" + dbhsmDbUser.getEncLibapiPath() + "'";
+            sql = "CREATE OR REPLACE LIBRARY liboraextapi AS '" + dbhsmDbUser.getEncLibapiPath() + ".dll'";
             log.info("赋执行库文件liboraextapi的权限sql: {}", sql);
             preparedStatement = conn.prepareStatement(sql);
             preparedStatement.execute();
