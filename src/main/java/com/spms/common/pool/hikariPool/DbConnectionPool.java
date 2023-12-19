@@ -5,7 +5,6 @@ import com.spms.common.constant.DbConstants;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import com.zaxxer.hikari.pool.HikariPool;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
@@ -68,20 +67,11 @@ public class DbConnectionPool {
         // Set the SQL limit for the prepared statement cache ，driver缓存的statement 最大长度
         config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
         config.setMaximumPoolSize(MAX_CONNECTIONS);
-        config.setConnectionTimeout(20 * 1000);
+        //config.setConnectionTimeout(20 * 1000);
         try {
             return new HikariDataSource(config);
-        }catch (HikariPool.PoolInitializationException  e){
-            //String errorMessage = new String(e.getMessage().getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
-            Throwable rootCause = e.getCause();
-            String errorMessage = rootCause != null ? rootCause.getMessage() : "";
-            log.info("Could not create HikariCP data source");
-            throw new RuntimeException("创建连接池失败！请检查网络是否正常及用户名密码是否正确。", e);
         } catch (Exception e) {
             e.printStackTrace();
-            //String errorMessage = new String(e.getMessage().getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
-            Throwable rootCause = e.getCause();
-            String errorMessage = rootCause != null ? rootCause.getMessage() : "";
             log.info("Could not create HikariCP data source");
             throw new RuntimeException("创建连接池失败！请检查网络是否正常及用户名密码是否正确。", e);
         }

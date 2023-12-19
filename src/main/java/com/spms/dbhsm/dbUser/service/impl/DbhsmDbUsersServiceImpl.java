@@ -355,7 +355,6 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 throwables.printStackTrace();
                 try {
                     // 回滚事务
-                    assert connection != null;
                     connection.rollback();
                     //删除创建的用户
                     sql = "drop OWNED BY \"" + username + "\";drop user \"" + username + "\"";
@@ -376,14 +375,12 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                     throwables.printStackTrace();
                 }
             }
-            if (connection != null) {
                 try {
                     connection.close();
                 } catch (SQLException throwables) {
                     throwables.printStackTrace();
                 }
             }
-        }
         return 1;
     }
     /** 将schema下的所有表赋权给用户*/

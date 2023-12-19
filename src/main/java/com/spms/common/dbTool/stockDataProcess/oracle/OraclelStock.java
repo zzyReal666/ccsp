@@ -2,6 +2,7 @@ package com.spms.common.dbTool.stockDataProcess.oracle;
 
 import com.ccsp.common.core.utils.StringUtils;
 import com.spms.common.constant.DbConstants;
+import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsAdd;
 import lombok.extern.slf4j.Slf4j;
 
@@ -23,11 +24,11 @@ public class OraclelStock {
     /**
      * Oracle 存量数据加解密
      */
-    public static void oracleStockEncOrDec(Connection conn, DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd, Boolean encOrdec) throws Exception {
+    public static void oracleStockEncOrDec(Connection conn, DbhsmDbInstance instance, DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd, Boolean encOrdec) throws Exception {
         // 1、创建存量数据加密触发器
         trFunStockOracle(conn, dbhsmEncryptColumnsAdd,encOrdec);
         //2 创建Oracle 游标更新列
-        cursorProcOracle(conn, dbhsmEncryptColumnsAdd);
+        cursorProcOracle(conn,instance,dbhsmEncryptColumnsAdd);
         //3、Oracle 删除触发器
         delTrFunStockOracle(conn, dbhsmEncryptColumnsAdd,encOrdec);
 
@@ -86,6 +87,7 @@ public class OraclelStock {
         Long encryptionLength = dbhsmEncryptColumnsAdd.getEncryptionLength();
         Integer establishRules = dbhsmEncryptColumnsAdd.getEstablishRules();
         String userName = dbhsmEncryptColumnsAdd.getDbUserName();
+        log.info("trFunStockPostgreSQL PID:{}",dbhsmEncryptColumnsAdd.getId());
         try{
             // 1、定义触发器
             log.info("1、创建Oracle存量数据触发器start");
@@ -99,6 +101,8 @@ public class OraclelStock {
             transFun.append("FOR EACH ROW");
             transFun.append(LINE_SEPARATOR);
             transFun.append("BEGIN");
+            transFun.append(LINE_SEPARATOR);
+            transFun.append("if (:OLD."+encryptColumns+" is not NULL) then");
             transFun.append(LINE_SEPARATOR);
             transFun.append(procedureName);
             transFun.append(LINE_SEPARATOR);
@@ -116,7 +120,8 @@ public class OraclelStock {
             transFun.append(LINE_SEPARATOR);
             transFun.append(StringUtils.format("'{}',",encryptColumns));
             transFun.append(LINE_SEPARATOR);
-            transFun.append("USER(),");
+            //transFun.append("USER(),");
+            transFun.append("'"+userName+"',");
             transFun.append(LINE_SEPARATOR);
 
             if (DbConstants.SGD_SM4.equals(alg)) {
@@ -134,7 +139,8 @@ public class OraclelStock {
                     transFun.append(StringUtils.format(":OLD.{},0,0,:NEW.{},{});\n",encryptColumns,encryptColumns,alg));
                 }
             }
-            transFun.append("END;");
+            transFun.append("end if;\n");
+            transFun.append("END;\n");
             transFun.append(LINE_SEPARATOR);
             log.info("创建Oracle存量数据触发器函数 sql:\n" + transFun);
             statement = conn.createStatement();
@@ -177,7 +183,8 @@ public class OraclelStock {
      *   close slc;
      * end;
      */
-    public static void cursorProcOracle(Connection conn, DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd) throws Exception {
+    public static void cursorProcOracle(Connection conn,DbhsmDbInstance instance, DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd) throws Exception {
+
         Statement statement = null;
         String encryptColumns = dbhsmEncryptColumnsAdd.getEncryptColumns();
         String dbTable = dbhsmEncryptColumnsAdd.getDbTable();

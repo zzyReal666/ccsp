@@ -65,6 +65,7 @@ public class PostgreSQLStock {
         String userSchema = "\""+user.getDbSchema()+"\"";
         String encOrdecStr = encOrdec ? "_encrypt(" : "_decrypt(";
         String funName = userSchema + ".tr_" + DbConstants.algMappingStrOrFpe(alg) + "_stock_" + user.getUserName() + "_" + dbhsmEncryptColumnsAdd.getDbTable()+ "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
+        log.info("trFunStockPostgreSQL PID:{}",dbhsmEncryptColumnsAdd.getId());
         try{
             // 1、定义触发器函数
             log.info("1、创建PostgreSql存量数据触发器函数start");
@@ -90,7 +91,7 @@ public class PostgreSQLStock {
             transFun.append(System.getProperty("line.separator"));
             transFun.append("'" + dbhsmEncryptColumnsAdd.getEncryptColumns() + "',");
             transFun.append(System.getProperty("line.separator"));
-            transFun.append("CAST(user AS text),");
+            transFun.append("'"+user.getUserName()+"',");
             transFun.append(System.getProperty("line.separator"));
 
             if (DbConstants.SGD_SM4.equals(dbhsmEncryptColumnsAdd.getEncryptionAlgorithm())) {

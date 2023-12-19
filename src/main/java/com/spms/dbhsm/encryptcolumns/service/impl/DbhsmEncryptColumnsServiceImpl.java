@@ -211,7 +211,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             BeanUtils.copyProperties(dbhsmEncryptColumnsAdd, dbhsmEncryptColumns);
             DbhsmDbUser user = new DbhsmDbUser();
             if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
-                OraclelStock.oracleStockEncOrDec(conn, dbhsmEncryptColumnsAdd, DbConstants.STOCK_DATA_ENCRYPTION);
+                OraclelStock.oracleStockEncOrDec(conn,instance, dbhsmEncryptColumnsAdd, DbConstants.STOCK_DATA_ENCRYPTION);
             } else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
                 SqlServerStock.sqlserverStockEncOrDec(conn, dbhsmEncryptColumnsAdd,DbConstants.ENC_FLAG);
             } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
@@ -448,12 +448,14 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                     if (preparedStatement != null) {
                         preparedStatement.close();
                     }
-                    //if (connection != null) {
-                    //    connection.close();
-                    //}
+                    if (connection != null) {
+                        connection.close();
+                    }
                 }
         }
-
+        //存量数据解密（放到最后为了删除时不等待，直接给到线程，放到删除之前会等待创建视图影响体验）
+        stockDecBeforeDel(encryptColumns,instance);
+        Thread.sleep(3000);
         int ret = dbhsmEncryptColumnsMapper.deleteDbhsmEncryptColumnsByIds(ids);
         if (ret > 0) {
             //重新创建视图
@@ -463,8 +465,8 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
                 BeanUtils.copyProperties(instance, connDTO);
                 Connection connection = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
-
-                //for (int i = 0; i < dbhsmEncryptColumns.size(); i++) {
+                try {
+                    //for (int i = 0; i < dbhsmEncryptColumns.size(); i++) {
                     DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd = new DbhsmEncryptColumnsAdd();
                     BeanUtils.copyProperties(dbhsmEncryptColumns.get(0), dbhsmEncryptColumnsAdd);
                     String ip = getIp(dbhsmEncryptColumns.get(0).getEthernetPort());
@@ -474,21 +476,21 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                     boolean viewRet = ViewUtil.operView(connection, dbhsmEncryptColumnsAdd, dbhsmEncryptColumnsMapper,userSchema);
                     if (viewRet) {
                         connection.commit();
-                        //connection.close();
                     } else {
-                        //if (connection != null) {
-                        //    connection.close();
-                        //}
                         log.error("创建视图异常");
                         throw new Exception("创建视图异常");
                     }
-
-                //}
+                    //}
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    if (connection != null) {
+                        connection.close();
+                    }
+                }
             }
-
         }
-        //存量数据解密（放到最后为了删除时不等待，直接给到线程，放到删除之前会等待创建视图影响体验）
-        stockDecBeforeDel(encryptColumns,instance);
+
         return ret;
     }
 
@@ -549,7 +551,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                     //存量数据解密
                     SqlServerStock.sqlserverStockEncOrDec(connection, encryptColumnsAdd,DbConstants.DEC_FLAG);
                 } else if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
-                    OraclelStock.oracleStockEncOrDec(connection, encryptColumnsAdd,DbConstants.STOCK_DATA_DECRYPTION);
+                    OraclelStock.oracleStockEncOrDec(connection,instance, encryptColumnsAdd,DbConstants.STOCK_DATA_DECRYPTION);
                 } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
                     MysqlStock.mysqlStockEncOrDec(connection, encryptColumnsAdd,DbConstants.STOCK_DATA_DECRYPTION);
                 }
