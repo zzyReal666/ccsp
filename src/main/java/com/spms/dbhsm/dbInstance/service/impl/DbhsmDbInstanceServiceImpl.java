@@ -287,10 +287,14 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
                 continue;
             }
             i = dbhsmDbInstanceMapper.deleteDbhsmDbInstanceById(id);
-            //删除加解密函数
-            delEncDecFunction(instanceById);
-            //删除连接池
-            DbConnectionPoolFactory.getInstance().unbind(DbConnectionPoolFactory.instanceConventKey(instanceById));
+            try {
+                //删除加解密函数
+                delEncDecFunction(instanceById);
+                //删除连接池
+                DbConnectionPoolFactory.getInstance().unbind(DbConnectionPoolFactory.instanceConventKey(instanceById));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         return isUsedInstances.size()>0? AjaxResult.error("实例："+StringUtils.join(isUsedInstances,",")+"已从管理端创建过用户，无法删除！"):AjaxResult.success();
     }

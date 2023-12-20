@@ -192,6 +192,7 @@ public class MysqlStock {
             statement.execute("call cursorProc()");
         } catch (Exception e) {
             e.printStackTrace();
+            log.error("mysql存量加解密异常，加密列信息"+dbhsmEncryptColumnsAdd);
             throw new Exception(e.getMessage());
         } finally {
             if (statement != null) {

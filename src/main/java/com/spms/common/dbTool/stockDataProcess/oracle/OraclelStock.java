@@ -222,6 +222,7 @@ public class OraclelStock {
             statement.execute(transFun.toString());
         } catch (Exception e) {
             e.printStackTrace();
+            log.error("oracle存量加解密异常，加密列信息"+dbhsmEncryptColumnsAdd);
             throw new Exception(e.getMessage());
         } finally {
             if (statement != null) {

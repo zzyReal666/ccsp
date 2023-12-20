@@ -453,7 +453,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                     }
                 }
         }
-        //存量数据解密（放到最后为了删除时不等待，直接给到线程，放到删除之前会等待创建视图影响体验）
+        //存量数据解密
         stockDecBeforeDel(encryptColumns,instance);
         Thread.sleep(3000);
         int ret = dbhsmEncryptColumnsMapper.deleteDbhsmEncryptColumnsByIds(ids);

@@ -414,9 +414,9 @@ public class ViewUtil {
                     item.append(System.getProperty("line.separator"));
                     item.append("CAST(Database() AS CHAR),#--库名");
                     item.append(System.getProperty("line.separator"));
-                    item.append("'" + encryptColumns.getDbTable() + "',#--表名");
+                    item.append("'" + encryptColumn1.getDbTable() + "',#--表名");
                     item.append(System.getProperty("line.separator"));
-                    item.append("'" + encryptColumns.getEncryptColumns() + "',#--列名");
+                    item.append("'" + encryptColumn1.getEncryptColumns() + "',#--列名");
                     item.append(System.getProperty("line.separator"));
                     item.append("CAST(User() AS CHAR),#--用户名");
                     item.append(System.getProperty("line.separator"));
@@ -424,12 +424,12 @@ public class ViewUtil {
                     if (DbConstants.SGD_SM4.equals(encryptColumn1.getEncryptionAlgorithm())) {
                         item.append(columnName + "," + "0,0)"+ (haveEncColumn ? ")" : "")+"\n");
                     } else {
-                        if (DbConstants.ESTABLISH_RULES_YES.equals(encryptColumns.getEstablishRules())) {
+                        if (DbConstants.ESTABLISH_RULES_YES.equals(encryptColumn1.getEstablishRules())) {
                             //加密列
                             item.append( columnName + "," +
                                     //偏移量
-                                    (encryptColumns.getEncryptionOffset() -1 ) + "," +
-                                    (encryptColumns.getEncryptionLength()-(encryptColumns.getEncryptionOffset() -1 )) +","+algorithm+ ")"+(haveEncColumn ? ")" : "")+"\n");
+                                    (encryptColumn1.getEncryptionOffset() -1 ) + "," +
+                                    (encryptColumn1.getEncryptionLength()-(encryptColumn1.getEncryptionOffset() -1 )) +","+algorithm+ ")"+(haveEncColumn ? ")" : "")+"\n");
                         } else {
                             item.append( columnName + "," + "0,0,"+algorithm + ")"+(haveEncColumn ? ")" : "")+"\n");
                         }

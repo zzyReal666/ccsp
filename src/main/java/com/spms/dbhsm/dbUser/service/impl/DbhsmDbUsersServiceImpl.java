@@ -792,7 +792,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
             conn.commit();
 
             //赋执行库文件liboraextapi的权限
-            sql = "CREATE OR REPLACE LIBRARY liboraextapi AS '" + dbhsmDbUser.getEncLibapiPath() + ".dll'";
+            sql = "CREATE OR REPLACE LIBRARY liboraextapi AS '" + dbhsmDbUser.getEncLibapiPath() + "'";
             log.info("赋执行库文件liboraextapi的权限sql: {}", sql);
             preparedStatement = conn.prepareStatement(sql);
             preparedStatement.execute();
@@ -881,6 +881,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         PreparedStatement preparedStatement = null;
         int resultSet = 0;
         String sql = "";
+        List<String> errorList = new ArrayList<>();
         for (Long id : ids) {
             //根据用户id查询用户
             DbhsmDbUser dbhsmDbUser = dbhsmDbUsersMapper.selectDbhsmDbUsersById(id);
@@ -929,7 +930,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
             } catch (SQLException e) {
                 log.info("删除数据库用户失败!执行SQL:{}", sql);
                 e.printStackTrace();
-                throw new SQLException(e.getMessage());
+                errorList.add(userName);
             } finally {
                 //释放资源
                 if (preparedStatement != null) {
@@ -939,6 +940,9 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                     connection.close();
                 }
             }
+        }
+        if(errorList.size()> 0){
+            throw new ZAYKException("删除以下数据库用户失败!失败用户列表:" + StringUtils.join(errorList,","));
         }
         return resultSet;
     }

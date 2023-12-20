@@ -122,6 +122,7 @@ public class PostgreSQLStock {
             //conn.commit();
         } catch (Exception e) {
             e.printStackTrace();
+            log.error("pgSql存量"+(encOrdec ? "加密" : "解密")+"异常，加密列信息"+dbhsmEncryptColumnsAdd);
             throw new Exception(e.getMessage());
         } finally {
             if (statement != null) {

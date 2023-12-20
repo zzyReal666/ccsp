@@ -1,5 +1,6 @@
 package com.spms.common.dbTool;
 
+import com.spms.common.DBStringUtil;
 import com.spms.dbhsm.dbUser.domain.DbhsmDbUser;
 import lombok.extern.slf4j.Slf4j;
 
@@ -630,7 +631,7 @@ public class ProcedureUtil {
         transSQL.append("create ASSEMBLY libsqlextdll");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("FROM '" + libsqlextPath + ".dll'");
+        transSQL.append("FROM '" + libsqlextPath + "'");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("WITH permission_set = UnSafe;");
@@ -672,6 +673,7 @@ public class ProcedureUtil {
          *      LANGUAGE C STRICT;
          *
          */
+        String encLibapiPath = DBStringUtil.removeFileExtension(dbhsmDbUser.getEncLibapiPath());
         StringBuilder transSQL = new StringBuilder();
         transSQL.append("CREATE OR REPLACE FUNCTION ");
         transSQL.append(System.getProperty("line.separator"));
@@ -703,7 +705,7 @@ public class ProcedureUtil {
         transSQL.append("RETURNS varchar");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("AS '" + dbhsmDbUser.getEncLibapiPath()+"', 'pgext_func_string_encrypt'");
+        transSQL.append("AS '" + encLibapiPath +"', 'pgext_func_string_encrypt'");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append(" LANGUAGE C STRICT;");
@@ -747,6 +749,7 @@ public class ProcedureUtil {
          * LANGUAGE C STRICT;
          *
          */
+        String encLibapiPath = DBStringUtil.removeFileExtension(dbhsmDbUser.getEncLibapiPath());
         StringBuilder transSQL = new StringBuilder();
         transSQL.append("CREATE OR REPLACE FUNCTION ");
         transSQL.append(System.getProperty("line.separator"));
@@ -779,7 +782,7 @@ public class ProcedureUtil {
         transSQL.append("RETURNS varchar");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("AS '" + dbhsmDbUser.getEncLibapiPath()+"', 'pgext_func_string_decrypt'");
+        transSQL.append("AS '" + encLibapiPath +"', 'pgext_func_string_decrypt'");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append(" LANGUAGE C STRICT;");
@@ -821,6 +824,7 @@ public class ProcedureUtil {
          *      LANGUAGE C STRICT;
          *
          */
+        String encLibapiPath = DBStringUtil.removeFileExtension(dbhsmDbUser.getEncLibapiPath());
         StringBuilder transSQL = new StringBuilder();
         transSQL.append("CREATE OR REPLACE FUNCTION ");
         transSQL.append(System.getProperty("line.separator"));
@@ -855,7 +859,7 @@ public class ProcedureUtil {
         transSQL.append("RETURNS text");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("AS '" + dbhsmDbUser.getEncLibapiPath()+"', 'pgext_func_fpe_encrypt'");
+        transSQL.append("AS '" + encLibapiPath +"', 'pgext_func_fpe_encrypt'");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append(" LANGUAGE C STRICT;");
@@ -896,6 +900,7 @@ public class ProcedureUtil {
          *      AS 'D:\pgsql\postgreSQL', 'pgext_func_fpe_decrypt'
          *      LANGUAGE C STRICT;
          */
+        String encLibapiPath = DBStringUtil.removeFileExtension(dbhsmDbUser.getEncLibapiPath());
         StringBuilder transSQL = new StringBuilder();
         transSQL.append("CREATE OR REPLACE FUNCTION ");
         transSQL.append(System.getProperty("line.separator"));
@@ -930,7 +935,7 @@ public class ProcedureUtil {
         transSQL.append("RETURNS text");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("AS '" + dbhsmDbUser.getEncLibapiPath()+"', 'pgext_func_fpe_decrypt'");
+        transSQL.append("AS '" + encLibapiPath+"', 'pgext_func_fpe_decrypt'");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append(" LANGUAGE C STRICT;");
