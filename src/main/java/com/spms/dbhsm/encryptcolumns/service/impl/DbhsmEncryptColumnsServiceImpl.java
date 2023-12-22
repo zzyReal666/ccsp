@@ -10,7 +10,7 @@ import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.ccsp.common.security.utils.DictUtils;
 import com.ccsp.common.security.utils.SecurityUtils;
 import com.ccsp.system.api.systemApi.domain.SysDictData;
-import com.spms.common.CommandUtil;
+import com.spms.common.DBIpUtil;
 import com.spms.common.JSONDataUtil;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.dbTool.DBUtil;
@@ -202,7 +202,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             BeanUtils.copyProperties(instance, connDTO);
             conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
             //获取端口对应的IP
-            String ip = getIp(dbhsmEncryptColumnsAdd.getEthernetPort());
+            String ip = DBIpUtil.getIp(dbhsmEncryptColumnsAdd.getEthernetPort());
             dbhsmEncryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);
             dbhsmEncryptColumnsAdd.setEncryptionStatus(DbConstants.ENCRYPTED);
             dbhsmEncryptColumnsAdd.setCreateTime(DateUtils.getNowDate());
@@ -253,7 +253,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
 
         //获取端口对应的IP
-        String ip = getIp(dbhsmEncryptColumnsAdd.getEthernetPort());
+        String ip = DBIpUtil.getIp(dbhsmEncryptColumnsAdd.getEthernetPort());
         dbhsmEncryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);
         dbhsmEncryptColumnsAdd.setEncryptionStatus(DbConstants.ENCRYPTED);
         dbhsmEncryptColumnsAdd.setId(SnowFlakeUtil.getSnowflakeId());
@@ -303,7 +303,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             conn.commit();
 
             //存量数据加密
-            //ip = getIp(dbhsmEncryptColumnsAdd.getEthernetPort());
+            //ip = DBIpUtil.getIp(dbhsmEncryptColumnsAdd.getEthernetPort());
             //dbhsmEncryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);;
             //if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
             //
@@ -383,7 +383,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
 
                     DbhsmEncryptColumnsAdd encryptColumnsAdd = new DbhsmEncryptColumnsAdd();
                     BeanUtils.copyProperties(encryptColumns, encryptColumnsAdd);
-                    String ip = getIp(encryptColumnsAdd.getEthernetPort());
+                    String ip = DBIpUtil.getIp(encryptColumnsAdd.getEthernetPort());
                     encryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);
                     encryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
                     if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
@@ -469,7 +469,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                     //for (int i = 0; i < dbhsmEncryptColumns.size(); i++) {
                     DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd = new DbhsmEncryptColumnsAdd();
                     BeanUtils.copyProperties(dbhsmEncryptColumns.get(0), dbhsmEncryptColumnsAdd);
-                    String ip = getIp(dbhsmEncryptColumns.get(0).getEthernetPort());
+                    String ip = DBIpUtil.getIp(dbhsmEncryptColumns.get(0).getEthernetPort());
                     dbhsmEncryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);
                     dbhsmEncryptColumnsAdd.setDatabaseType(instance.getDatabaseType());
                     dbhsmEncryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
@@ -505,7 +505,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
 
                 DbhsmEncryptColumnsAdd encryptColumnsAdd = new DbhsmEncryptColumnsAdd();
                 BeanUtils.copyProperties(encryptColumns, encryptColumnsAdd);
-                String ip = getIp(encryptColumnsAdd.getEthernetPort());
+                String ip = DBIpUtil.getIp(encryptColumnsAdd.getEthernetPort());
                 encryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);
                 encryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
                 if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
@@ -595,32 +595,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         thread.start();
     }
 
-    /**
-     * 根据网口名称获取IP
-     * @param ethernetPort
-     * @return
-     */
-    private String getIp(String ethernetPort) throws Exception {
-        //获取端口
-        String osName = System.getProperty("os.name");
-        String ip = "";
-         if (osName.toLowerCase().startsWith("linux")) {
-             ip = CommandUtil.exeCmd("ip a| grep " + ethernetPort.split("@")[0] + " |grep inet |awk '{print $2}'|awk -F '/' '{print $1}'");
-             if (StringUtils.isEmpty(ip)) {
-                 throw new Exception(ethernetPort + "口IP不存在,请先进行配置IP");
-             }
-             ip = ip.trim().replaceAll("\n", ",");
-             if (StringUtils.isEmpty(ip)) {
-                 throw new Exception(ethernetPort + "口IP不存在,请先进行配置IP");
-             }
-             if (ip.lastIndexOf(",") == 0) {
-                 ip = ip.substring(0, ip.length() - 1);
-             }
 
-        }
-
-        return ip.split(",")[0];
-    }
 
     public static void main(String[] args) {
         String ethernetPort="eth0";
