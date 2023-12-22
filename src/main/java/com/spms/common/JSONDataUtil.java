@@ -29,20 +29,35 @@ import java.util.*;
 public class JSONDataUtil {
     @Resource
     private static SpmsDevBaseDataService devBaseDataService;
-
+    private static long reConnErrNum = 0;
 
     /**
      * 从数据库获取某个数据的值
      */
+
     public static String getSysDataToDB(String key) {
 
         if (devBaseDataService == null) {
             devBaseDataService = SpringUtils.getBean(SpmsDevBaseDataService.class);
         }
 
-        R<DevBaseData> devBaseDataR = devBaseDataService.selectBaseDataByKey(key);
-        if (devBaseDataR.getData() != null) {
-            return devBaseDataR.getData().getDataValue();
+        try{
+            R<DevBaseData> devBaseDataR = devBaseDataService.selectBaseDataByKey(key);
+            reConnErrNum = 0;
+            if (devBaseDataR.getData() != null) {
+                return devBaseDataR.getData().getDataValue();
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+            if (reConnErrNum < 5){
+                log.info("系统模块连接异常，5秒后进行重连");
+                try {
+                    Thread.sleep(5 * 1000);
+                } catch (InterruptedException ex) {
+                }
+                ++reConnErrNum;
+                getSysDataToDB(key);
+            }
         }
         return null;
     }
