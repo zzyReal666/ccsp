@@ -1,6 +1,7 @@
 package com.spms.dbhsm.secretKey.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.RandomUtil;
 import com.ccsp.common.core.domain.R;
 import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.DateUtils;
@@ -99,8 +100,10 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
             int keyGenerationMode = JSONDataUtil.getSecretKeyGenerateType(DbConstants.SYSDATA_ALGORITHM_TYPE_SYK);
             if (keyGenerationMode == DbConstants.HARD_SECRET_KEY) {
                 generatorSym(dbhsmSecretKeyManage.getSecretKeyType(), dbhsmSecretKeyManage.getSecretKeyIndex().intValue(), dbhsmSecretKeyManage.getSecretKeyLength());
-            }else {
+            } else if (keyGenerationMode == DbConstants.BULK_SECRET_KEY) {
                 generatorBulkKey(dbhsmSecretKeyManage);
+            } else{
+                generatorSoftKey(dbhsmSecretKeyManage);
             }
         }else if(DbConstants.KEY_SOURCE_KMIP.intValue() == dbhsmSecretKeyManage.getSecretKeySource().intValue()) {
             //调用KMIP
@@ -218,6 +221,43 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
     }
 
     /**
+     * 纯软密钥
+     * @param dbhsmSecretKeyManage
+     * @throws ZAYKException
+     */
+    private void generatorSoftKey(DbhsmSecretKeyManage dbhsmSecretKeyManage) throws ZAYKException {
+        int secretKeyLength=dbhsmSecretKeyManage.getSecretKeyLength();
+        Long keyIndex = dbhsmSecretKeyManage.getSecretKeyIndex();
+        Integer secretKeyType = dbhsmSecretKeyManage.getSecretKeyType();
+
+        KeyPairInfo keyPairInfo = new KeyPairInfo();
+
+        // 软密钥--对称
+        byte[] random = RandomUtil.randomBytes(secretKeyLength);
+        keyPairInfo.setPrivateKey(Base64.toBase64String(random));
+        keyPairInfo.setPublicKey(Base64.toBase64String(random));
+        keyPairInfo.setSecretKeyIndex(Math.toIntExact(keyIndex));
+        keyPairInfo.setSecretKeyUsage(1);
+        keyPairInfo.setSecretKeyModuleLength(secretKeyLength);
+        keyPairInfo.setSecretKeyType(secretKeyType.toString());
+        //插入数据库
+        ArrayList<HsmSymmetricSecretKey> secretKeyArrayList = new ArrayList<>();
+        HsmSymmetricSecretKey symmetricSecretKey = new HsmSymmetricSecretKey();
+        symmetricSecretKey.setSecretKeyId(UUID.randomUUID().toString());
+        symmetricSecretKey.setSecretKeyIndex(String.valueOf(keyPairInfo.getSecretKeyIndex()));
+        symmetricSecretKey.setSecretKeyModuleLength(secretKeyLength);
+        symmetricSecretKey.setSecretKeyUsage(keyPairInfo.getSecretKeyUsage());
+        symmetricSecretKey.setPublicKey(keyPairInfo.getPublicKey());
+        symmetricSecretKey.setPrivateKey(keyPairInfo.getPrivateKey());
+        symmetricSecretKey.setCreateTime(DateUtils.getNowDate());
+        secretKeyArrayList.add(symmetricSecretKey);
+        R<AjaxResult2> batchR = remoteSecretKeyService.insertHsmSymSecretKeyBatch(secretKeyArrayList);
+        if (batchR.getCode() != DbConstants.SUCCESS) {
+            log.error(" insertHsmSymSecretKeyBatch error :" + batchR.getMsg());
+        }
+    }
+
+    /**
      * 修改数据库密钥
      *
      * @param dbhsmSecretKeyManage 数据库密钥
@@ -228,7 +268,14 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
     public int updateDbhsmSecretKeyManage(DbhsmSecretKeyManage dbhsmSecretKeyManage) throws Exception {
         //如果密钥来源为卡内密钥，切该索引密钥未生成，则生成卡内密钥，如果为KMIP则只保存密钥关系
         if(DbConstants.KEY_SOURCE_SECRET_CARD.intValue() == dbhsmSecretKeyManage.getSecretKeySource().intValue()) {
-            generatorSym(dbhsmSecretKeyManage.getSecretKeyType(),dbhsmSecretKeyManage.getSecretKeyIndex().intValue(), dbhsmSecretKeyManage.getSecretKeyLength());
+            int keyGenerationMode = JSONDataUtil.getSecretKeyGenerateType(DbConstants.SYSDATA_ALGORITHM_TYPE_SYK);
+            if (keyGenerationMode == DbConstants.HARD_SECRET_KEY) {
+                generatorSym(dbhsmSecretKeyManage.getSecretKeyType(), dbhsmSecretKeyManage.getSecretKeyIndex().intValue(), dbhsmSecretKeyManage.getSecretKeyLength());
+            } else if (keyGenerationMode == DbConstants.BULK_SECRET_KEY) {
+                generatorBulkKey(dbhsmSecretKeyManage);
+            } else{
+                generatorSoftKey(dbhsmSecretKeyManage);
+            }
         }else if(DbConstants.KEY_SOURCE_KMIP.intValue() == dbhsmSecretKeyManage.getSecretKeySource().intValue()) {
             //调用KMIP
             KMSClientInterface kmipService = KmipServicePoolFactory.getKmipServicePool(dbhsmSecretKeyManage.getSecretKeyServer());
@@ -435,7 +482,6 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
             log.error("addSymmetryManagement ===============》 添加" + keyIndex + "号对称密钥失败");
             throw new Exception("添加" + keyIndex + "号对称密钥失败");
         }
-
     }
 
 }
