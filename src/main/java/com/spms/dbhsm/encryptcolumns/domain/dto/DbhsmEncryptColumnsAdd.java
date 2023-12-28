@@ -7,7 +7,7 @@ import lombok.ToString;
 
 /**
  * 数据库加密列对象 dbhsm_encrypt_columns
- * 
+ *
  * @author diq
  * @date 2023-09-27
  */
@@ -71,5 +71,12 @@ public class DbhsmEncryptColumnsAdd extends TreeEntity
 
     /** 密钥ID：对应密钥表中的id主键字段 */
     private String secretKeyId;
+
+    /** 密钥:软密钥*/
+    private String secretKey;
+
+    /** 列原始定义*/
+    private String columnDefinitions;
+
 
 }

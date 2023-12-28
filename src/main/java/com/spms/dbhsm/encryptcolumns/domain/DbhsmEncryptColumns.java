@@ -7,7 +7,7 @@ import com.ccsp.common.core.web.domain.TreeEntity;
 
 /**
  * 数据库加密列对象 dbhsm_encrypt_columns
- * 
+ *
  * @author diq
  * @date 2023-09-27
  */
@@ -63,115 +63,120 @@ public class DbhsmEncryptColumns extends TreeEntity
     /** 密钥ID：对应密钥表中的id主键字段 */
     private String secretKeyId;
 
-    public void setId(String id) 
+    /** 列原始定义*/
+    private String columnDefinitions;
+    /** 密钥:软密钥*/
+    private String secretKey;
+
+    public void setId(String id)
     {
         this.id = id;
     }
 
-    public String getId() 
+    public String getId()
     {
         return id;
     }
-    public void setDbInstanceId(Long dbInstanceId) 
+    public void setDbInstanceId(Long dbInstanceId)
     {
         this.dbInstanceId = dbInstanceId;
     }
 
-    public Long getDbInstanceId() 
+    public Long getDbInstanceId()
     {
         return dbInstanceId;
     }
-    public void setDbInstance(String dbInstance) 
+    public void setDbInstance(String dbInstance)
     {
         this.dbInstance = dbInstance;
     }
 
-    public String getDbInstance() 
+    public String getDbInstance()
     {
         return dbInstance;
     }
-    public void setDbUserName(String dbUserName) 
+    public void setDbUserName(String dbUserName)
     {
         this.dbUserName = dbUserName;
     }
 
-    public String getDbUserName() 
+    public String getDbUserName()
     {
         return dbUserName;
     }
-    public void setDbTable(String dbTable) 
+    public void setDbTable(String dbTable)
     {
         this.dbTable = dbTable;
     }
 
-    public String getDbTable() 
+    public String getDbTable()
     {
         return dbTable;
     }
-    public void setEthernetPort(String ethernetPort) 
+    public void setEthernetPort(String ethernetPort)
     {
         this.ethernetPort = ethernetPort;
     }
 
-    public String getEthernetPort() 
+    public String getEthernetPort()
     {
         return ethernetPort;
     }
-    public void setEncryptColumns(String encryptColumns) 
+    public void setEncryptColumns(String encryptColumns)
     {
         this.encryptColumns = encryptColumns;
     }
 
-    public String getEncryptColumns() 
+    public String getEncryptColumns()
     {
         return encryptColumns;
     }
-    public void setColumnsType(String columnsType) 
+    public void setColumnsType(String columnsType)
     {
         this.columnsType = columnsType;
     }
 
-    public String getColumnsType() 
+    public String getColumnsType()
     {
         return columnsType;
     }
-    public void setEncryptionStatus(Integer encryptionStatus) 
+    public void setEncryptionStatus(Integer encryptionStatus)
     {
         this.encryptionStatus = encryptionStatus;
     }
 
-    public Integer getEncryptionStatus() 
+    public Integer getEncryptionStatus()
     {
         return encryptionStatus;
     }
-    public void setEncryptionAlgorithm(String encryptionAlgorithm) 
+    public void setEncryptionAlgorithm(String encryptionAlgorithm)
     {
         this.encryptionAlgorithm = encryptionAlgorithm;
     }
 
-    public String getEncryptionAlgorithm() 
+    public String getEncryptionAlgorithm()
     {
         return encryptionAlgorithm;
     }
-    public void setEstablishRules(Integer establishRules) 
+    public void setEstablishRules(Integer establishRules)
     {
         this.establishRules = establishRules;
     }
 
-    public Integer getEstablishRules() 
+    public Integer getEstablishRules()
     {
         return establishRules;
     }
-    public void setEncryptionOffset(Integer encryptionOffset) 
+    public void setEncryptionOffset(Integer encryptionOffset)
     {
         this.encryptionOffset = encryptionOffset;
     }
 
-    public Integer getEncryptionOffset() 
+    public Integer getEncryptionOffset()
     {
         return encryptionOffset;
     }
-    public void setEncryptionLength(Long encryptionLength) 
+    public void setEncryptionLength(Long encryptionLength)
     {
         this.encryptionLength = encryptionLength;
     }
@@ -188,6 +193,22 @@ public class DbhsmEncryptColumns extends TreeEntity
     public String getSecretKeyId()
     {
         return secretKeyId;
+    }
+
+    public String getColumnDefinitions() {
+        return columnDefinitions;
+    }
+
+    public void setColumnDefinitions(String columnDefinitions) {
+        this.columnDefinitions = columnDefinitions;
+    }
+
+    public String getSecretKey() {
+        return secretKey;
+    }
+
+    public void setSecretKey(String secretKey) {
+        this.secretKey = secretKey;
     }
 
     @Override
@@ -211,6 +232,9 @@ public class DbhsmEncryptColumns extends TreeEntity
             .append("createBy", getCreateBy())
             .append("updateTime", getUpdateTime())
             .append("updateBy", getUpdateBy())
+            .append("updateBy", getUpdateBy())
+            .append("columnDefinitions", getColumnDefinitions())
+            .append("secretKey", getSecretKey())
             .toString();
     }
 }

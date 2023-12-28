@@ -27,6 +27,8 @@ public class DbConstants {
     /**字典类型*/
     public static final String DBHSM_DB_TYPE = "dbhsm_db_type";
     public static final String DB_SQL_POSTGRESQL_USER_QUERY = "select  * from pg_user";
+    public static final String DB_SQL_DM_USER_QUERY = "select * from dba_users";
+
     /**存量数据加密解密 加密true，解密false*/
     public static final Boolean STOCK_DATA_ENCRYPTION = true;
     public static final Boolean STOCK_DATA_DECRYPTION = false;
@@ -35,6 +37,12 @@ public class DbConstants {
     public static final int ENC_FLAG = 1;
     /**数据库加密网关web端口key*/
     public static final String DBENC_WEB_PORT =  "dbencWebPort";
+    /**查询表空间*/
+    public static final String DB_SQL_ORACLE_TABLESPACE_QUERY = "select tablespace_name from dba_data_files where tablespace_name!='UNDOTBS1' and tablespace_name!='SYSTEM' and tablespace_name!='SYSAUX'";
+    public static final String DB_SQL_DM_TABLESPACE_QUERY = "select tablespace_name from dba_data_files where tablespace_name!='SYSTEM' and tablespace_name!='TEMP' and tablespace_name!='ROLL'";
+    //系统主密钥
+    public static final String SYSTEM_MASTER_KEY = "systemMasterKey";
+
     /**
      * 请求成功
      */
@@ -70,7 +78,9 @@ public class DbConstants {
     public static final String DB_TYPE_MYSQL_DESC = "MySql";
     public static final String DB_TYPE_POSTGRESQL = "3";
     public static final String DB_TYPE_POSTGRESQL_DESC = "PostgreSQL";
-    public static final String DB_TYPE_DB2 = "4";
+    public static final String DB_TYPE_DM = "4" ;
+    public static final String DB_TYPE_DM_DESC = "DM" ;
+    public static final String DB_TYPE_DB2 = "5";
     public static final String DB_TYPE_DB2_DESC = "DB2";
     public static final String DB_COLUMN_NAME = "columnName";
 

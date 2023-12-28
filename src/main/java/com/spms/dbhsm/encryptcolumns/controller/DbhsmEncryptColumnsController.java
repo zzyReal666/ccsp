@@ -1,5 +1,6 @@
 package com.spms.dbhsm.encryptcolumns.controller;
 
+import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.poi.ExcelUtil;
 import com.ccsp.common.core.web.controller.BaseController;
 import com.ccsp.common.core.web.domain.AjaxResult;
@@ -7,6 +8,7 @@ import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.ccsp.common.log.annotation.Log;
 import com.ccsp.common.log.enums.BusinessType;
 import com.ccsp.common.security.annotation.RequiresPermissions;
+import com.ccsp.system.api.systemApi.domain.SysDictData;
 import com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsAdd;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsDto;
@@ -15,6 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -72,6 +76,23 @@ public class DbhsmEncryptColumnsController extends BaseController
     public AjaxResult getInfo(@PathVariable("id") String id)
     {
         return AjaxResult.success(dbhsmEncryptColumnsService.selectDbhsmEncryptColumnsById(id));
+    }
+
+    /**
+     * 获取达梦数据库加密算法列表
+     */
+    @RequiresPermissions("dbhsm:encryptcolumns:query")
+    @GetMapping(value = "/listDMAlgList")
+    public AjaxResult getDMAlg(DbhsmEncryptColumnsDto dbhsmEncryptColumns)
+    {
+        List<SysDictData> arrayList= new ArrayList<SysDictData>();
+        try {
+            arrayList = dbhsmEncryptColumnsService.selectDMAlg(dbhsmEncryptColumns);
+        } catch (ZAYKException | SQLException e) {
+            e.printStackTrace();
+            return AjaxResult.error("获取达梦算法列表失败！");
+        }
+        return AjaxResult.success(arrayList);
     }
 
     /**

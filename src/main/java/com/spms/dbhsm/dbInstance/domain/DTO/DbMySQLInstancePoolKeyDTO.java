@@ -11,7 +11,7 @@ import lombok.Data;
  */
 @Data
 @Builder
-public class DbSQLServernstancePoolKeyDTO extends DbInstancePoolKeyDTO
+public class DbMySQLInstancePoolKeyDTO extends DbInstancePoolKeyDTO
 {
     /** 数据库类型 */
     private String databaseType;
@@ -28,10 +28,10 @@ public class DbSQLServernstancePoolKeyDTO extends DbInstancePoolKeyDTO
     /** 数据库DBA */
     private String databaseDba;
 
-    public DbSQLServernstancePoolKeyDTO() {
+    public DbMySQLInstancePoolKeyDTO() {
     }
 
-    public DbSQLServernstancePoolKeyDTO(String databaseType, String databaseIp, String databasePort, String databaseServerName, String databaseDba) {
+    public DbMySQLInstancePoolKeyDTO(String databaseType, String databaseIp, String databasePort, String databaseServerName, String databaseDba) {
         this.databaseType = databaseType;
         this.databaseIp = databaseIp;
         this.databasePort = databasePort;
@@ -44,11 +44,11 @@ public class DbSQLServernstancePoolKeyDTO extends DbInstancePoolKeyDTO
         if (this == o) {
             return true;
         }
-        if (!(o instanceof DbSQLServernstancePoolKeyDTO)) {
+        if (!(o instanceof DbMySQLInstancePoolKeyDTO)) {
             return false;
         }
 
-        DbSQLServernstancePoolKeyDTO that = (DbSQLServernstancePoolKeyDTO) o;
+        DbMySQLInstancePoolKeyDTO that = (DbMySQLInstancePoolKeyDTO) o;
 
         if (getDatabaseType() != null ? !getDatabaseType().equals(that.getDatabaseType()) : that.getDatabaseType() != null) {
             return false;
@@ -74,6 +74,5 @@ public class DbSQLServernstancePoolKeyDTO extends DbInstancePoolKeyDTO
         result = 31 * result + (getDatabaseDba() != null ? getDatabaseDba().hashCode() : 0);
         return result;
     }
-
 
 }

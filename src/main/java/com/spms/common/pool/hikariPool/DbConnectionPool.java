@@ -54,6 +54,9 @@ public class DbConnectionPool {
             case DbConstants.DB_TYPE_POSTGRESQL:
                 config.setJdbcUrl("jdbc:postgresql://" + databaseIp + ":" + databasePort + "/" + databaseServerName);
                 break;
+            case DbConstants.DB_TYPE_DM:
+                config.setJdbcUrl("jdbc:dm://" + databaseIp + ":" + databasePort + "/" + databaseServerName);
+                break;
             default:
                 throw new IllegalArgumentException("Unsupported database type: " + databaseType);
         }
@@ -73,7 +76,7 @@ public class DbConnectionPool {
         } catch (Exception e) {
             e.printStackTrace();
             log.info("Could not create HikariCP data source");
-            throw new RuntimeException("创建连接池失败！请检查网络是否正常及用户名密码是否正确。", e);
+            throw new RuntimeException("与数据库"+databaseServerName+"创建连接失败！请检查网络是否正常及DBA用户名密码是否正确。", e);
         }
     }
 
@@ -103,17 +106,17 @@ public class DbConnectionPool {
         //instance.setDatabaseExampleType(":");
         //instance.setDatabaseDba("user55");
         //instance.setDatabaseDbaPassword("12345678");
-        instance.setDatabaseType(DbConstants.DB_TYPE_POSTGRESQL);
-        instance.setDatabaseIp("192.168.7.39");
-        instance.setDatabasePort("5432");
-        instance.setDatabaseServerName("pgDB");
+        instance.setDatabaseType(DbConstants.DB_TYPE_DM);
+        instance.setDatabaseIp("192.168.6.158");
+        instance.setDatabasePort("5236");
+        instance.setDatabaseServerName("dbtest");
         instance.setDatabaseExampleType(":");
-        instance.setDatabaseDba("postgres");
-        instance.setDatabaseDbaPassword("postgres1");
+        instance.setDatabaseDba("SYSDBA");
+        instance.setDatabaseDbaPassword("SYSDBA");
         DbConnectionPoolFactory factory = new DbConnectionPoolFactory();
         Connection connection = factory.getConnection(instance);
         System.out.println(connection);
-        String sql = "select * from table1";
+        String sql = "select * from DEVUSER.TABLE_1";
         //String sql1 = "drop user testuser12";
         //String sql = DbConstants.DB_SQL_SQLSERVER_USER_QUERY;
         PreparedStatement statement = null;
@@ -130,7 +133,7 @@ public class DbConnectionPool {
                 while (resultSet.next()) {
                     // 处理结果集
                     //System.out.println(resultSet.getString("id"));
-                    System.out.println(resultSet.getString("con2"));
+                    System.out.println(resultSet.getString("COLUMN_2"));
                 }
             }
         } catch (SQLException e) {

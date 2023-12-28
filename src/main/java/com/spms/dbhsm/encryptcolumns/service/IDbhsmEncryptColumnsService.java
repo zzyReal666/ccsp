@@ -1,7 +1,9 @@
 package com.spms.dbhsm.encryptcolumns.service;
 
 
+import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.web.domain.AjaxResult2;
+import com.ccsp.system.api.systemApi.domain.SysDictData;
 import com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsAdd;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsDto;
@@ -11,15 +13,15 @@ import java.util.List;
 
 /**
  * 数据库加密列Service接口
- * 
+ *
  * @author diq
  * @date 2023-09-27
  */
-public interface IDbhsmEncryptColumnsService 
+public interface IDbhsmEncryptColumnsService
 {
     /**
      * 查询数据库加密列
-     * 
+     *
      * @param id 数据库加密列主键
      * @return 数据库加密列
      */
@@ -27,7 +29,7 @@ public interface IDbhsmEncryptColumnsService
 
     /**
      * 查询数据库加密列列表
-     * 
+     *
      * @param dbhsmEncryptColumns 数据库加密列
      * @return 数据库加密列集合
      */
@@ -35,7 +37,7 @@ public interface IDbhsmEncryptColumnsService
 
     /**
      * 新增数据库加密列
-     * 
+     *
      * @param dbhsmEncryptColumns 数据库加密列
      * @return 结果
      */
@@ -43,7 +45,7 @@ public interface IDbhsmEncryptColumnsService
 
     /**
      * 修改数据库加密列
-     * 
+     *
      * @param dbhsmEncryptColumns 数据库加密列
      * @return 结果
      */
@@ -51,7 +53,7 @@ public interface IDbhsmEncryptColumnsService
 
     /**
      * 批量删除数据库加密列
-     * 
+     *
      * @param ids 需要删除的数据库加密列主键集合
      * @return 结果
      */
@@ -59,7 +61,7 @@ public interface IDbhsmEncryptColumnsService
 
     /**
      * 删除数据库加密列信息
-     * 
+     *
      * @param id 数据库加密列主键
      * @return 结果
      */
@@ -70,4 +72,6 @@ public interface IDbhsmEncryptColumnsService
      * @return
      */
     AjaxResult2 treeData();
+
+    List<SysDictData> selectDMAlg(DbhsmEncryptColumnsDto dbhsmEncryptColumns) throws ZAYKException, SQLException;
 }

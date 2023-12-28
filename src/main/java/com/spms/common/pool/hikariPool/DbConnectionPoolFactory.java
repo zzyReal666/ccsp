@@ -127,17 +127,20 @@ public class DbConnectionPoolFactory {
         return connection;
     }
 
-    private static DbInstancePoolKeyDTO getDbInstancePoolKeyDTO(DbInstancePoolKeyDTO dbInstancekey, String databaseType) {
+    private static DbInstancePoolKeyDTO getDbInstancePoolKeyDTO(DbInstancePoolKeyDTO dbInstancekey, String databaseType) throws ZAYKException {
         if (databaseType.equals(DbConstants.DB_TYPE_ORACLE)) {
             dbInstancekey = new DbOracleInstancePoolKeyDTO();
         } else if (databaseType.equals(DbConstants.DB_TYPE_SQLSERVER)) {
-            dbInstancekey = new DbSQLServernstancePoolKeyDTO();
+            dbInstancekey = new DbSQLServerInstancePoolKeyDTO();
         } else if (databaseType.equals(DbConstants.DB_TYPE_MYSQL)) {
-            dbInstancekey = new DbMySQLnstancePoolKeyDTO();
+            dbInstancekey = new DbMySQLInstancePoolKeyDTO();
         } else if (databaseType.equals(DbConstants.DB_TYPE_POSTGRESQL)) {
-            dbInstancekey = new DbPostgreSQLnstancePoolKeyDTO();
+            dbInstancekey = new DbPostgreSQLInstancePoolKeyDTO();
+        } else if (databaseType.equals(DbConstants.DB_TYPE_DM)) {
+            dbInstancekey = new DbDMInstancePoolKeyDTO();
         } else {
             log.info("Error:未实现的数据库类型");
+            throw  new ZAYKException("未实现的数据库类型");
         }
         return dbInstancekey;
     }
@@ -173,9 +176,15 @@ public class DbConnectionPoolFactory {
         if (instanceGetConnDTO.getDatabaseType().equals(DbConstants.DB_TYPE_ORACLE)) {
             instanceKey = new DbOracleInstancePoolKeyDTO();
         } else if (databaseType.equals(DbConstants.DB_TYPE_SQLSERVER)) {
-            instanceKey = new DbSQLServernstancePoolKeyDTO();
+            instanceKey = new DbSQLServerInstancePoolKeyDTO();
         } else if (databaseType.equals(DbConstants.DB_TYPE_MYSQL)) {
-
+            instanceKey = new DbMySQLInstancePoolKeyDTO();
+        } else if (databaseType.equals(DbConstants.DB_TYPE_POSTGRESQL)) {
+            instanceKey = new DbPostgreSQLInstancePoolKeyDTO();
+        }else if (databaseType.equals(DbConstants.DB_TYPE_DM)) {
+            instanceKey = new DbDMInstancePoolKeyDTO();
+        }else {
+            throw new ZAYKException("不支持的数据库类型：" + databaseType);
         }
         BeanUtils.copyProperties(instanceGetConnDTO,instanceKey);
         checkGetConnIsEmpty(instanceGetConnDTO);
@@ -215,7 +224,7 @@ public class DbConnectionPoolFactory {
      * @param  instance 从池中获取不同数据库连接使用
      * @return
      */
-    public static DbInstancePoolKeyDTO instanceConventKey(DbhsmDbInstance instance) {
+    public static DbInstancePoolKeyDTO instanceConventKey(DbhsmDbInstance instance) throws ZAYKException {
         DbInstancePoolKeyDTO instanceKey = new DbInstancePoolKeyDTO();
         if (ObjectUtils.isEmpty(instance)) {
             return null;

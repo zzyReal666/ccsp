@@ -1,6 +1,5 @@
 package com.spms.dbhsm.dbInstance.domain.DTO;
 
-import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import lombok.Builder;
 import lombok.Data;
 
@@ -12,7 +11,7 @@ import lombok.Data;
  */
 @Data
 @Builder
-public class DbPostgreSQLnstancePoolKeyDTO extends DbInstancePoolKeyDTO
+public class DbDMInstancePoolKeyDTO extends DbInstancePoolKeyDTO
 {
     /** 数据库类型 */
     private String databaseType;
@@ -26,17 +25,20 @@ public class DbPostgreSQLnstancePoolKeyDTO extends DbInstancePoolKeyDTO
     /** 数据库服务名 */
     private String databaseServerName;
 
+    /** 实例类型 */
+    private String databaseExampleType;
+
     /** 数据库DBA */
     private String databaseDba;
 
-    public DbPostgreSQLnstancePoolKeyDTO() {
-    }
+    public DbDMInstancePoolKeyDTO() {}
 
-    public DbPostgreSQLnstancePoolKeyDTO(String databaseType, String databaseIp, String databasePort, String databaseServerName, String databaseDba) {
+    public DbDMInstancePoolKeyDTO(String databaseType, String databaseIp, String databasePort, String databaseServerName, String databaseExampleType, String databaseDba) {
         this.databaseType = databaseType;
         this.databaseIp = databaseIp;
         this.databasePort = databasePort;
         this.databaseServerName = databaseServerName;
+        this.databaseExampleType = databaseExampleType;
         this.databaseDba = databaseDba;
     }
 
@@ -45,11 +47,11 @@ public class DbPostgreSQLnstancePoolKeyDTO extends DbInstancePoolKeyDTO
         if (this == o) {
             return true;
         }
-        if (!(o instanceof DbPostgreSQLnstancePoolKeyDTO)) {
+        if (!(o instanceof DbDMInstancePoolKeyDTO)) {
             return false;
         }
 
-        DbPostgreSQLnstancePoolKeyDTO that = (DbPostgreSQLnstancePoolKeyDTO) o;
+        DbDMInstancePoolKeyDTO that = (DbDMInstancePoolKeyDTO) o;
 
         if (getDatabaseType() != null ? !getDatabaseType().equals(that.getDatabaseType()) : that.getDatabaseType() != null) {
             return false;
@@ -63,6 +65,9 @@ public class DbPostgreSQLnstancePoolKeyDTO extends DbInstancePoolKeyDTO
         if (getDatabaseServerName() != null ? !getDatabaseServerName().equals(that.getDatabaseServerName()) : that.getDatabaseServerName() != null) {
             return false;
         }
+        if (getDatabaseExampleType() != null ? !getDatabaseExampleType().equals(that.getDatabaseExampleType()) : that.getDatabaseExampleType() != null) {
+            return false;
+        }
         return getDatabaseDba() != null ? getDatabaseDba().equals(that.getDatabaseDba()) : that.getDatabaseDba() == null;
     }
 
@@ -72,6 +77,7 @@ public class DbPostgreSQLnstancePoolKeyDTO extends DbInstancePoolKeyDTO
         result = 31 * result + (getDatabaseIp() != null ? getDatabaseIp().hashCode() : 0);
         result = 31 * result + (getDatabasePort() != null ? getDatabasePort().hashCode() : 0);
         result = 31 * result + (getDatabaseServerName() != null ? getDatabaseServerName().hashCode() : 0);
+        result = 31 * result + (getDatabaseExampleType() != null ? getDatabaseExampleType().hashCode() : 0);
         result = 31 * result + (getDatabaseDba() != null ? getDatabaseDba().hashCode() : 0);
         return result;
     }

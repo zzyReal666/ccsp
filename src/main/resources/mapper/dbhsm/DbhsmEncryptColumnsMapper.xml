@@ -23,10 +23,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="createBy"    column="create_by"    />
         <result property="updateTime"    column="update_time"    />
         <result property="updateBy"    column="update_by"    />
+        <result property="columnDefinitions"    column="column_definitions"    />
     </resultMap>
 
     <sql id="selectDbhsmEncryptColumnsVo">
-        select id, db_instance_id, db_instance, db_user_name, db_table, ethernet_port, encrypt_columns, columns_type, encryption_status, encryption_algorithm, establish_rules, encryption_offset, encryption_length, secret_key_id, create_time, create_by, update_time, update_by from dbhsm_encrypt_columns
+        select id, db_instance_id, db_instance, db_user_name, db_table, ethernet_port, encrypt_columns, columns_type, encryption_status, encryption_algorithm, establish_rules, encryption_offset, encryption_length, secret_key_id, create_time, create_by, update_time, update_by,column_definitions from dbhsm_encrypt_columns
     </sql>
 
     <select id="selectDbhsmEncryptColumnsList" parameterType="com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns" resultMap="DbhsmEncryptColumnsResult">
@@ -74,6 +75,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="createBy != null">create_by,</if>
             <if test="updateTime != null">update_time,</if>
             <if test="updateBy != null">update_by,</if>
+            <if test="columnDefinitions != null">column_definitions,</if>
          </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="id != null">#{id},</if>
@@ -94,6 +96,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="createBy != null">#{createBy},</if>
             <if test="updateTime != null">#{updateTime},</if>
             <if test="updateBy != null">#{updateBy},</if>
+            <if test="columnDefinitions != null">#{columnDefinitions},</if>
          </trim>
     </insert>
 
@@ -117,6 +120,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="createBy != null">create_by = #{createBy},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
             <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="columnDefinitions != null">column_definitions = #{columnDefinitions},</if>
         </trim>
         where id = #{id}
     </update>

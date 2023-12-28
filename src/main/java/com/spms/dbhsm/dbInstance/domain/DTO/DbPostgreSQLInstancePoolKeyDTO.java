@@ -11,7 +11,7 @@ import lombok.Data;
  */
 @Data
 @Builder
-public class DbMySQLnstancePoolKeyDTO extends DbInstancePoolKeyDTO
+public class DbPostgreSQLInstancePoolKeyDTO extends DbInstancePoolKeyDTO
 {
     /** 数据库类型 */
     private String databaseType;
@@ -28,10 +28,10 @@ public class DbMySQLnstancePoolKeyDTO extends DbInstancePoolKeyDTO
     /** 数据库DBA */
     private String databaseDba;
 
-    public DbMySQLnstancePoolKeyDTO() {
+    public DbPostgreSQLInstancePoolKeyDTO() {
     }
 
-    public DbMySQLnstancePoolKeyDTO(String databaseType, String databaseIp, String databasePort, String databaseServerName, String databaseDba) {
+    public DbPostgreSQLInstancePoolKeyDTO(String databaseType, String databaseIp, String databasePort, String databaseServerName, String databaseDba) {
         this.databaseType = databaseType;
         this.databaseIp = databaseIp;
         this.databasePort = databasePort;
@@ -44,11 +44,11 @@ public class DbMySQLnstancePoolKeyDTO extends DbInstancePoolKeyDTO
         if (this == o) {
             return true;
         }
-        if (!(o instanceof DbMySQLnstancePoolKeyDTO)) {
+        if (!(o instanceof DbPostgreSQLInstancePoolKeyDTO)) {
             return false;
         }
 
-        DbMySQLnstancePoolKeyDTO that = (DbMySQLnstancePoolKeyDTO) o;
+        DbPostgreSQLInstancePoolKeyDTO that = (DbPostgreSQLInstancePoolKeyDTO) o;
 
         if (getDatabaseType() != null ? !getDatabaseType().equals(that.getDatabaseType()) : that.getDatabaseType() != null) {
             return false;

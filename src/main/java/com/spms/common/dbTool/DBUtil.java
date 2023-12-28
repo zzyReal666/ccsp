@@ -1,6 +1,8 @@
 package com.spms.common.dbTool;
 
+import com.ccsp.common.core.exception.ZAYKException;
 import com.spms.common.constant.DbConstants;
+import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsAdd;
 import lombok.extern.slf4j.Slf4j;
 
 import java.sql.*;
@@ -50,6 +52,12 @@ public final class DBUtil {
                 ResultSet resultSet = stmt.executeQuery(sql);
                 while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
                     tableNamesList.add(resultSet.getString("tablename"));
+                }
+                resultSet.close();
+            }else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(dbType)){
+                ResultSet resultSet = stmt.executeQuery("select TABLE_NAME FROM all_tables WHERE owner='" + userName.toUpperCase() + "'");
+                while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
+                    tableNamesList.add(resultSet.getString("TABLE_NAME"));
                 }
                 resultSet.close();
             }
@@ -162,6 +170,16 @@ public final class DBUtil {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+            }else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(dbType)){
+                ps = conn.prepareStatement("select * from " + tableName.toUpperCase());
+                rs = ps.executeQuery();
+                rsmd = rs.getMetaData();
+                for (int i = 1; i <= rsmd.getColumnCount(); i++) {
+                    Map<String,String> colMap =new HashMap<>();
+                    colMap.put(DbConstants.DB_COLUMN_NAME, rsmd.getColumnName(i));
+                    colMap.put("columnType", rsmd.getColumnTypeName(i));
+                    colList.add(colMap);
+                }
             }
 
         } catch (Exception e) {
@@ -197,4 +215,45 @@ public final class DBUtil {
         }
         return map;
     }
+
+    /** 获取列原始定义*/
+    public static String getColumnDefinition(Connection connection, DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd) throws ZAYKException {
+        CallableStatement cstmt=null;
+        String schemaName = dbhsmEncryptColumnsAdd.getDbUserName();
+        String tableName = dbhsmEncryptColumnsAdd.getDbTable();
+        String columnName = dbhsmEncryptColumnsAdd.getEncryptColumns();
+        String columnDefinition = "";
+
+        try {
+            cstmt = connection.prepareCall("{call SP_TABLEDEF(?, ?)}");
+            cstmt.setString(1, schemaName);
+            cstmt.setString(2, tableName);
+            ResultSet rs = cstmt.executeQuery();
+            if (rs.next()) {
+                String tableDefinition = rs.getString(1);
+                int startIndex = tableDefinition.indexOf("\"" + columnName + "\"");
+                if (startIndex != -1) {
+                    int endIndex = tableDefinition.indexOf(",", startIndex);
+                    if (endIndex == -1) {
+                        endIndex = tableDefinition.indexOf(")", startIndex);
+                    }
+                    columnDefinition = tableDefinition.substring(startIndex, endIndex);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new ZAYKException("获取列定义失败！");
+        } finally {
+            // Close resources
+            try {
+                if (cstmt != null) {
+                    cstmt.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        return columnDefinition;
+    }
+
 }

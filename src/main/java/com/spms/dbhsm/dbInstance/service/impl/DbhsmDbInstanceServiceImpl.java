@@ -105,20 +105,20 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         List<InstanceServerNameVO> voList = dbhsmDbInstanceMapper.listDbInstanceSelect(instanceServerNameVO);
         for (InstanceServerNameVO vo : voList) {
             switch (vo.getDatabaseType()) {
-                case "0":
+                case DbConstants.DB_TYPE_ORACLE:
                     vo.setLabel(vo.getLabel() + "(" + DbConstants.DB_TYPE_ORACLE_DESC + ")");
                     break;
-                case "1":
+                case DbConstants.DB_TYPE_SQLSERVER:
                     vo.setLabel(vo.getLabel() + "(" + DbConstants.DB_TYPE_SQLSERVER_DESC + ")");
                     break;
-                case "2":
+                case DbConstants.DB_TYPE_MYSQL:
                     vo.setLabel(vo.getLabel() + "(" + DbConstants.DB_TYPE_MYSQL_DESC + ")");
                     break;
-                case "3":
+                case DbConstants.DB_TYPE_POSTGRESQL:
                     vo.setLabel(vo.getLabel() + "(" + DbConstants.DB_TYPE_POSTGRESQL_DESC + ")");
                     break;
-                case "4":
-                    vo.setLabel(vo.getLabel() + "(" + DbConstants.DB_TYPE_DB2_DESC + ")");
+                case DbConstants.DB_TYPE_DM:
+                    vo.setLabel(vo.getLabel() + "(" + DbConstants.DB_TYPE_DM_DESC + ")");
                     break;
                 default:
                     // 处理未知的数据库类型
@@ -316,6 +316,8 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
                     break;
                 case DbConstants.DB_TYPE_POSTGRESQL:
                     break;
+                case DbConstants.DB_TYPE_DM:
+                    break;
                 default:
                     log.info("Unknown database type: " + databaseType);
             }
@@ -342,7 +344,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         return dbhsmDbInstanceMapper.deleteDbhsmDbInstanceById(id);
     }
 
-    /**查询表空间*/
+    /**查询Oracle表空间*/
     @Override
     public List<SelectOption>  getDbTablespace(Long id) {
         Connection conn = null;
@@ -351,7 +353,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         int i =0;
         List<SelectOption>  tablespaceList = new ArrayList<>();
         DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
-        if(DbConstants.DB_TYPE_ORACLE.equals(instance.getDatabaseType())) {
+        if(DbConstants.DB_TYPE_ORACLE.equals(instance.getDatabaseType())|| DbConstants.DB_TYPE_DM.equals(instance.getDatabaseType())) {
             if (!ObjectUtils.isEmpty(instance)) {
                 //创建数据库连接
                 DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
@@ -360,7 +362,13 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
                     conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
                     if (Optional.ofNullable(conn).isPresent()) {
                         stmt = conn.createStatement();
-                        resultSet = stmt.executeQuery("select tablespace_name from dba_data_files where tablespace_name!='UNDOTBS1' and tablespace_name!='SYSTEM' and tablespace_name!='SYSAUX'");
+                        String selectTableSpaceSql  = null;
+                        if(DbConstants.DB_TYPE_ORACLE.equals(instance.getDatabaseType())){
+                            selectTableSpaceSql = DbConstants.DB_SQL_ORACLE_TABLESPACE_QUERY;
+                        }else if(DbConstants.DB_TYPE_DM.equals(instance.getDatabaseType())){
+                            selectTableSpaceSql = DbConstants.DB_SQL_DM_TABLESPACE_QUERY;
+                        }
+                        resultSet = stmt.executeQuery(selectTableSpaceSql);
                         while (resultSet.next()) {
                             SelectOption option = new SelectOption();
                             option.setId(i++);
@@ -400,6 +408,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         return tablespaceList;
     }
 
+    //获取PostgreSQL 架构（schema)
     @Override
     public List<SelectOption> getDbSchema(Long id) {
         Connection conn = null;
@@ -476,6 +485,8 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
             databaseType = DbConstants.DB_TYPE_MYSQL_DESC;
         } else if(DbConstants.DB_TYPE_POSTGRESQL.equals(instance.getDatabaseType())) {
             databaseType = DbConstants.DB_TYPE_POSTGRESQL_DESC;
+        }else if(DbConstants.DB_TYPE_DM.equals(instance.getDatabaseType())) {
+            databaseType = DbConstants.DB_TYPE_DM_DESC;
         }
         return databaseType + ":" + instance.getDatabaseIp() + ":" + instance.getDatabasePort() + instance.getDatabaseExampleType() + instance.getDatabaseServerName();
     }

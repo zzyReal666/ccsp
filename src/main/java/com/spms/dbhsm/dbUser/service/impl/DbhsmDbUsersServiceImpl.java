@@ -7,6 +7,7 @@ import com.ccsp.common.core.utils.tree.EleTreeWrapper;
 import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.ccsp.system.api.systemApi.RemoteDicDataService;
 import com.ccsp.system.api.systemApi.domain.SysDictData;
+import com.spms.common.constant.DMErrorCode;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.dbTool.FunctionUtil;
 import com.spms.common.dbTool.ProcedureUtil;
@@ -137,6 +138,9 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                         case  DbConstants.DB_TYPE_POSTGRESQL:
                             sql = DbConstants.DB_SQL_POSTGRESQL_USER_QUERY;
                             break;
+                        case  DbConstants.DB_TYPE_DM:
+                            sql = DbConstants.DB_SQL_DM_USER_QUERY;
+                            break;
                         default:
                             throw new ZAYKException("暂不支持的数据库类型");
                     }
@@ -212,6 +216,12 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 dbUser.setId(id);
                 dbUser.setUserName(resultSet.getString("usename"));
                 break;
+            case DbConstants.DB_TYPE_DM:
+                dbUser.setId(id);
+                dbUser.setUserName(resultSet.getString("userName"));
+                dbUser.setUserId(resultSet.getString("user_id"));
+                dbUser.setCreated(resultSet.getDate("created"));
+                break;
             default:
                 throw new ZAYKException("数据库类型不支持");
         }
@@ -274,11 +284,112 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 return insertMysqlUser(dbhsmDbUser, instance);
             case DbConstants.DB_TYPE_POSTGRESQL:
                 return insertPostgreSqlUser(dbhsmDbUser, instance);
+            case DbConstants.DB_TYPE_DM:
+                return insertDMUser(dbhsmDbUser, instance);
             default:
                 log.info("数据库类型不支持！");
                 throw new ZAYKException("数据库类型不支持！");
         }
     }
+
+    @Transactional(rollbackFor = ZAYKException.class)
+    public int insertDMUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws Exception {
+        Connection conn = null;
+        PreparedStatement preparedStatement = null;
+        int executeUpdate = 0;
+        String username, password, tableSpace, sql, permissionsSql = null;
+        dbhsmDbUser.setUserName(dbhsmDbUser.getUserName().toUpperCase());
+        int result = insertDbUsers(dbhsmDbUser);
+        if (result != 1) {
+            log.error("创建用户失败!");
+            throw new ZAYKException("创建用户失败!");
+        }
+        username = dbhsmDbUser.getUserName();
+        password = dbhsmDbUser.getPassword();
+        tableSpace = dbhsmDbUser.getTableSpace();
+        Long permissionGroupId = dbhsmDbUser.getPermissionGroupId();
+        //根据实例获取数据库连接
+        conn = DbConnectionPoolFactory.getInstance().getConnection(instance);
+        if (!Optional.ofNullable(conn).isPresent()) {
+            throw new ZAYKException("获取数据库连接失败!");
+        }
+        try {
+            sql = "CREATE USER  \"" + username + "\" IDENTIFIED BY \"" + password + "\" DEFAULT TABLESPACE \"" + tableSpace  + "\"" ;
+            preparedStatement = conn.prepareStatement(sql);
+            preparedStatement.executeUpdate();
+        } catch (Exception e) {
+            //释放资源
+            if (preparedStatement != null) {
+                try {
+                    preparedStatement.close();
+                } catch (SQLException throwables) {
+                    throwables.printStackTrace();
+                }
+            }
+            try {
+                conn.close();
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
+            throw new Exception(e.getMessage().split(":")[1]);
+        }
+        //根据权限组id查询权限组对应的所有权限SQL：
+        List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
+        //赋权
+        try {
+            for (int i = 0; i < permissionsSqlList.size(); i++) {
+                permissionsSql = permissionsSqlList.get(i);
+                if (StringUtils.isNotEmpty(permissionsSql)) {
+                    if (!(permissionsSql.toLowerCase().startsWith("grant") && !(permissionsSql.toLowerCase().startsWith("revoke")))) {
+                        log.info("不支持的授权SQL:" + permissionsSql);
+                        throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
+                    }
+                    if (permissionsSql.toLowerCase().startsWith("grant")) {
+                        sql = permissionsSql.trim() + " to " + username;
+                    } else {
+                        sql = permissionsSql.trim() + " from " + username;
+                    }
+                    preparedStatement = conn.prepareStatement(sql);
+                    executeUpdate = preparedStatement.executeUpdate();
+                }
+            }
+        }catch (SQLException e) {
+            String errorCode = e.getMessage().split("\n")[0].split(":")[1];
+            String errMsg = ObjectUtils.isEmpty(errorCode) ? e.getMessage() : DMErrorCode.getErrorMessage(errorCode);
+            if(!DMErrorCode.OBJECT_ALREADY_EXISTS.equals(errorCode)){
+                // 撤销创建的用户
+                sql = "DROP USER IF EXISTS \"" + username +"\"" ;
+                try{
+                    preparedStatement = conn.prepareStatement(sql);
+                    preparedStatement.executeUpdate();
+                    conn.commit();
+                }catch (Exception exception){
+                    e.printStackTrace();
+                }
+            }
+            e.printStackTrace();
+            throw new Exception(errMsg);
+        }
+         finally {
+            //释放资源
+            if (preparedStatement != null) {
+                try {
+                    preparedStatement.close();
+                } catch (SQLException throwables) {
+                    throwables.printStackTrace();
+                }
+            }
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException throwables) {
+                    throwables.printStackTrace();
+                }
+            }
+        }
+        return executeUpdate == 0 ? 1 : executeUpdate;
+    }
+
     //postgresql 新增用户
     @Transactional(rollbackFor = ZAYKException.class)
     public int insertPostgreSqlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws ZAYKException, SQLException {
@@ -918,6 +1029,9 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                             break;
                         case DbConstants.DB_TYPE_POSTGRESQL:
                             sql = "drop OWNED BY \"" + userName + "\";drop user \"" + userName + "\"";
+                            break;
+                        case DbConstants.DB_TYPE_DM:
+                            sql = "DROP USER IF EXISTS \"" + userName +"\"" ;
                             break;
                         default:
                             throw new ZAYKException("暂不支持的数据库类型： " + instance.getDatabaseType());

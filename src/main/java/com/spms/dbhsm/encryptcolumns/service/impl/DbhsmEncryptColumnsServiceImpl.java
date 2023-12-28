@@ -2,18 +2,26 @@ package com.spms.dbhsm.encryptcolumns.service.impl;
 
 import cn.hutool.db.DbRuntimeException;
 import cn.hutool.db.DbUtil;
+import com.ccsp.cert.sanwei.ByteUtils;
+import com.ccsp.cert.sm4.SM4Utils;
+import com.ccsp.common.core.domain.R;
+import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.DateUtils;
+import com.ccsp.common.core.utils.PaddUtils;
 import com.ccsp.common.core.utils.SnowFlakeUtil;
 import com.ccsp.common.core.utils.StringUtils;
 import com.ccsp.common.core.utils.tree.EleTreeWrapper;
 import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.ccsp.common.security.utils.DictUtils;
 import com.ccsp.common.security.utils.SecurityUtils;
+import com.ccsp.system.api.hsmSvsTsaApi.RemoteSecretKeyService;
+import com.ccsp.system.api.hsmSvsTsaApi.domain.HsmSymmetricSecretKey;
 import com.ccsp.system.api.systemApi.domain.SysDictData;
 import com.spms.common.DBIpUtil;
 import com.spms.common.JSONDataUtil;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.dbTool.DBUtil;
+import com.spms.common.dbTool.FunctionUtil;
 import com.spms.common.dbTool.TransUtil;
 import com.spms.common.dbTool.ViewUtil;
 import com.spms.common.dbTool.stockDataProcess.mysql.MysqlStock;
@@ -32,7 +40,10 @@ import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsAdd;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsDto;
 import com.spms.dbhsm.encryptcolumns.mapper.DbhsmEncryptColumnsMapper;
 import com.spms.dbhsm.encryptcolumns.service.IDbhsmEncryptColumnsService;
+import com.spms.dbhsm.secretKey.domain.DbhsmSecretKeyManage;
+import com.spms.dbhsm.secretKey.mapper.DbhsmSecretKeyManageMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.bouncycastle.util.encoders.Base64;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -42,6 +53,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.sql.*;
+import java.util.Date;
 import java.util.*;
 
 /**
@@ -65,7 +77,11 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
     @Autowired
     private DbhsmDbUsersMapper dbUsersMapper;
 
+    @Autowired
+    RemoteSecretKeyService remoteSecretKeyService;
 
+    @Autowired
+    DbhsmSecretKeyManageMapper dbhsmSecretKeyManageMapper;
     //@Value("${server.port:10013}")
     private static int dbhsmPort =80;
 
@@ -129,6 +145,8 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 tableName = columnsDto.getDbTableName();
             }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
                 tableName = columnsDto.getDbTableName();
+            }else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())) {
+                tableName = dbUserInfo.getUserName() + "." + columnsDto.getDbTableName();
             }
 
             List<Map<String, String>> columnsInfoList = DBUtil.findAllColumnsInfo(conn, tableName, instance.getDatabaseType());
@@ -137,7 +155,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 encryptColumns.setDbInstanceId(instance.getId());
                 encryptColumns.setDbInstance(getInstance(instance));
                 //Oracle数据库需要区分用户 查询使用
-                if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
+                if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())|| DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())) {
                     encryptColumns.setDbUserName(dbUserInfo.getUserName());
                 }
                 encryptColumns.setDbTable(columnsDto.getDbTableName());
@@ -228,6 +246,15 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 }
                 user = dbhsmDbUsers.get(0);
                 PostgreSQLStock.postgreSQLStockEncOrDec(conn, dbhsmEncryptColumnsAdd, user, DbConstants.STOCK_DATA_ENCRYPTION);
+            }else if(DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())){
+                //获取列原始定义
+                String columnDefinition = DBUtil.getColumnDefinition(conn, dbhsmEncryptColumnsAdd);
+                dbhsmEncryptColumnsAdd.setColumnDefinitions(columnDefinition);
+                //获取密钥
+                String secretKey = getSecretKey(dbhsmEncryptColumnsAdd.getSecretKeyId());
+                dbhsmEncryptColumnsAdd.setSecretKey(secretKey);
+                //创建加密
+                FunctionUtil.encOrdecColumnsSqlToDM(conn, dbhsmEncryptColumnsAdd,DbConstants.ENC_FLAG);
             }
             conn.commit();
         } catch (Exception e) {
@@ -242,6 +269,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
 
     @Transactional(rollbackFor = Exception.class)
     public int insertDbEncryptColumns(DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd) throws Exception {
+
         // 使用DBA创建连接
         DbhsmDbInstance instance = instanceMapper.selectDbhsmDbInstanceById(dbhsmEncryptColumnsAdd.getDbInstanceId());
         dbhsmEncryptColumnsAdd.setDatabaseType(instance.getDatabaseType());
@@ -262,7 +290,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         dbhsmEncryptColumnsAdd.setCreateBy(SecurityUtils.getUsername());
         DbhsmEncryptColumns dbhsmEncryptColumns = new DbhsmEncryptColumns();
         BeanUtils.copyProperties(dbhsmEncryptColumnsAdd, dbhsmEncryptColumns);
-        int ret = dbhsmEncryptColumnsMapper.insertDbhsmEncryptColumns(dbhsmEncryptColumns);
+
         DbhsmDbUser user = new DbhsmDbUser();
         if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
             //oracle创建触发器
@@ -293,7 +321,13 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             //触发器
             TransUtil.transEncryptColumnsToPostgreSql(conn, dbhsmEncryptColumnsAdd,user);
 
+        } else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())) {
+            //获取列原始定义
+            String columnDefinition = DBUtil.getColumnDefinition(conn, dbhsmEncryptColumnsAdd);
+            dbhsmEncryptColumns.setColumnDefinitions(columnDefinition);
+            return dbhsmEncryptColumnsMapper.insertDbhsmEncryptColumns(dbhsmEncryptColumns);
         }
+        int ret = dbhsmEncryptColumnsMapper.insertDbhsmEncryptColumns(dbhsmEncryptColumns);
 
         //先删除之前的视图
         ViewUtil.deleteView(conn, dbhsmEncryptColumnsAdd,"\""+user.getDbSchema()+"\"");
@@ -329,6 +363,35 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             }
         }
     }
+
+    private String getSecretKey(String secretKeyId) throws ZAYKException {
+        String systemMasterKey = null;
+        DbhsmSecretKeyManage secretKeyManage1 = new DbhsmSecretKeyManage();
+        secretKeyManage1.setSecretKeyId(secretKeyId);
+        List<DbhsmSecretKeyManage> dbhsmSecretKeyManages = dbhsmSecretKeyManageMapper.selectDbhsmSecretKeyManageList(secretKeyManage1);
+        DbhsmSecretKeyManage secretKeyManage = dbhsmSecretKeyManages.get(0);
+        Long secretKeyIndex = secretKeyManage.getSecretKeyIndex();
+        R<HsmSymmetricSecretKey> symSecretKeyInfo = remoteSecretKeyService.selectSymSecretKeyInfo(Math.toIntExact(secretKeyIndex));
+        HsmSymmetricSecretKey symmetricSecretKey = symSecretKeyInfo.getData();
+        if (symmetricSecretKey == null) {
+            throw new ZAYKException("未获取到" + secretKeyId+ "号对称密钥");
+        }
+        byte[] decode = Base64.decode(symmetricSecretKey.getPrivateKey());
+        byte[] plaintext = new byte[0];
+        //数据库配置的系统主密钥存在则使用配置的系统主密钥加密
+        //获取系统主密钥
+        Object systemMasterKeyObj = JSONDataUtil.getSysDataToDB(DbConstants.SYSTEM_MASTER_KEY);
+        if (systemMasterKeyObj != null) {
+            systemMasterKey = systemMasterKeyObj.toString();
+            log.info("已配置系统主密钥");
+            plaintext = SM4Utils.decryptData_ECB(decode, ByteUtils.hexToBytes(systemMasterKey));
+        }else{
+            log.info("未配置系统主密钥");
+        }
+        byte[] unpad = PaddUtils.unpad(plaintext, 16);
+        return new String(unpad);
+    }
+
 
     /**
      * 修改数据库加密列
@@ -427,6 +490,10 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
 
                         //存量数据解密
                         //postgreSQLStockEncOrDec(connection,encryptColumnsAdd, user);
+                    }else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())) {
+                        stockDecBeforeDel(encryptColumns,instance);
+                        int ret = dbhsmEncryptColumnsMapper.deleteDbhsmEncryptColumnsByIds(ids);
+                        return ret;
                     }
                     //执行删除视图
                     try{
@@ -527,6 +594,8 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                     DbhsmDbUser user = dbhsmDbUsers.get(0);
                     //存量数据解密
                     postgreSQLStockEncOrDec(connection, encryptColumnsAdd, user);
+                }else if(DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())){
+                    stockDec(connection,encryptColumnsAdd,instance);
                 }
 
             } catch (SQLException e) {
@@ -554,6 +623,8 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                     OraclelStock.oracleStockEncOrDec(connection,instance, encryptColumnsAdd,DbConstants.STOCK_DATA_DECRYPTION);
                 } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
                     MysqlStock.mysqlStockEncOrDec(connection, encryptColumnsAdd,DbConstants.STOCK_DATA_DECRYPTION);
+                }else if (DbConstants.DB_TYPE_DM.equals(instance.getDatabaseType())){
+                    FunctionUtil.encOrdecColumnsSqlToDM(connection,encryptColumnsAdd,DbConstants.DEC_FLAG);
                 }
                 connection.commit();
             } catch (Exception e) {
@@ -649,6 +720,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 instanceMap.put("pId", "0");
                 instanceMap.put("title", instance.getDatabaseServerName() + getDataBaseName(instance.getDatabaseType(), dictDatas));
                 instanceMap.put("level", 1);
+                instanceMap.put("databaseType", instance.getDatabaseType());
                 instancetTrees.add(instanceMap);
                 if(isDatabaseServerReachable(connDTO.getDatabaseIp(),Integer.parseInt(connDTO.getDatabasePort()),5)) {
                     continue;
@@ -708,6 +780,60 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             return AjaxResult2.success();
         }
         return AjaxResult2.success(EleTreeWrapper.getInstance().getTree(instancetTrees, "pId", "id"));
+    }
+
+    @Override
+    public List<SysDictData> selectDMAlg(DbhsmEncryptColumnsDto dbhsmEncryptColumns) throws ZAYKException, SQLException {
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+        //创建数据库服务连接
+        DbhsmDbInstance instance = instanceMapper.selectDbhsmDbInstanceById(dbhsmEncryptColumns.getDbInstanceId());
+        DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
+        BeanUtils.copyProperties(instance, connDTO);
+        conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
+        //获取达梦数据库算法列表
+        String queryAlgSql = "select * from V$EXTERNAL_CIPHERS where ID > 5600 OR LIB = 'libdm_ext_crypto.so'";
+        List<String> algListArr = new ArrayList<>();
+        try {
+            stmt = conn.prepareStatement(queryAlgSql);
+            rs = stmt.executeQuery();
+            while (rs.next()) {
+                algListArr.add(rs.getString("name"));
+            }
+        }catch (SQLException e){
+            e.printStackTrace();
+        }finally {
+            assert rs != null;
+            rs.close();
+            stmt.close();
+            conn.close();
+        }
+    return DMAlgorithmsConvertedDic(algListArr);
+    }
+
+    /**
+     * */
+    List<SysDictData> DMAlgorithmsConvertedDic(List<String> list){
+        List<SysDictData> sysDictDataList = new ArrayList<>();
+        for (int i = 0; i < list.size(); i++) {
+            SysDictData sysDictData = new SysDictData();
+            sysDictData.setSearchValue(null);
+            sysDictData.setCreateBy("admin");
+            sysDictData.setCreateTime(new Date());
+            sysDictData.setDictCode((long) i);
+            sysDictData.setDictSort((long) i);
+            sysDictData.setDictLabel(list.get(i).toUpperCase());
+            sysDictData.setDictValue(list.get(i).toUpperCase());
+            sysDictData.setDictType("dm_algorithms");
+            sysDictData.setCssClass(null);
+            sysDictData.setListClass("default");
+            sysDictData.setIsDefault("N");
+            sysDictData.setStatus("0");
+            sysDictDataList.add(sysDictData);
+        }
+
+        return sysDictDataList;
     }
 
     /**
@@ -780,6 +906,8 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             databaseType = DbConstants.DB_TYPE_MYSQL_DESC;
         } else if(DbConstants.DB_TYPE_POSTGRESQL.equals(instance.getDatabaseType())) {
             databaseType = DbConstants.DB_TYPE_POSTGRESQL_DESC;
+        }else if(DbConstants.DB_TYPE_DM.equals(instance.getDatabaseType())) {
+            databaseType = DbConstants.DB_TYPE_DM_DESC;
         }
         return databaseType + ":" + instance.getDatabaseIp() + ":" + instance.getDatabasePort() + instance.getDatabaseExampleType() + instance.getDatabaseServerName();
     }
