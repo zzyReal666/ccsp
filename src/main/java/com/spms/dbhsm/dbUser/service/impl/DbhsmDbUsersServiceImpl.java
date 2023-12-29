@@ -770,9 +770,11 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
             // 回滚事务
             connection.rollback();
             try {
-                sql = "drop user " + username + ";drop login " + username;
+                sql = "drop user  ?;drop login ?";
                 preparedStatement = connection.prepareStatement(sql);
-                preparedStatement.execute();
+                preparedStatement.setString(1, username);
+                preparedStatement.setString(2, username);
+                preparedStatement.executeUpdate();
                 connection.commit();
             } catch (SQLException sqlException) {
                 sqlException.printStackTrace();
@@ -820,14 +822,12 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
             throw new ZAYKException("获取数据库连接失败!");
         }
         try {
-            //获取用户创建模式 0：创建无容器数据库用户 1：创建CDB容器中的公共用户
-            int userCreateMode = instance.getUserCreateMode();
-            //if (userCreateMode == DbConstants.USER_CREATE_MODE_CDB) {
-            //    sql = "CREATE USER c##" + username + " IDENTIFIED BY \"" + password + "\" DEFAULT tablespace users";
-            //} else {
-                sql = "CREATE USER " + username + " IDENTIFIED BY \"" + password + "\" DEFAULT TABLESPACE \"" + tableSpace + "\" TEMPORARY TABLESPACE \"TEMP\"";
-            //}
+            sql = "CREATE USER ? IDENTIFIED BY ? DEFAULT TABLESPACE ? TEMPORARY TABLESPACE ?";
             preparedStatement = conn.prepareStatement(sql);
+            preparedStatement.setString(1, username);
+            preparedStatement.setString(2, "\""+password+"\"");
+            preparedStatement.setString(3, "\""+tableSpace+"\"");
+            preparedStatement.setString(4, "TEMP");
             preparedStatement.executeUpdate();
         } catch (Exception e) {
             //释放资源
@@ -859,20 +859,22 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                         throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
                     }
                     if (permissionsSql.toLowerCase().startsWith("grant")) {
-                        sql = permissionsSql.trim() + " to " + username;
+                        sql = permissionsSql.trim() + " to ?";
                     } else {
-                        sql = permissionsSql.trim() + " from " + username;
+                        sql = permissionsSql.trim() + " from ?";
                     }
                     preparedStatement = conn.prepareStatement(sql);
-                    executeUpdate = preparedStatement.executeUpdate();
+                    preparedStatement.setString(1, username);
+                    preparedStatement.executeUpdate();
                 }
             }
         }catch (SQLException sqlException) {
             // 回滚事务
             conn.rollback();
             // 撤销创建的用户
-            sql = "DROP USER " + username + " cascade";
+            sql = "DROP USER ? cascade";
             preparedStatement = conn.prepareStatement(sql);
+            preparedStatement.setString(1, username);
             preparedStatement.executeUpdate();
             sqlException.printStackTrace();
             //释放资源
@@ -903,14 +905,14 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
             conn.commit();
 
             //赋执行库文件liboraextapi的权限
-            sql = "CREATE OR REPLACE LIBRARY liboraextapi AS '" + dbhsmDbUser.getEncLibapiPath() + "'";
-            log.info("赋执行库文件liboraextapi的权限sql: {}", sql);
+            sql = "CREATE OR REPLACE LIBRARY liboraextapi AS ?";
             preparedStatement = conn.prepareStatement(sql);
+            preparedStatement.setString(1, dbhsmDbUser.getEncLibapiPath());
             preparedStatement.execute();
 
-            sql = "grant execute on liboraextapi to " + username;
-            log.info("赋执行库文件liboraextapi的权限给用户 sql: {}", sql);
+            sql = "grant execute on liboraextapi to ?";
             preparedStatement = conn.prepareStatement(sql);
+            preparedStatement.setString(1, username);
             preparedStatement.execute();
             conn.commit();
         } catch (SQLException e) {
@@ -918,8 +920,9 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
             // 回滚事务
             conn.rollback();
             // 撤销创建的用户
-            sql = "DROP USER " + username + " cascade";
+            sql = "DROP USER ? cascade";
             preparedStatement = conn.prepareStatement(sql);
+            preparedStatement.setString(1, username);
             preparedStatement.executeUpdate();
             e.printStackTrace();
             throw new SQLException(e);

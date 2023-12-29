@@ -146,7 +146,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
                 tableName = columnsDto.getDbTableName();
             }else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())) {
-                tableName = dbUserInfo.getUserName() + "." + columnsDto.getDbTableName();
+                tableName = dbUserInfo.getUserName() + ".\"" + columnsDto.getDbTableName()+"\"";
             }
 
             List<Map<String, String>> columnsInfoList = DBUtil.findAllColumnsInfo(conn, tableName, instance.getDatabaseType());
@@ -546,8 +546,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                     } else {
                         log.error("创建视图异常");
                         throw new Exception("创建视图异常");
-                    }
-                    //}
+                    }                    //}
                 } catch (Exception e) {
                     e.printStackTrace();
                 } finally {

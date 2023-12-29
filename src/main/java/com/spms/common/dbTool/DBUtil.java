@@ -171,7 +171,7 @@ public final class DBUtil {
                     e.printStackTrace();
                 }
             }else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(dbType)){
-                ps = conn.prepareStatement("select * from " + tableName.toUpperCase());
+                ps = conn.prepareStatement("select * from " + tableName);
                 rs = ps.executeQuery();
                 rsmd = rs.getMetaData();
                 for (int i = 1; i <= rsmd.getColumnCount(); i++) {
