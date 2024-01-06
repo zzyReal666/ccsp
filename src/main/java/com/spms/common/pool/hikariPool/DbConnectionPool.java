@@ -56,6 +56,9 @@ public class DbConnectionPool {
                 break;
             case DbConstants.DB_TYPE_DM:
                 config.setJdbcUrl("jdbc:dm://" + databaseIp + ":" + databasePort + "/" + databaseServerName);
+                // 设置SSL连接
+                //config.addDataSourceProperty("sslFilesPath", "E:\\dmdbms\\client_ssl\\SYSDBA");
+                //config.addDataSourceProperty("sslKeystorePass", "abc123");
                 break;
             default:
                 throw new IllegalArgumentException("Unsupported database type: " + databaseType);

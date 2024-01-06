@@ -110,7 +110,10 @@ public class DbhsmEncryptColumnsController extends BaseController
             return AjaxResult.error(e.getMessage());
         }
     }
-
+    @GetMapping("/getEncColumnsTaskStatus")
+    public String getTaskStatus() {
+        return dbhsmEncryptColumnsService.getTaskStatus();
+    }
     /**
      * 修改数据库加密列
      */

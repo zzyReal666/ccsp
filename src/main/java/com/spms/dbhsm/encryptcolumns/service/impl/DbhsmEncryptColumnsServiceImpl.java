@@ -4,10 +4,8 @@ import cn.hutool.db.DbRuntimeException;
 import cn.hutool.db.DbUtil;
 import com.ccsp.cert.sanwei.ByteUtils;
 import com.ccsp.cert.sm4.SM4Utils;
-import com.ccsp.common.core.domain.R;
 import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.DateUtils;
-import com.ccsp.common.core.utils.PaddUtils;
 import com.ccsp.common.core.utils.SnowFlakeUtil;
 import com.ccsp.common.core.utils.StringUtils;
 import com.ccsp.common.core.utils.tree.EleTreeWrapper;
@@ -15,7 +13,6 @@ import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.ccsp.common.security.utils.DictUtils;
 import com.ccsp.common.security.utils.SecurityUtils;
 import com.ccsp.system.api.hsmSvsTsaApi.RemoteSecretKeyService;
-import com.ccsp.system.api.hsmSvsTsaApi.domain.HsmSymmetricSecretKey;
 import com.ccsp.system.api.systemApi.domain.SysDictData;
 import com.spms.common.DBIpUtil;
 import com.spms.common.JSONDataUtil;
@@ -48,6 +45,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -84,6 +82,8 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
     DbhsmSecretKeyManageMapper dbhsmSecretKeyManageMapper;
     //@Value("${server.port:10013}")
     private static int dbhsmPort =80;
+
+    private String taskStatus = "Encrypting";
 
     static {
             String sysDataToDB = JSONDataUtil.getSysDataToDB(DbConstants.DBENC_WEB_PORT);
@@ -195,11 +195,13 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
      */
     @Override
     public int insertDbhsmEncryptColumns(DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd) throws Exception {
-        insertDbEncryptColumns(dbhsmEncryptColumnsAdd);
+        String id = insertDbEncryptColumns(dbhsmEncryptColumnsAdd);
+        taskStatus = "Encrypting";
         Thread thread = new Thread(() -> {
             try {
                 stockDataEnc(dbhsmEncryptColumnsAdd);
             } catch (Exception e) {
+                dbhsmEncryptColumnsMapper.deleteDbhsmEncryptColumnsById(id);
                 e.printStackTrace();
             }
         });
@@ -257,8 +259,14 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 FunctionUtil.encOrdecColumnsSqlToDM(conn, dbhsmEncryptColumnsAdd,DbConstants.ENC_FLAG);
             }
             conn.commit();
+            taskStatus = "finished";
+            DbhsmEncryptColumns encryptColumns = new DbhsmEncryptColumns();
+            encryptColumns.setId(dbhsmEncryptColumnsAdd.getId());
+            encryptColumns.setEncryptionStatus(DbConstants.ENCRYPTED);
+            dbhsmEncryptColumnsMapper.updateDbhsmEncryptColumns(encryptColumns);
         } catch (Exception e) {
             e.printStackTrace();
+            taskStatus = e.getMessage();
             throw new Exception(e);
         } finally {
             if (conn != null) {
@@ -266,9 +274,17 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             }
         }
     }
+    /**
+     * 获取密钥生成完成状态
+     * @return
+     */
+    @Override
+    public String getTaskStatus() {
+        return taskStatus;
+    }
 
     @Transactional(rollbackFor = Exception.class)
-    public int insertDbEncryptColumns(DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd) throws Exception {
+    public String insertDbEncryptColumns(DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd) throws Exception {
 
         // 使用DBA创建连接
         DbhsmDbInstance instance = instanceMapper.selectDbhsmDbInstanceById(dbhsmEncryptColumnsAdd.getDbInstanceId());
@@ -283,7 +299,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         //获取端口对应的IP
         String ip = DBIpUtil.getIp(dbhsmEncryptColumnsAdd.getEthernetPort());
         dbhsmEncryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);
-        dbhsmEncryptColumnsAdd.setEncryptionStatus(DbConstants.ENCRYPTED);
+        dbhsmEncryptColumnsAdd.setEncryptionStatus(DbConstants.ENCRYPTING);
         dbhsmEncryptColumnsAdd.setId(SnowFlakeUtil.getSnowflakeId());
 
         dbhsmEncryptColumnsAdd.setCreateTime(DateUtils.getNowDate());
@@ -325,7 +341,8 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             //获取列原始定义
             String columnDefinition = DBUtil.getColumnDefinition(conn, dbhsmEncryptColumnsAdd);
             dbhsmEncryptColumns.setColumnDefinitions(columnDefinition);
-            return dbhsmEncryptColumnsMapper.insertDbhsmEncryptColumns(dbhsmEncryptColumns);
+            dbhsmEncryptColumnsMapper.insertDbhsmEncryptColumns(dbhsmEncryptColumns);
+            return dbhsmEncryptColumnsAdd.getId();
         }
         int ret = dbhsmEncryptColumnsMapper.insertDbhsmEncryptColumns(dbhsmEncryptColumns);
 
@@ -353,7 +370,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             log.error("创建视图异常");
             throw new Exception("创建视图异常");
         }
-            return ret;
+            return dbhsmEncryptColumnsAdd.getId();
         } catch (Exception e) {
             e.printStackTrace();
             throw new Exception(e);
@@ -369,18 +386,16 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         DbhsmSecretKeyManage secretKeyManage1 = new DbhsmSecretKeyManage();
         secretKeyManage1.setSecretKeyId(secretKeyId);
         List<DbhsmSecretKeyManage> dbhsmSecretKeyManages = dbhsmSecretKeyManageMapper.selectDbhsmSecretKeyManageList(secretKeyManage1);
-        DbhsmSecretKeyManage secretKeyManage = dbhsmSecretKeyManages.get(0);
-        Long secretKeyIndex = secretKeyManage.getSecretKeyIndex();
-        R<HsmSymmetricSecretKey> symSecretKeyInfo = remoteSecretKeyService.selectSymSecretKeyInfo(Math.toIntExact(secretKeyIndex));
-        HsmSymmetricSecretKey symmetricSecretKey = symSecretKeyInfo.getData();
-        if (symmetricSecretKey == null) {
-            throw new ZAYKException("未获取到" + secretKeyId+ "号对称密钥");
+        if (CollectionUtils.isEmpty(dbhsmSecretKeyManages) || StringUtils.isEmpty(dbhsmSecretKeyManages.get(0).getSecretKey())) {
+            log.info("加密失败，请检查"+secretKeyId+"密钥生成时所选密钥来源是否正确！");
+            throw new ZAYKException("密钥不存在，请检查"+secretKeyId+"密钥生成时所选密钥来源是否正确！");
         }
-        byte[] decode = Base64.decode(symmetricSecretKey.getPrivateKey());
+        String secretKey = dbhsmSecretKeyManages.get(0).getSecretKey();
+        byte[] decode = Base64.decode(secretKey);
         byte[] plaintext = new byte[0];
         //数据库配置的系统主密钥存在则使用配置的系统主密钥加密
         //获取系统主密钥
-        Object systemMasterKeyObj = JSONDataUtil.getSysDataToDB(DbConstants.SYSTEM_MASTER_KEY);
+        Object systemMasterKeyObj = JSONDataUtil.getSysDataToDB(DbConstants.DBENC_SYSTEM_MASTER_KEY);
         if (systemMasterKeyObj != null) {
             systemMasterKey = systemMasterKeyObj.toString();
             log.info("已配置系统主密钥");
@@ -388,8 +403,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         }else{
             log.info("未配置系统主密钥");
         }
-        byte[] unpad = PaddUtils.unpad(plaintext, 16);
-        return new String(unpad);
+        return new String(plaintext);
     }
 
 
@@ -667,11 +681,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
 
 
 
-    public static void main(String[] args) {
-        String ethernetPort="eth0";
-            ethernetPort=ethernetPort.split("@")[0];
-        System.out.println(ethernetPort);
-    }
+
     /**
      * 删除数据库加密列信息
      *

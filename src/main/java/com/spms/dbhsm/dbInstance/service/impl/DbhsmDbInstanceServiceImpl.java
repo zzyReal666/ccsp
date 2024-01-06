@@ -24,10 +24,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
 import javax.annotation.PostConstruct;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -150,6 +147,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
     @Transactional(rollbackFor = Exception.class)
     public int insertDbhsmDbInstance(DbhsmDbInstance dbhsmDbInstance) throws ZAYKException, SQLException {
         int i = 0;
+        CallableStatement cstmt=null;
         //数据类型为oracle
         if(DbConstants.DB_TYPE_ORACLE.equals(dbhsmDbInstance.getDatabaseType())) {
             //数据库实例唯一性判断
@@ -170,6 +168,18 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         BeanUtils.copyProperties(dbhsmDbInstance,dbInstanceGetConnDTO);
         DbConnectionPoolFactory.buildDataSourcePool(dbInstanceGetConnDTO);
         DbConnectionPoolFactory.queryPool();
+        if(DbConstants.DB_TYPE_DM.equals(dbhsmDbInstance.getDatabaseType())) {
+            Connection connection = DbConnectionPoolFactory.getInstance().getConnection(dbhsmDbInstance);
+           try {
+               cstmt = connection.prepareCall("{call SP_SET_PARA_STRING_VALUE(2,'COMM_ENCRYPT_NAME','DES_OFB');}");
+               cstmt.execute();
+           }catch (SQLException e) {
+               e.printStackTrace();
+           }finally {
+               cstmt.close();
+               connection.close();
+           }
+        }
         return i;
     }
 

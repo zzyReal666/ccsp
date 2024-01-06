@@ -10,7 +10,7 @@ import javax.validation.constraints.Pattern;
 
 /**
  * 密码服务对象 dbhsm_secret_service
- * 
+ *
  * @author diq
  * @date 2023-09-25
  */
@@ -52,91 +52,102 @@ public class DbhsmSecretService extends BaseEntity
     /** 密码 */
     private String password;
 
+    /** 密码服务类型：0：中安云科:  1：吉大正元 */
+    private String secretServiceType;
+
     /** 密钥索引：用于生成SM2密钥，其公钥用于配置到KMIP */
     @Excel(name = "密钥索引：用于生成SM2密钥，其公钥用于配置到KMIP")
     private Long secretKeyIndex;
 
-    public void setId(Long id) 
+
+
+
+    public void setId(Long id)
     {
         this.id = id;
     }
 
-    public Long getId() 
+    public Long getId()
     {
         return id;
     }
-    public void setSecretService(String secretService) 
+    public void setSecretService(String secretService)
     {
         this.secretService = secretService;
     }
 
-    public String getSecretService() 
+    public String getSecretService()
     {
         return secretService;
     }
-    public void setServiceIp(String serviceIp) 
+    public void setServiceIp(String serviceIp)
     {
         this.serviceIp = serviceIp;
     }
 
-    public String getServiceIp() 
+    public String getServiceIp()
     {
         return serviceIp;
     }
-    public void setServicePort(String servicePort) 
+    public void setServicePort(String servicePort)
     {
         this.servicePort = servicePort;
     }
 
-    public String getServicePort() 
+    public String getServicePort()
     {
         return servicePort;
     }
-    public void setServiceUrl(String serviceUrl) 
+    public void setServiceUrl(String serviceUrl)
     {
         this.serviceUrl = serviceUrl;
     }
 
-    public String getServiceUrl() 
+    public String getServiceUrl()
     {
         return serviceUrl;
     }
-    public void setStatus(Integer status) 
+    public void setStatus(Integer status)
     {
         this.status = status;
     }
 
-    public Integer getStatus() 
+    public Integer getStatus()
     {
         return status;
     }
-    public void setUserName(String userName) 
+    public void setUserName(String userName)
     {
         this.userName = userName;
     }
 
-    public String getUserName() 
+    public String getUserName()
     {
         return userName;
     }
-    public void setPassword(String password) 
+    public void setPassword(String password)
     {
         this.password = password;
     }
 
-    public String getPassword() 
+    public String getPassword()
     {
         return password;
     }
-    public void setSecretKeyIndex(Long secretKeyIndex) 
+    public void setSecretKeyIndex(Long secretKeyIndex)
     {
         this.secretKeyIndex = secretKeyIndex;
     }
 
-    public Long getSecretKeyIndex() 
+    public Long getSecretKeyIndex()
     {
         return secretKeyIndex;
     }
+
+    public String getSecretServiceType() {
+        return secretServiceType;
+    }
+
 
     @Override
     public String toString() {

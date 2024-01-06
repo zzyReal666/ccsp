@@ -74,4 +74,5 @@ public interface IDbhsmEncryptColumnsService
     AjaxResult2 treeData();
 
     List<SysDictData> selectDMAlg(DbhsmEncryptColumnsDto dbhsmEncryptColumns) throws ZAYKException, SQLException;
+    String getTaskStatus();
 }

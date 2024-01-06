@@ -92,7 +92,7 @@ public class DbhsmSecretServiceServiceImpl implements IDbhsmSecretServiceService
     @Override
     public int insertDbhsmSecretService(DbhsmSecretService dbhsmSecretService) throws Exception {
         dbhsmSecretService.setCreateTime(DateUtils.getNowDate());
-
+    if(DbConstants.SECRET_SERVICE_TYPE_KMIP.equals(dbhsmSecretService.getSecretServiceType())) {
         //将KMIP配置文件模板拷贝到初始化文件
         String commandCopy = "cp -f /opt/config_file/kmc.ini /opt/config_file/jsonfile/" + dbhsmSecretService.getSecretService() + ".ini";
         log.info("commandCopy  === " + commandCopy);
@@ -119,6 +119,7 @@ public class DbhsmSecretServiceServiceImpl implements IDbhsmSecretServiceService
         }*/
         //创建连接，
         KmipServicePoolFactory.bind(dbhsmSecretService);
+    }
         return dbhsmSecretServiceMapper.insertDbhsmSecretService(dbhsmSecretService);
     }
 

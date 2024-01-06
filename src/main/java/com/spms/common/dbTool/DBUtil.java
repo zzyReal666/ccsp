@@ -1,6 +1,7 @@
 package com.spms.common.dbTool;
 
 import com.ccsp.common.core.exception.ZAYKException;
+import com.spms.common.ParseCreateSQL;
 import com.spms.common.constant.DbConstants;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsAdd;
 import lombok.extern.slf4j.Slf4j;
@@ -102,7 +103,7 @@ public final class DBUtil {
         ResultSetMetaData rsmd = null;
         try {
             if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(dbType)){
-                ps = conn.prepareStatement("select * from " + tableName.toUpperCase());
+                ps = conn.prepareStatement("select * from " + tableName.toUpperCase() + " limit 1");
                 rs = ps.executeQuery();
                 rsmd = rs.getMetaData();
                 for (int i = 1; i <= rsmd.getColumnCount(); i++) {
@@ -171,7 +172,7 @@ public final class DBUtil {
                     e.printStackTrace();
                 }
             }else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(dbType)){
-                ps = conn.prepareStatement("select * from " + tableName);
+                ps = conn.prepareStatement("select * from " + tableName + " limit 1");
                 rs = ps.executeQuery();
                 rsmd = rs.getMetaData();
                 for (int i = 1; i <= rsmd.getColumnCount(); i++) {
@@ -229,17 +230,19 @@ public final class DBUtil {
             cstmt.setString(1, schemaName);
             cstmt.setString(2, tableName);
             ResultSet rs = cstmt.executeQuery();
-            if (rs.next()) {
-                String tableDefinition = rs.getString(1);
-                int startIndex = tableDefinition.indexOf("\"" + columnName + "\"");
-                if (startIndex != -1) {
-                    int endIndex = tableDefinition.indexOf(",", startIndex);
-                    if (endIndex == -1) {
-                        endIndex = tableDefinition.indexOf(")", startIndex);
-                    }
-                    columnDefinition = tableDefinition.substring(startIndex, endIndex);
+            StringBuilder tableDefinition = new StringBuilder();
+            while (rs.next()) {
+                tableDefinition.append(rs.getString(1));
+            }
+            String createSQL = ParseCreateSQL.parseCreateSQL(tableDefinition.toString(), true);
+            String[] lines = createSQL.split("\\n");
+            for (String line : lines) {
+                if (line.contains(columnName)) {
+                    columnDefinition = line;
+                    break;
                 }
             }
+
         } catch (SQLException e) {
             e.printStackTrace();
             throw new ZAYKException("获取列定义失败！");
@@ -256,4 +259,28 @@ public final class DBUtil {
         return columnDefinition;
     }
 
+    public static void main(String[] args) {
+        String columnDefinition ="CREATE TABLE \"W1229\".\"demo1229\"\n" +
+                "(\n" +
+                "\"COLUMN_2\" CHAR(10),\n" +
+                "\"COLUMN_3\" CHAR(10),\n" +
+                "\"COLUMN_4\" CHAR(10),\n" +
+                "\"COLUMN_5\" CHAR(10),\n" +
+                "\"COLUMN_6\" CHAR(10),\n" +
+                "\"COLUMN_7\" CHAR(10),\n" +
+                "\"COLUMN_8\" CHAR(10),\n" +
+                "\"COLUMN_9\" CHAR(10),\n" +
+                "\"COLUMN_10\" CHAR(10),\n" +
+                "\"COLUMN_11\" CHAR(10) ENCRYPT WITH SM4_ECB MANUAL BY WRAPPED '0x1EC162702C34E1548A3ABB636D2085FFC45DF216915657D42DF93F1F0DCEA92E188E9044' USER(\"W1229\" ),\n" +
+                "\"COLUMN_12\" CHAR(10)) STORAGE(ON \"MAIN\", CLUSTERBTR) ;\n" ;
+        String col ="\"CREATE TABLE \\\"DMU1\\\".\\\"TABLE_4\\\"\\n\" +\n" +
+                "                \"(\\n\" +\n" +
+                "                \"\\\"COLUMN_1\\\" INT IDENTITY(1, 1) NOT NULL,\\n\" +\n" +
+                "                \"\\\"COLUMN_2\\\" CHAR(10),\\n\" +\n" +
+                "                \"UNIQUE(\\\"COLUMN_1\\\"),\\n\" +\n" +
+                "                \"NOT CLUSTER PRIMARY KEY(\\\"COLUMN_1\\\")) STORAGE(ON \\\"MAIN\\\", CLUSTERBTR) ;";
+        String c ="))";
+        int i = c.indexOf(")");
+        System.out.println(i);
+    }
 }

@@ -42,6 +42,25 @@ public class DbConstants {
     public static final String DB_SQL_DM_TABLESPACE_QUERY = "select tablespace_name from dba_data_files where tablespace_name!='SYSTEM' and tablespace_name!='TEMP' and tablespace_name!='ROLL'";
     //系统主密钥
     public static final String SYSTEM_MASTER_KEY = "systemMasterKey";
+    //系统主密钥是否是定制
+    public static final String SYSTEM_MASTER_KEY_IS_CUSTOMIZED = "SMKIsCustomized";
+    //定制信息
+    public static final String CUSTOMIZED_INFO = "customizedInfo";
+    public static final String DBENC_SYSTEM_MASTER_KEY = "dbencSystemMasterKey";
+    public static final String AUTHORIZATION = "AUTHORIZATION";
+    public static final String SECRET_SERVICE_TYPE_JIT = "1";
+    public static final String SECRET_SERVICE_TYPE_KMIP = "0";
+    public static final int SECRET_KEY_USAGE_ENC = 8;
+
+    /**
+     *吉大正元获取最新版本kek
+     * 加密方式
+     * 0=证书
+     * 1=公钥
+     * */
+    public static final int JIT_ENCRYPTED_TYPE_PUBLICKEY = 1;
+    public static final String JIT_ALGORITHM_TYPE_SM2 = "SM2";
+    public static final String JIT_SUCCESS_CODE = "0";
 
     /**
      * 请求成功
@@ -84,10 +103,10 @@ public class DbConstants {
     public static final String DB_TYPE_DB2_DESC = "DB2";
     public static final String DB_COLUMN_NAME = "columnName";
 
-    /** 加密状态  1未加密 2已加密 3已解密 */
+    /** 加密状态  1未加密 2已加密 3加密中 */
     public static final Integer NOT_ENCRYPTED = 1;
     public static final Integer ENCRYPTED = 2;
-
+    public static final Integer ENCRYPTING = 3;
     /**
      * 是否唯一返回码
      */
@@ -110,15 +129,18 @@ public class DbConstants {
     /** 密钥来源1：密码卡；2：KMIP  3：大容量密钥*/
     public static final Integer KEY_SOURCE_SECRET_CARD = 1;
     public static final Integer KEY_SOURCE_KMIP = 2;
+    public static final Integer KEY_SOURCE_JIT = 3;
     /**密钥生成方式软实现
      *
      * 0：软实现
      * 1：硬实现
      * 2：大容量
+     * 3: 软实现(密钥加密后存数据库)
      * */
     // public static final int SOFT_SECRET_KEY = 0;
     public static final int HARD_SECRET_KEY = 1;
     public static final int BULK_SECRET_KEY = 2;
+    public static final int SOFT_SECRET_KEY = 3;
     //KMIP配置路径
     public static final String KMIP_INI_PATH="/opt/config_file/jsonfile";
     //KMIP配置文件相关

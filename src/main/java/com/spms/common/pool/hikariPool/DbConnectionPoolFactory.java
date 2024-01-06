@@ -261,12 +261,12 @@ public class DbConnectionPoolFactory {
         //instance.setDatabaseDba("usre55");
         //instance.setDatabaseDbaPassword("12345678");
         instance.setDatabaseType(DbConstants.DB_TYPE_ORACLE);
-        instance.setDatabaseIp("192.168.7.177");
-        instance.setDatabasePort("1521");
-        instance.setDatabaseServerName("orc1");
+        instance.setDatabaseIp("192.168.7.149");
+        instance.setDatabasePort("5236");
+        instance.setDatabaseServerName("DAMENG");
         instance.setDatabaseExampleType("/");
-        instance.setDatabaseDba("system");
-        instance.setDatabaseDbaPassword("12345678");
+        instance.setDatabaseDba("SYSDBA");
+        instance.setDatabaseDbaPassword("SYSDBA");
 
         DbConnectionPoolFactory factory = new DbConnectionPoolFactory();
         Connection connection = factory.getConnection(instance);
