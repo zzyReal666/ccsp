@@ -141,7 +141,7 @@ public class FunctionUtil {
      * DES_ECB为算法，支持的算法见2.3加载自定义算法
      * tuser1为可见用户，除此用户外，其他用户均不可见该列数据
      * */
-    public static void encOrdecColumnsSqlToDM(Connection conn, DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd, int encOrDecFlag) {
+    public static void encOrdecColumnsSqlToDM(Connection conn, DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd, int encOrDecFlag) throws ZAYKException {
         Statement stmt=null;
         String schema = dbhsmEncryptColumnsAdd.getDbUserName();
         String tableName = dbhsmEncryptColumnsAdd.getDbTable();
@@ -169,6 +169,7 @@ public class FunctionUtil {
             stmt.execute(sql.toString());
         } catch (SQLException e) {
             e.printStackTrace();
+            throw  new ZAYKException(e.getMessage());
         }finally {
             if (stmt != null){
                 try {

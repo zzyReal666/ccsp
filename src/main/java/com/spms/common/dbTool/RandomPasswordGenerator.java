@@ -1,46 +1,53 @@
 package com.spms.common.dbTool;
 
-import java.util.Random;
+import java.security.SecureRandom;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class RandomPasswordGenerator {
     public static void main(String[] args) {
-        int length = 16; // 设置密码长度为10位
+        int length = 16;
 
-        String password = generateRandomPassword(length);
+        AtomicReference<String> password = new AtomicReference<>(generateRandomPassword(length));
         System.out.println("Generated random password: " + password);
+        for (int i = 0; i < 100; i++) {
+            new Thread(()->{
+                password.set(generateRandomPassword(length));
+                System.out.println("Generated random password: " + password);
+            }).start();
+        }
     }
 
+    /**
+     * Generates a random password 必须有一个大写字母一个小写字母一个数字
+     * @param length
+     * @return
+     */
     public static String generateRandomPassword(int length) {
         StringBuilder sb = new StringBuilder();
-        char[] characters = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
-        for (char c : characters) {
-            sb.append(c).append(",");
-        }
-        characters = new char[]{'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
-        for (char c : characters) {
-            sb.append(c).append(",");
-        }
-        characters = new char[]{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
-        for (char c : characters) {
-            sb.append(c).append(",");
-        }
-
-        String characterSet = sb.toString().replaceAll(",$", "").trim();
-         characterSet = characterSet.replaceAll(",", "").trim();
-        System.out.println(sb.toString());
-        Random rand = new Random();
+        String lowerCaseChars = "abcdefghijklmnopqrstuvwxyz";
+        String upperCaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        String digitChars = "0123456789";
+        SecureRandom random = new SecureRandom();
         StringBuilder result = new StringBuilder();
-        while (result.length() < length) {
-            int index = rand.nextInt(characterSet.length());
-            char nextChar = characterSet.charAt(index);
+        //生成一个大写字母一个小写字母一个数字
+        result.append(lowerCaseChars.charAt(random.nextInt(lowerCaseChars.length())));
+        result.append(upperCaseChars.charAt(random.nextInt(upperCaseChars.length())));
+        result.append(digitChars.charAt(random.nextInt(digitChars.length())));
 
-            if (!result.toString().contains(String.valueOf(nextChar)) ){
-                result.append(nextChar);
-            }
+        String allChars = lowerCaseChars + upperCaseChars + digitChars;
+        // 生成剩余的字符
+        while (result.length() < length) {
+            result.append(allChars.charAt(random.nextInt(allChars.length())));
+        }
+        // 随机排列结果中的字符
+        char[] passwordArray = result.toString().toCharArray();
+        for (int i = 0; i < passwordArray.length; i++) {
+            int randomIndex = random.nextInt(passwordArray.length);
+            char temp = passwordArray[i];
+            passwordArray[i] = passwordArray[randomIndex];
+            passwordArray[randomIndex] = temp;
         }
 
-        return result.toString();
+        return new String(passwordArray);
     }
-
-
 }

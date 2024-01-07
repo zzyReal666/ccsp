@@ -254,6 +254,7 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
         // 软密钥--对称
         //byte[] random = RandomUtil.randomBytes(secretKeyLength);
         String random = RandomPasswordGenerator.generateRandomPassword(secretKeyLength);
+        log.info("Soft Random:{}\n" , random);
         keyPairInfo.setPrivateKey(Base64.toBase64String(random.getBytes()));
         keyPairInfo.setPublicKey(Base64.toBase64String(random.getBytes()));
         keyPairInfo.setSecretKeyIndex(Math.toIntExact(keyIndex));

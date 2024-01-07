@@ -38,12 +38,6 @@
             <artifactId>mssql-jdbc</artifactId>
             <version>10.2.0.jre8</version>
         </dependency>
-        <!--   sqlserver 数据库依赖     -->
-        <dependency>
-            <groupId>com.microsoft.sqlserver</groupId>
-            <artifactId>mssql-jdbc</artifactId>
-            <version>10.2.0.jre8</version>
-        </dependency>
         <!-- postgresql 数据库依赖-->
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -54,7 +48,6 @@
         <dependency>
             <groupId>ccsp</groupId>
             <artifactId>ccsp-common-datasource</artifactId>
-            <version>3.5.0</version>
         </dependency>
 
         <!-- SpringCloud Alibaba Sentinel -->
@@ -73,30 +66,32 @@
         <dependency>
             <groupId>ccsp</groupId>
             <artifactId>ccsp-common-swagger</artifactId>
-            <version>3.5.0</version>
         </dependency>
 
         <!-- CCSP Common Security -->
         <dependency>
             <groupId>ccsp</groupId>
             <artifactId>ccsp-common-security</artifactId>
-            <version>3.5.0</version>
         </dependency>
         <dependency>
             <groupId>ccsp</groupId>
             <artifactId>ccsp-common-core</artifactId>
-            <version>3.5.0</version>
         </dependency>
         <dependency>
             <groupId>ccsp</groupId>
             <artifactId>ccsp-common-log</artifactId>
-            <version>3.5.0</version>
         </dependency>
 
         <dependency>
             <groupId>org.ini4j</groupId>
             <artifactId>ini4j</artifactId>
             <version>0.5.4</version>
+        </dependency>
+        <!-- 达梦8驱动 -->
+        <dependency>
+            <groupId>com.dameng</groupId>
+            <artifactId>Dm8JdbcDriver18</artifactId>
+            <version>8.1.1.49</version>
         </dependency>
 
         <dependency>
@@ -106,6 +101,13 @@
             <scope>system</scope>
             <systemPath>${project.basedir}/src/main/resources/libs/ccsp-common-kmip-3.5.0.jar</systemPath>
         </dependency>
+        <!--httpclient-->
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.14</version>
+        </dependency>
+
     </dependencies>
 
     <build>
