@@ -802,7 +802,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         BeanUtils.copyProperties(instance, connDTO);
         conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
         //获取达梦数据库算法列表
-        String queryAlgSql = "select * from V$EXTERNAL_CIPHERS where ID > 5600 OR LIB = 'libdm_ext_crypto.so'";
+        String queryAlgSql = "select * from V$EXTERNAL_CIPHERS where ((ID > 5600 OR LIB = 'libdm_ext_crypto.so') and NAME<>'SM3')";
         List<String> algListArr = new ArrayList<>();
         try {
             stmt = conn.prepareStatement(queryAlgSql);

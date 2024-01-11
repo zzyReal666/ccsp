@@ -8,6 +8,8 @@ import com.ccsp.common.core.web.page.TableDataInfo;
 import com.ccsp.common.log.annotation.Log;
 import com.ccsp.common.log.enums.BusinessType;
 import com.ccsp.common.security.annotation.RequiresPermissions;
+import com.spms.common.JSONDataUtil;
+import com.spms.common.constant.DbConstants;
 import com.spms.dbhsm.secretService.domain.DbhsmSecretService;
 import com.spms.dbhsm.secretService.service.IDbhsmSecretServiceService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,7 +44,23 @@ public class DbhsmSecretServiceController extends BaseController
         List<DbhsmSecretService> list = dbhsmSecretServiceService.selectDbhsmSecretServiceList(dbhsmSecretService);
         return getDataTable(list);
     }
-
+    /**
+     * 查询密码服务列表
+     */
+    @RequiresPermissions("dbhsm:secretService:list")
+    @GetMapping("/listSecretServiceForDropDown")
+    public AjaxResult listSecretServiceForDropDown(DbhsmSecretService dbhsmSecretService) throws IOException {
+        int keyGenerationMode = JSONDataUtil.getSecretKeyGenerateType(DbConstants.SYSDATA_ALGORITHM_TYPE_SYK);
+        List<DbhsmSecretService> list = dbhsmSecretServiceService.listSecretServiceForDropDown(dbhsmSecretService);
+        if (DbConstants.SOFT_SECRET_KEY==keyGenerationMode) {
+            return AjaxResult.success(list);
+        }
+        DbhsmSecretService secretService = new DbhsmSecretService();
+        secretService.setId(0L);
+        secretService.setSecretService("密码卡");
+        secretService.setSecretServiceType("1");
+        return AjaxResult.success(list.add(secretService));
+    }
     /**
      * 导出密码服务列表
      */

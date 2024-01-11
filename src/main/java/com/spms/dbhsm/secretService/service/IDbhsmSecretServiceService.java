@@ -62,4 +62,6 @@ public interface IDbhsmSecretServiceService
      * @return 结果
      */
     public int deleteDbhsmSecretServiceById(Long id);
+
+    List<DbhsmSecretService> listSecretServiceForDropDown(DbhsmSecretService dbhsmSecretService);
 }

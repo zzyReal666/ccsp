@@ -52,7 +52,7 @@ public class DbhsmSecretService extends BaseEntity
     /** 密码 */
     private String password;
 
-    /** 密码服务类型：0：中安云科:  1：吉大正元 */
+    /** 密码服务类型：2：中安云科:  3：吉大正元 */
     private String secretServiceType;
 
     /** 密钥索引：用于生成SM2密钥，其公钥用于配置到KMIP */
@@ -148,6 +148,9 @@ public class DbhsmSecretService extends BaseEntity
         return secretServiceType;
     }
 
+    public void setSecretServiceType(String secretServiceType) {
+        this.secretServiceType = secretServiceType;
+    }
 
     @Override
     public String toString() {
@@ -165,6 +168,7 @@ public class DbhsmSecretService extends BaseEntity
             .append("userName", getUserName())
             .append("password", getPassword())
             .append("secretKeyIndex", getSecretKeyIndex())
+            .append("secretServiceType", getSecretServiceType())
             .toString();
     }
 }

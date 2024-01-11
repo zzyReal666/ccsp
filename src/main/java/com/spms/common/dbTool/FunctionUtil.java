@@ -151,6 +151,9 @@ public class FunctionUtil {
         if(DbConstants.ENC_FLAG==encOrDecFlag) {
             String secretKey;
             secretKey = dbhsmEncryptColumnsAdd.getSecretKey();
+            if(StringUtils.isEmpty(secretKey)) {
+                throw new ZAYKException("密钥不存在！");
+            }
             encStr = StringUtils.format("{} ENCRYPT WITH {} MANUAL BY \"{}\" USER ({}) ", columnDefinitions, alg, secretKey, schema);
             encOrDecFlagStr="加密";
         }else {

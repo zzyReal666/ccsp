@@ -68,18 +68,34 @@ public class ZaStrategyController {
     static int SDR_SYS_MASTER_KEY_NO_EXIST = 0x1200008;
     private static ZaykManageClass mgr = new ZaykManageClass();
     private static int crytoCartTypeSInt = 0;
-    public static final String cryptoCardType = "cryptoCardType";
+
     public static String ALGORITHM_TYPE_SYK = "SYK";
 
     static {
+        getCrytoCartType();
+    }
+    private static void getCrytoCartType() {
         try {
-            Object crytoCartType = JSONDataUtil.getSysData(cryptoCardType);
-            if (crytoCartType != null) {
-                crytoCartTypeSInt = Integer.parseInt(crytoCartType.toString());
-                mgr.Initialize(crytoCartTypeSInt);
+            Object crytoCartType = JSONDataUtil.getSysDataToDB(DbConstants.cryptoCardType);
+            if(crytoCartType == null ){
+                log.info("获取到密钥卡类型为空：{}",crytoCartType);
+                return;
             }
-        } catch (IOException e) {
+            if(DbConstants.CRYPTO_CARD_TYPE_NO_CARD.equals(crytoCartType.toString())){
+                log.info("密码卡类型为0，不进行密码卡初始化：{}",crytoCartType);
+                return;
+            }
+            crytoCartTypeSInt = Integer.parseInt(crytoCartType.toString());
+            mgr.Initialize(crytoCartTypeSInt);
+        } catch (Exception e) {
             e.printStackTrace();
+            log.info("系统模块连接异常，5秒后进行重连");
+            try {
+                Thread.sleep(1000 * 5);
+            } catch (InterruptedException ex) {
+                throw new RuntimeException(ex);
+            }
+            getCrytoCartType();
         }
     }
 

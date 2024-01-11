@@ -266,5 +266,5 @@ public class DbConstants {
 
     public static String SYSDATA_ALGORITHM_TYPE_SYK = "CardKeySYK";
 
-
+    public static final String CRYPTO_CARD_TYPE_NO_CARD = "0";
 }

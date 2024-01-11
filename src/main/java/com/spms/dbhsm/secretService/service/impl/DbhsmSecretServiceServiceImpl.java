@@ -83,6 +83,11 @@ public class DbhsmSecretServiceServiceImpl implements IDbhsmSecretServiceService
         return dbhsmSecretServiceMapper.selectDbhsmSecretServiceList(dbhsmSecretService);
     }
 
+    @Override
+    public List<DbhsmSecretService> listSecretServiceForDropDown(DbhsmSecretService dbhsmSecretService) {
+        List<DbhsmSecretService> serviceList = dbhsmSecretServiceMapper.selectDbhsmSecretServiceList(dbhsmSecretService);
+        return serviceList;
+    }
     /**
      * 新增密码服务
      *
