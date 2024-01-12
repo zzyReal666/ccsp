@@ -65,4 +65,6 @@ public interface IDbhsmDbUsersService
     public int deleteDbhsmDbUsersById(Long id);
 
     AjaxResult2 treeData();
+
+    String dmPwdPolicyValidate(DbhsmDbUser dbhsmDbUser);
 }

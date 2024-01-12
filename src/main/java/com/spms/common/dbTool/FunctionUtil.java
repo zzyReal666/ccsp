@@ -10,10 +10,7 @@ import org.bouncycastle.util.encoders.Base64;
 import org.zayksoft.zkgm.SM2Utils;
 
 import java.nio.charset.StandardCharsets;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 
 /**
  * @project ccsp
@@ -184,6 +181,44 @@ public class FunctionUtil {
         }
     }
 
+    /**
+     * 获取达梦口令策略
+     * @param conn
+     * @throws ZAYKException
+     */
+    public static int getPwdPolicyToDM(Connection conn) throws ZAYKException {
+        Statement stmt=null;
+        int value=2;
+        String pwdPolicySql = "SELECT value FROM V$PARAMETER WHERE NAME= 'PWD_POLICY'";
+        //执行sql
+        log.info("获取口令策略sql:{}", pwdPolicySql);
+        try {
+            stmt = conn.createStatement();
+            ResultSet resultSet = stmt.executeQuery(pwdPolicySql);
+            while (resultSet.next()) {
+                value = Integer.parseInt(resultSet.getString("value"));
+                log.info("口令策略:{}", value);
+            }
+            return value;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw  new ZAYKException(e.getMessage());
+        }finally {
+            if (stmt != null){
+                try {
+                    stmt.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+
+            }
+        }
+    }
     public static void main1(String[] args) {
         // Base64编码的字符串
         //String base64String = "SGVsbG8gd29ybGQ=";

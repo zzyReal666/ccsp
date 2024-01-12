@@ -11,7 +11,7 @@ import java.util.Map;
  * @version 1.0
  */
 public class DMErrorCode {
-    /** 对象依存性 */
+    /** 对象已存性 */
     public static String OBJECT_ALREADY_EXISTS = "-2124";
 
     public static Map<String, String> dmErrorCodeMap = new HashMap();

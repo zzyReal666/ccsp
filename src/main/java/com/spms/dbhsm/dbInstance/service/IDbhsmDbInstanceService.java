@@ -76,4 +76,6 @@ public interface IDbhsmDbInstanceService
     List<SelectOption>  getDbTablespace(Long id);
 
     List<SelectOption> getDbSchema(Long id);
+
+    public int getPwdPolicyToDM(Long id);
 }

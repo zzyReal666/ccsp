@@ -11,6 +11,7 @@ import com.ccsp.common.log.annotation.Log;
 import com.ccsp.common.log.enums.BusinessType;
 import com.ccsp.common.security.annotation.RequiresPermissions;
 import com.spms.common.PageHelperUtil;
+import com.spms.common.constant.DbConstants;
 import com.spms.dbhsm.dbUser.domain.DbhsmDbUser;
 import com.spms.dbhsm.dbUser.domain.VO.DbhsmDbUserVO;
 import com.spms.dbhsm.dbUser.service.IDbhsmDbUsersService;
@@ -98,7 +99,7 @@ public class DbhsmDbUsersController extends BaseController {
             i = dbhsmDbUsersService.insertDbhsmDbUsers(dbhsmDbUser);
         } catch (Exception  e) {
             e.printStackTrace();
-            return AjaxResult.error(e.getMessage().contains("ORA") ? e.getMessage().split(":")[1] +": "+e.getMessage().split(":")[2] : e.getMessage());
+            return AjaxResult.error(StringUtils.isEmpty(e.getMessage())?"新增用户失败！":(e.getMessage().contains("ORA") ? e.getMessage().split(":")[1] +": "+e.getMessage().split(":")[2] : e.getMessage()));
         }
         return toAjax(i);
     }
@@ -141,5 +142,18 @@ public class DbhsmDbUsersController extends BaseController {
     public AjaxResult2 treeData()
     {
         return dbhsmDbUsersService.treeData();
+    }
+
+    /**
+     * 达梦策略校验
+     */
+    @PostMapping("/dmPwdPolicyValidate")
+    public AjaxResult2 dmPwdPolicyValidate(@RequestBody DbhsmDbUser dbhsmDbUser)
+    {
+        String validate = dbhsmDbUsersService.dmPwdPolicyValidate(dbhsmDbUser);
+        if(!DbConstants.TRUE_STRING.equals(validate)){
+            return AjaxResult2.error(validate);
+        }
+        return AjaxResult2.success();
     }
 }

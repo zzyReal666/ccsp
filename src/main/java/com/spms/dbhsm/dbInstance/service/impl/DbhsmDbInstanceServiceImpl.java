@@ -6,6 +6,7 @@ import com.ccsp.common.core.utils.StringUtils;
 import com.ccsp.common.core.web.domain.AjaxResult;
 import com.spms.common.SelectOption;
 import com.spms.common.constant.DbConstants;
+import com.spms.common.dbTool.FunctionUtil;
 import com.spms.common.pool.hikariPool.DbConnectionPoolFactory;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstancePoolKeyDTO;
@@ -499,5 +500,18 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
             databaseType = DbConstants.DB_TYPE_DM_DESC;
         }
         return databaseType + ":" + instance.getDatabaseIp() + ":" + instance.getDatabasePort() + instance.getDatabaseExampleType() + instance.getDatabaseServerName();
+    }
+
+    @Override
+    public int getPwdPolicyToDM(Long id) {
+        int pwdPolicyToDM = 2;
+        DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
+        try {
+            Connection connection = DbConnectionPoolFactory.getInstance().getConnection(instance);
+            pwdPolicyToDM = FunctionUtil.getPwdPolicyToDM(connection);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return pwdPolicyToDM;
     }
 }

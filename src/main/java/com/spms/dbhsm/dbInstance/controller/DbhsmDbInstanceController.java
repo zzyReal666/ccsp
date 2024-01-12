@@ -62,6 +62,7 @@ public class DbhsmDbInstanceController extends BaseController
         ajax.put("dbTableSpace",dbhsmDbInstanceService.getDbTablespace(id));
         //获取PostgreSQL 架构（schema)
         ajax.put("dbPGSchema",dbhsmDbInstanceService.getDbSchema(id));
+        //ajax.put("dbPGSchema",dbhsmDbInstanceService.getPwdPolicyToDM(id));
         return ajax;
     }
     /**

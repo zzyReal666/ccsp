@@ -7,6 +7,7 @@ import com.ccsp.common.core.utils.tree.EleTreeWrapper;
 import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.ccsp.system.api.systemApi.RemoteDicDataService;
 import com.ccsp.system.api.systemApi.domain.SysDictData;
+import com.spms.common.DMUserPasswordPolicy;
 import com.spms.common.constant.DMErrorCode;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.dbTool.FunctionUtil;
@@ -16,6 +17,7 @@ import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbOracleInstancePoolKeyDTO;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import com.spms.dbhsm.dbInstance.mapper.DbhsmDbInstanceMapper;
+import com.spms.dbhsm.dbInstance.service.impl.DbhsmDbInstanceServiceImpl;
 import com.spms.dbhsm.dbUser.domain.DbhsmDbUser;
 import com.spms.dbhsm.dbUser.domain.DbhsmUserPermissionGroup;
 import com.spms.dbhsm.dbUser.mapper.DbhsmDbUsersMapper;
@@ -70,7 +72,8 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
     RemoteDicDataService remoteDicDataService;
 
     @Autowired
-    private DbhsmDbInstanceMapper instanceMapper;
+    DbhsmDbInstanceServiceImpl  dbhsmDbInstanceService;
+
     /**
      * 查询数据库用户
      *
@@ -355,22 +358,25 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
             }
         }catch (SQLException e) {
             String errorCode = e.getMessage().split("\n")[0].split(":")[1];
-            String errMsg = ObjectUtils.isEmpty(errorCode) ? e.getMessage() : DMErrorCode.getErrorMessage(errorCode);
-            if(!DMErrorCode.OBJECT_ALREADY_EXISTS.equals(errorCode)){
+            if(StringUtils.isNotEmpty(errorCode)){
+                String errMsg = ObjectUtils.isEmpty(errorCode) ? e.getMessage() : DMErrorCode.getErrorMessage(errorCode);
+                e.printStackTrace();
+                throw new Exception(errMsg);
+            }
+            if (!DMErrorCode.OBJECT_ALREADY_EXISTS.equals(errorCode)) {
                 // 撤销创建的用户
-                sql = "DROP USER IF EXISTS \"" + username +"\"" ;
-                try{
+                sql = "DROP USER IF EXISTS \"" + username + "\"";
+                try {
                     preparedStatement = conn.prepareStatement(sql);
                     preparedStatement.executeUpdate();
                     conn.commit();
-                }catch (Exception exception){
+                } catch (Exception exception) {
                     e.printStackTrace();
                 }
             }
             e.printStackTrace();
-            throw new Exception(errMsg);
-        }
-         finally {
+            throw new Exception(e.getMessage().contains("语法分析出错")?"创建用户失败,权限组中存在不支持达梦数据库的权限命令":e.getMessage());
+        } finally {
             //释放资源
             if (preparedStatement != null) {
                 try {
@@ -1039,7 +1045,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                             sql = "drop OWNED BY \"" + userName + "\";drop user \"" + userName + "\"";
                             break;
                         case DbConstants.DB_TYPE_DM:
-                            sql = "DROP USER IF EXISTS \"" + userName +"\"" ;
+                            sql = "DROP USER IF EXISTS \"" + userName +"\" cascade"  ;
                             break;
                         default:
                             throw new ZAYKException("暂不支持的数据库类型： " + instance.getDatabaseType());
@@ -1110,7 +1116,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 dbTypeMap.put("dbType", sysDictData.getDictValue());
                 instancetTrees.add(dbTypeMap);
 
-                List<DbhsmDbInstance> instanceList = instanceMapper.selectDbhsmDbInstanceList(new DbhsmDbInstance());
+                List<DbhsmDbInstance> instanceList = dbhsmDbInstanceMapper.selectDbhsmDbInstanceList(new DbhsmDbInstance());
                 for (int j = 0; j < instanceList.size(); j++) {
                     DbhsmDbInstance instance = instanceList.get(j);
                     if(sysDictData.getDictValue().equals(instance.getDatabaseType())){
@@ -1133,4 +1139,12 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
         }
         return AjaxResult2.success(EleTreeWrapper.getInstance().getTree(instancetTrees, "pId", "id"));
     }
+
+    @Override
+    public String dmPwdPolicyValidate(DbhsmDbUser dbhsmDbUser) {
+        int pwdPolicyToDM = dbhsmDbInstanceService.getPwdPolicyToDM(dbhsmDbUser.getDatabaseInstanceId());
+        return DMUserPasswordPolicy.validatePolicyRules(pwdPolicyToDM,dbhsmDbUser.getPassword(), dbhsmDbUser.getUserName());
+    }
+
+
 }

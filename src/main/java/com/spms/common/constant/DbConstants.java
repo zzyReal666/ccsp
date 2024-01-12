@@ -61,6 +61,7 @@ public class DbConstants {
     public static final int JIT_ENCRYPTED_TYPE_PUBLICKEY = 1;
     public static final String JIT_ALGORITHM_TYPE_SM2 = "SM2";
     public static final String JIT_SUCCESS_CODE = "0";
+    public static final String TRUE_STRING = "true";
 
     /**
      * 请求成功
