@@ -78,4 +78,5 @@ public interface IDbhsmDbInstanceService
     List<SelectOption> getDbSchema(Long id);
 
     public int getPwdPolicyToDM(Long id);
+    public int getPwdMinLenToDM(Long id);
 }

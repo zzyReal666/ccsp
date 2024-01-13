@@ -1143,7 +1143,8 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
     @Override
     public String dmPwdPolicyValidate(DbhsmDbUser dbhsmDbUser) {
         int pwdPolicyToDM = dbhsmDbInstanceService.getPwdPolicyToDM(dbhsmDbUser.getDatabaseInstanceId());
-        return DMUserPasswordPolicy.validatePolicyRules(pwdPolicyToDM,dbhsmDbUser.getPassword(), dbhsmDbUser.getUserName());
+        int pwdMinLenToDM = dbhsmDbInstanceService.getPwdMinLenToDM(dbhsmDbUser.getDatabaseInstanceId());
+        return DMUserPasswordPolicy.validatePolicyRules(pwdPolicyToDM,dbhsmDbUser.getPassword(), dbhsmDbUser.getUserName(), pwdMinLenToDM);
     }
 
 

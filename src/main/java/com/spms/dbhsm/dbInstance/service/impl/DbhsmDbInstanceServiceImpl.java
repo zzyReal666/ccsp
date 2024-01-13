@@ -514,4 +514,17 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService
         }
         return pwdPolicyToDM;
     }
+
+    @Override
+    public int getPwdMinLenToDM(Long id) {
+        int pwdMinLenToDM = 9;
+        DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
+        try {
+            Connection connection = DbConnectionPoolFactory.getInstance().getConnection(instance);
+            pwdMinLenToDM = FunctionUtil.getPwdMinLenToDM(connection);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return pwdMinLenToDM;
+    }
 }

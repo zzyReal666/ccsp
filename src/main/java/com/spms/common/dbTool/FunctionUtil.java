@@ -219,6 +219,44 @@ public class FunctionUtil {
             }
         }
     }
+    /**
+     * 获取达梦口令策略INI 参数 PWD_MIN_LEN 设置的值
+     * @param conn
+     * @throws ZAYKException
+     */
+    public static int getPwdMinLenToDM(Connection conn) throws ZAYKException {
+        Statement stmt=null;
+        int value=2;
+        String pwdMinLenSql = "SELECT value FROM V$PARAMETER WHERE NAME= 'PWD_MIN_LEN'";
+        //执行sql
+        log.info("获取口令策略INI 参数 PWD_MIN_LEN 设置的值:{}", pwdMinLenSql);
+        try {
+            stmt = conn.createStatement();
+            ResultSet resultSet = stmt.executeQuery(pwdMinLenSql);
+            while (resultSet.next()) {
+                value = Integer.parseInt(resultSet.getString("value"));
+                log.info("INI 参数 PWD_MIN_LEN 值:{}", value);
+            }
+            return value;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw  new ZAYKException(e.getMessage());
+        }finally {
+            if (stmt != null){
+                try {
+                    stmt.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+
+            }
+        }
+    }
     public static void main1(String[] args) {
         // Base64编码的字符串
         //String base64String = "SGVsbG8gd29ybGQ=";

@@ -152,7 +152,7 @@ public class DbhsmDbUsersController extends BaseController {
     {
         String validate = dbhsmDbUsersService.dmPwdPolicyValidate(dbhsmDbUser);
         if(!DbConstants.TRUE_STRING.equals(validate)){
-            return AjaxResult2.error(validate);
+            return AjaxResult2.success(validate);
         }
         return AjaxResult2.success();
     }
