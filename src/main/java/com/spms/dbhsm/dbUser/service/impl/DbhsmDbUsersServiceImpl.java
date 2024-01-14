@@ -348,9 +348,9 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                         throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
                     }
                     if (permissionsSql.toLowerCase().startsWith("grant")) {
-                        sql = permissionsSql.trim() + " to " + username;
+                        sql = permissionsSql.trim() + " to \"" + username +"\"";
                     } else {
-                        sql = permissionsSql.trim() + " from " + username;
+                        sql = permissionsSql.trim() + " from \"" + username +"\"";
                     }
                     preparedStatement = conn.prepareStatement(sql);
                     executeUpdate = preparedStatement.executeUpdate();

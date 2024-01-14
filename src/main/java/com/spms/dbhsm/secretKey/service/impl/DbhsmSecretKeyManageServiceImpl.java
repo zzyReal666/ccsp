@@ -41,6 +41,7 @@ import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.util.encoders.Hex;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.io.IOException;
@@ -384,6 +385,9 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
         map.put("algorithm","SM4");
         map.put("length",128);
         log.info("获取密钥标识：url: {},参数: {}",url,map);
+//        if(!HttpClientUtil.isNetworkReachable(ip, Integer.parseInt(port))){
+//            throw new ZAYKException("密码服务地址https://"+ip+":"+port+"网络不可达！");
+//        }
         KeyResponse keyResponse = JSON.parseObject(HttpClientUtil.sendPostJson(url, map,authorization), KeyResponse.class);
         if(ObjectUtil.isNotEmpty(keyResponse)&&!keyResponse.getCode().equals(DbConstants.JIT_SUCCESS_CODE)){
             log.info("获取JIT密钥标识失败！");
@@ -404,6 +408,7 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
      * @return 结果
      */
     @SuppressWarnings("Duplicates")
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public int updateDbhsmSecretKeyManage(DbhsmSecretKeyManage dbhsmSecretKeyManage) throws Exception {
         //如果密钥来源为卡内密钥，切该索引密钥未生成，则生成卡内密钥，如果为KMIP则只保存密钥关系
@@ -413,8 +418,6 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
                 generatorSym(dbhsmSecretKeyManage.getSecretKeyType(), dbhsmSecretKeyManage.getSecretKeyIndex().intValue(), dbhsmSecretKeyManage.getSecretKeyLength());
             } else if (keyGenerationMode == DbConstants.BULK_SECRET_KEY) {
                 generatorBulkKey(dbhsmSecretKeyManage);
-            } else{
-                generatorSoftKey(dbhsmSecretKeyManage);
             }
         }else if(DbConstants.KEY_SOURCE_KMIP.intValue() == dbhsmSecretKeyManage.getSecretKeySource().intValue()) {
             //调用KMIP
@@ -473,6 +476,8 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
             //获取数字信封
             log.info("keyMaterial:" + keyMaterial);
             dbhsmSecretKeyManage.setSecretKey(keyMaterial);
+        }else if(DbConstants.KEY_SOURCE_JIT.intValue() == dbhsmSecretKeyManage.getSecretKeySource().intValue()){
+            generatorSoftKey(dbhsmSecretKeyManage);
         }else {
             log.error("密钥来源参数错误:" + dbhsmSecretKeyManage.getSecretKeySource().intValue());
             throw new Exception("密钥来源参数错误:" + dbhsmSecretKeyManage.getSecretKeySource().intValue());

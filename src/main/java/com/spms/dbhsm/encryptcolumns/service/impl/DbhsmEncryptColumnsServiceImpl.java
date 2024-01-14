@@ -15,6 +15,7 @@ import com.ccsp.common.security.utils.SecurityUtils;
 import com.ccsp.system.api.hsmSvsTsaApi.RemoteSecretKeyService;
 import com.ccsp.system.api.systemApi.domain.SysDictData;
 import com.spms.common.DBIpUtil;
+import com.spms.common.HttpClientUtil;
 import com.spms.common.JSONDataUtil;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.dbTool.DBUtil;
@@ -731,7 +732,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 instanceMap.put("level", 1);
                 instanceMap.put("databaseType", instance.getDatabaseType());
                 instancetTrees.add(instanceMap);
-                if(isDatabaseServerReachable(connDTO.getDatabaseIp(),Integer.parseInt(connDTO.getDatabasePort()),5)) {
+                if(HttpClientUtil.isDatabaseServerReachable(connDTO.getDatabaseIp(),Integer.parseInt(connDTO.getDatabasePort()),5)) {
                     continue;
                 }
                 DbhsmDbUser dbUser = new DbhsmDbUser();
@@ -971,19 +972,5 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         return "";
     }
 
-    /**
-     * 探测网络是否可以访问数据库
-     * @param host
-     * @param port
-     * @param timeout 超时时间秒
-     * @return
-     */
-    public static boolean isDatabaseServerReachable(String host, int port, int timeout) {
-        try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress(host, port), timeout);
-            return false;
-        } catch (IOException e) {
-            return true;
-        }
-    }
+
 }

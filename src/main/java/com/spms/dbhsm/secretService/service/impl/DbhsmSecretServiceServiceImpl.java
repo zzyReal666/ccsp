@@ -193,8 +193,10 @@ public class DbhsmSecretServiceServiceImpl implements IDbhsmSecretServiceService
         }
         dbhsmSecretService.setUpdateTime(DateUtils.getNowDate());
         int ret = dbhsmSecretServiceMapper.updateDbhsmSecretService(dbhsmSecretService);
-        modifySecretServiceIniFile(dbhsmSecretService);
-        KmipServicePoolFactory.rebind(dbhsmSecretService1, dbhsmSecretService);
+        if(DbConstants.SECRET_SERVICE_TYPE_KMIP.equals(dbhsmSecretService.getSecretServiceType())) {
+            modifySecretServiceIniFile(dbhsmSecretService);
+            KmipServicePoolFactory.rebind(dbhsmSecretService1, dbhsmSecretService);
+        }
         return ret;
     }
 

@@ -2,6 +2,7 @@ package com.spms.common;
 
 import com.alibaba.fastjson.JSONObject;
 import com.ccsp.common.core.exception.ZAYKException;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
@@ -15,6 +16,10 @@ import org.apache.http.util.EntityUtils;
 
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -37,10 +42,15 @@ public class HttpClientUtil {
         HttpPost httpPost = null;
         CloseableHttpResponse response = null;
         String result = "";
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setConnectTimeout(10000)
+                .setConnectionRequestTimeout(10000)
+                .setSocketTimeout(10000)
+                .build();
         try {
-            //httpClient = HttpClientBuilder.create().build();
              httpClient = getScontractHttpClient();
             httpPost = new HttpPost(url);
+            httpPost.setConfig(requestConfig);
             // 设置参数
             if (null != params && params.size() > 0){
                 String paramJson = JSONObject.toJSONString(params);
@@ -49,7 +59,11 @@ public class HttpClientUtil {
                 httpPost.setEntity(stringEntity);
                 httpPost.setHeader("Authorization", authorization);
             }
-            response = httpClient.execute(httpPost);
+            try {
+                response = httpClient.execute(httpPost);
+            }catch (Exception e) {
+                throw new ZAYKException("密码服务地址" + url.split("/api")[0] + "网络不可达！");
+            }
             result = EntityUtils.toString(response.getEntity());
         } catch (IOException e) {
             e.printStackTrace();
@@ -101,4 +115,41 @@ public class HttpClientUtil {
                 setSSLHostnameVerifier(new NoopHostnameVerifier()).build();
 
     }
+
+    /**
+     * 探测网络是否可以访问数据库
+     * @param host
+     * @param port
+     * @param timeout 超时时间秒
+     * @return 可达返回false
+     */
+    public static boolean isDatabaseServerReachable(String host, int port, int timeout) {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(host, port), timeout);
+            return false;
+        } catch (IOException e) {
+            return true;
+        }
+    }
+
+    /**
+     *  查看网络是否可达https协议
+     * @return
+     */
+//    public static boolean isNetworkReachable(String ip,int port) {
+//        try {
+//            URL url = new URL("https://"+ip+":"+port);
+//            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+//            connection.setRequestMethod("GET");
+//            connection.connect();
+//            int code = connection.getResponseCode();
+//            return code == 200;
+//        } catch (Exception e) {
+//            return false;
+//        }
+//    }
+//    public static void main(String[] args) {
+//        String url = "https://192.168.1.10:9090";
+//        System.out.println("Is HTTPS accessible: " + HttpClientUtil.isNetworkReachable("124.207.188.210",44351));
+//    }
 }
