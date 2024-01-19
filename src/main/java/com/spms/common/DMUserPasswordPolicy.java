@@ -27,8 +27,8 @@ public class DMUserPasswordPolicy {
             }
             if ((value & 2) == 2) {
                 sum += 2;
-                if (inputPassword.length() < pwdMinLenToDM || inputPassword.length() > 50) {
-                    rules.add("密码长度范围["+pwdMinLenToDM+"-50]");
+                if (inputPassword.length() < pwdMinLenToDM || inputPassword.length() > 48) {
+                    rules.add("密码长度范围["+pwdMinLenToDM+"-48]");
                 }
             }
             if ((value & 4) == 4) {

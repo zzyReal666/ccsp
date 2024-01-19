@@ -144,7 +144,6 @@ public class DbhsmEncryptColumnsController extends BaseController
     /**
      * 数据库实例-用户-表树结构
      */
-    @Log(title = "数据库实例-用户-表树结构", businessType = BusinessType.DELETE)
     @PostMapping(value = "/treeData")
     public AjaxResult2 treeData()
     {

@@ -60,7 +60,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="permissionGroupName != null  and permissionGroupName != ''"> and a.permission_group_name like concat('%', #{permissionGroupName}, '%')</if>
             <if test="status != null  and status != ''"> and a.status = #{status}</if>
         </where>
-        group by permission_group_name
+        group by a.permission_group_id, a.permission_group_name, a.status, a.create_by, a.create_time, a.update_by, a.update_time,
+        b.permission_id , b.permission_group_id , b.create_by, b.create_time, b.update_by , b.update_time,c.permission_name
     </select>
 
     <select id="selectDbhsmPermissionGroupVoList" parameterType="com.spms.dbhsm.permissionGroup.domain.DbhsmPermissionGroup" resultMap="DbhsmPermissionGroupResult">

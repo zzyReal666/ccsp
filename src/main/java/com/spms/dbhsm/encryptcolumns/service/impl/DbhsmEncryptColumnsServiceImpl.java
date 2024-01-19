@@ -749,7 +749,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
 
                         //只有通过web创建的用户才允许创建加密列
                         Map<String, Object> userMap = new HashMap<String, Object>();
-                        userMap.put("id", user.getId()+idPrefix);
+                        userMap.put("id", user.getId()+idPrefix+user.getUserName());
                         userMap.put("pId", instance.getId()+idPrefix);
                         userMap.put("title", user.getUserName());
                         userMap.put("level", 2);
@@ -761,7 +761,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                                 tableName = tableNameList.get(k);
                                 Map<String, Object> dbTableMetaMap = new HashMap<String, Object>();
                                 dbTableMetaMap.put("id", tableName+idPrefix);
-                                dbTableMetaMap.put("pId", user.getId()+idPrefix);
+                                dbTableMetaMap.put("pId", user.getId()+idPrefix+user.getUserName());
                                 dbTableMetaMap.put("title", tableName);
                                 dbTableMetaMap.put("level", 3);
                                 instancetTrees.add(dbTableMetaMap);

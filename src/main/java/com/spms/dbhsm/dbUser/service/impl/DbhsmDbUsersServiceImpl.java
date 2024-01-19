@@ -345,6 +345,15 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 if (StringUtils.isNotEmpty(permissionsSql)) {
                     if (!(permissionsSql.toLowerCase().startsWith("grant") && !(permissionsSql.toLowerCase().startsWith("revoke")))) {
                         log.info("不支持的授权SQL:" + permissionsSql);
+                        // 撤销创建的用户
+                        sql = "DROP USER IF EXISTS \"" + username + "\"";
+                        try {
+                            preparedStatement = conn.prepareStatement(sql);
+                            preparedStatement.executeUpdate();
+                            conn.commit();
+                        } catch (Exception exception) {
+                            exception.printStackTrace();
+                        }
                         throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
                     }
                     if (permissionsSql.toLowerCase().startsWith("grant")) {
@@ -371,7 +380,7 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                     preparedStatement.executeUpdate();
                     conn.commit();
                 } catch (Exception exception) {
-                    e.printStackTrace();
+                    exception.printStackTrace();
                 }
             }
             e.printStackTrace();
