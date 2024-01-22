@@ -204,6 +204,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             } catch (Exception e) {
                 dbhsmEncryptColumnsMapper.deleteDbhsmEncryptColumnsById(id);
                 e.printStackTrace();
+                taskStatus="加密失败！请查看日志信息！";
             }
         });
         thread.setDaemon(true);

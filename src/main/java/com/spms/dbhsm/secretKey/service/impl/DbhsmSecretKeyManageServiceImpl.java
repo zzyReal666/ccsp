@@ -107,7 +107,22 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
     @SuppressWarnings("Duplicates")
     @Override
     public int insertDbhsmSecretKeyManage(DbhsmSecretKeyManage dbhsmSecretKeyManage) throws Exception {
-
+        if(DbConstants.KEY_SOURCE_KMIP.intValue() == dbhsmSecretKeyManage.getSecretKeySource().intValue() ||
+                DbConstants.KEY_SOURCE_JIT.intValue() == dbhsmSecretKeyManage.getSecretKeySource().intValue()) {
+            DbhsmSecretService dbhsmSecretService = new DbhsmSecretService();
+            dbhsmSecretService.setSecretService(dbhsmSecretKeyManage.getSecretKeyServer());
+            List<DbhsmSecretService> serviceList = dbhsmSecretServiceMapper.selectDbhsmSecretServiceList(dbhsmSecretService);
+            if (CollectionUtils.isEmpty(serviceList) || ObjectUtil.isEmpty(serviceList.get(0))) {
+                throw new ZAYKException("密码服务不存在！");
+            }
+            //根据密钥索引获取sm2密钥
+            Long secretKeyIndex = serviceList.get(0).getSecretKeyIndex();
+            R<HsmSm2SecretKey> hsmSm2SecretKeyR = remoteSecretKeyService.selectSm2SecretKeyInfo(Math.toIntExact(secretKeyIndex), DbConstants.SECRET_KEY_USAGE_ENC);
+            HsmSm2SecretKey sm2SecretKey = hsmSm2SecretKeyR.getData();
+            if (sm2SecretKey == null) {
+                throw new ZAYKException("获取SM2加密密钥异常，请检查索引号为" + secretKeyIndex + "的SM2加密密钥是否存在！");
+            }
+        }
         //密钥类型为对称密钥
         if (dbhsmSecretKeyManage.getSecretKeyType().equals(DbConstants.SECRET_KEY_TYPE_SYM)) {
             dbhsmSecretKeyManage.setSecretKeyId("Symm" + UUID.randomUUID().toString().substring(0, 14) + dbhsmSecretKeyManage.getSecretKeyIndex());

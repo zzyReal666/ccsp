@@ -775,12 +775,8 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                         throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
                     }
                     //用户赋予对每个表的**权限EXEC sp_MSforeachtable 'GRANT SELECT ON ? TO your_user'
-                    sql = "USE ? ;" + "EXEC sp_MSforeachtable '? ON ? TO ?'";
+                    sql = "USE " + dbName + " ;" + "EXEC sp_MSforeachtable '" + permission.trim() + " ON ? TO " + username + "'";
                     preparedStatement = connection.prepareStatement(sql);
-                    preparedStatement.setString(1, dbName);
-                    preparedStatement.setString(2, permission.trim());
-                    preparedStatement.setString(3, "?");
-                    preparedStatement.setString(4, username);
                     preparedStatement.executeUpdate();
                 }
             }

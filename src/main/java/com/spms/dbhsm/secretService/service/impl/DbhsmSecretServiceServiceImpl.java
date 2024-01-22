@@ -1,9 +1,12 @@
 package com.spms.dbhsm.secretService.service.impl;
 
+import com.ccsp.common.core.domain.R;
 import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.DateUtils;
 import com.ccsp.common.core.utils.StringUtils;
 import com.ccsp.common.core.web.domain.AjaxResult;
+import com.ccsp.system.api.hsmSvsTsaApi.RemoteSecretKeyService;
+import com.ccsp.system.api.hsmSvsTsaApi.domain.HsmSm2SecretKey;
 import com.spms.common.CommandUtil;
 import com.spms.common.Int4jUtil;
 import com.spms.common.constant.DbConstants;
@@ -32,12 +35,15 @@ import java.util.List;
  */
 @Slf4j
 @Service
-public class DbhsmSecretServiceServiceImpl implements IDbhsmSecretServiceService {
+public class    DbhsmSecretServiceServiceImpl implements IDbhsmSecretServiceService {
     @Autowired
     private DbhsmSecretServiceMapper dbhsmSecretServiceMapper;
 
     @Autowired
     private DbhsmSecretKeyManageMapper dbhsmSecretKeyManageMapper;
+
+    @Autowired
+    private RemoteSecretKeyService remoteSecretKeyService;
 
     @PostConstruct
     private void initSecretService() {
@@ -96,6 +102,15 @@ public class DbhsmSecretServiceServiceImpl implements IDbhsmSecretServiceService
      */
     @Override
     public int insertDbhsmSecretService(DbhsmSecretService dbhsmSecretService) throws Exception {
+
+        //        校验sm2密钥是否存在
+        Long secretKeyIndex = dbhsmSecretService.getSecretKeyIndex();
+        //根据密钥索引获取sm2密钥
+        R<HsmSm2SecretKey> hsmSm2SecretKeyR = remoteSecretKeyService.selectSm2SecretKeyInfo(Math.toIntExact(secretKeyIndex), DbConstants.SECRET_KEY_USAGE_ENC);
+        HsmSm2SecretKey sm2SecretKey = hsmSm2SecretKeyR.getData();
+        if (sm2SecretKey == null) {
+            throw new ZAYKException("获取SM2加密密钥异常，请检查sm2 "+ secretKeyIndex + "号加密密钥是否存在！");
+        }
         dbhsmSecretService.setCreateTime(DateUtils.getNowDate());
     if(DbConstants.SECRET_SERVICE_TYPE_KMIP.equals(dbhsmSecretService.getSecretServiceType())) {
         //将KMIP配置文件模板拷贝到初始化文件
@@ -170,6 +185,14 @@ public class DbhsmSecretServiceServiceImpl implements IDbhsmSecretServiceService
      */
     @Override
     public int updateDbhsmSecretService(DbhsmSecretService dbhsmSecretService) throws IOException, ZAYKException {
+        //        校验sm2密钥是否存在
+        Long secretKeyIndex = dbhsmSecretService.getSecretKeyIndex();
+        //根据密钥索引获取sm2密钥
+        R<HsmSm2SecretKey> hsmSm2SecretKeyR = remoteSecretKeyService.selectSm2SecretKeyInfo(Math.toIntExact(secretKeyIndex), DbConstants.SECRET_KEY_USAGE_ENC);
+        HsmSm2SecretKey sm2SecretKey = hsmSm2SecretKeyR.getData();
+        if (sm2SecretKey == null) {
+            throw new ZAYKException("获取SM2加密密钥异常，请检查索引号为"+ secretKeyIndex + "的SM2加密密钥是否存在！");
+        }
         DbhsmSecretService dbhsmSecretService1 = dbhsmSecretServiceMapper.selectDbhsmSecretServiceById(dbhsmSecretService.getId());
         //如果参数没有变化，则不修改配置文件
         if (dbhsmSecretService1.getSecretService().equals(dbhsmSecretService.getSecretService())
@@ -181,6 +204,7 @@ public class DbhsmSecretServiceServiceImpl implements IDbhsmSecretServiceService
                 && dbhsmSecretService1.getServicePort().equals(dbhsmSecretService.getServicePort())) {
             return 1;
         }
+
         //如果修改后的ip和port已存在则禁止修改
         DbhsmSecretService dbhsmSecretService2 = new DbhsmSecretService();
         dbhsmSecretService2.setServiceIp(dbhsmSecretService.getServiceIp());
