@@ -48,9 +48,8 @@ public class JSONDataUtil {
                 return devBaseDataR.getData().getDataValue();
             }
         }catch (Exception e){
-            e.printStackTrace();
-            if (reConnErrNum < 5){
-                log.info("系统模块连接异常，5秒后进行重连");
+            if (reConnErrNum < 60){
+                log.error("系统模块连接异常，5秒后进行第" + reConnErrNum + "次重连");
                 try {
                     Thread.sleep(5 * 1000);
                 } catch (InterruptedException ex) {

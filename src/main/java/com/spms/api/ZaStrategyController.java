@@ -88,8 +88,7 @@ public class ZaStrategyController {
             crytoCartTypeSInt = Integer.parseInt(crytoCartType.toString());
             mgr.Initialize(crytoCartTypeSInt);
         } catch (Exception e) {
-            e.printStackTrace();
-            log.info("系统模块连接异常，5秒后进行重连");
+            log.error("系统模块连接异常，5秒后进行重连");
             try {
                 Thread.sleep(1000 * 5);
             } catch (InterruptedException ex) {
