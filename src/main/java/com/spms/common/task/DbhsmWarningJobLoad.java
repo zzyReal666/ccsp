@@ -102,12 +102,16 @@ public class DbhsmWarningJobLoad {
     }
 
     public void connectionParam(Long id, String table, String field) {
+        //验证字段值
         String result = null;
         Connection conn = null;
         Statement stmt = null;
         ResultSet resultSet = null;
         String sql;
+        //校验字段 -- 数据
         StringBuffer stringBuffer = new StringBuffer();
+        //result返回拼接数据
+        StringBuffer resultMsg = new StringBuffer();
         DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
         if (!ObjectUtils.isEmpty(instance)) {
             DbhsmWarningInfo dbhsmWarningInfo = new DbhsmWarningInfo();
@@ -118,30 +122,30 @@ public class DbhsmWarningJobLoad {
                 conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
                 if (Optional.ofNullable(conn).isPresent()) {
                     stmt = conn.createStatement();
-                    sql = "SELECT " + field + " FROM " + table + " limit 1;";
+                    sql = "SELECT " + field + " FROM " + table + ";";
                     resultSet = stmt.executeQuery(sql);
                     String[] split = field.split(",");
                     while (resultSet.next()) {
                         for (int i = 0; i < split.length - 1; i++) {
                             stringBuffer.append(resultSet.getString(split[i]));
+                            resultMsg.append(split[i] + "=" + resultSet.getString(split[i]));
                         }
                         //获取最后一个字段值
                         result = resultSet.getString(split[split.length - 1]);
+                        String verification = verification(stringBuffer.toString());
+                        //如果校验值相同不需要更改
+                        if (verification.equals(result)) {
+                            System.out.println("校验一致,数据没有被更改");
+                            return;
+                        }
+                        String instanceInfo = CommandUtil.getInstance(instance);
+                        //告警数据新增
+                        dbhsmWarningInfo.setResult("连接信息：" + instanceInfo + "，经校验：[" + resultMsg + "]字段数据被篡改");
+                        dbhsmWarningInfo.setStatus(1L);
+                        dbhsmWarningInfo.setOldVerificationValue(result);
+                        dbhsmWarningInfo.setNewVerificationValue(verification);
+                        dbhsmWarningInfo.setCreateTime(new Date());
                     }
-                    String verification = verification(stringBuffer.toString());
-                    //如果校验值相同不需要更改
-                    if (verification.equals(result)) {
-                        System.out.println("校验一致,数据没有被更改");
-                        return;
-                    }
-                    String instanceInfo = CommandUtil.getInstance(instance);
-                    //告警数据新增
-                    dbhsmWarningInfo.setResult("连接信息：" + instanceInfo + "，经校验：[" + field + "]字段数据被篡改");
-                    dbhsmWarningInfo.setStatus(1L);
-                    dbhsmWarningInfo.setOldVerificationValue(result);
-                    dbhsmWarningInfo.setNewVerificationValue(verification);
-                    dbhsmWarningInfo.setCreateTime(new Date());
-
                 }
             } catch (SQLException | ZAYKException e) {
                 dbhsmWarningInfo.setResult(e.getMessage());
