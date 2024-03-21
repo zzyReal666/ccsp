@@ -1,9 +1,10 @@
 package com.spms.dbhsm.warningConfig.service;
 
-import java.util.List;
-
 import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig;
+import com.spms.dbhsm.warningConfig.vo.DataBaseConnectionResponse;
+
+import java.util.List;
 
 /**
  * warningConfigService接口
@@ -61,5 +62,5 @@ public interface IDbhsmWarningConfigService
      */
     public int deleteDbhsmWarningConfigById(Long id);
 
-    AjaxResult2<List<String>> queryDataBaseConnection();
+    AjaxResult2<List<DataBaseConnectionResponse>> queryDataBaseConnection();
 }

@@ -1,30 +1,21 @@
 package com.spms.dbhsm.warningConfig.controller;
 
-import java.util.List;
-import java.io.IOException;
-import javax.servlet.http.HttpServletResponse;
-
+import com.ccsp.common.core.utils.poi.ExcelUtil;
+import com.ccsp.common.core.web.controller.BaseController;
+import com.ccsp.common.core.web.domain.AjaxResult;
 import com.ccsp.common.core.web.domain.AjaxResult2;
-import io.swagger.annotations.ApiModelProperty;
-import io.swagger.annotations.ApiOperation;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.ccsp.common.core.web.page.TableDataInfo;
 import com.ccsp.common.log.annotation.Log;
 import com.ccsp.common.log.enums.BusinessType;
 import com.ccsp.common.security.annotation.RequiresPermissions;
 import com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig;
 import com.spms.dbhsm.warningConfig.service.IDbhsmWarningConfigService;
-import com.ccsp.common.core.web.controller.BaseController;
-import com.ccsp.common.core.web.domain.AjaxResult;
-import com.ccsp.common.core.utils.poi.ExcelUtil;
-import com.ccsp.common.core.web.page.TableDataInfo;
+import com.spms.dbhsm.warningConfig.vo.DataBaseConnectionResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletResponse;
+import java.util.List;
 
 /**
  * warningConfigController
@@ -108,7 +99,7 @@ public class DbhsmWarningConfigController extends BaseController
     }
 
     @GetMapping("/queryDataBaseConnection")
-    public AjaxResult2<List<String>> queryDataBaseConnection()
+    public AjaxResult2<List<DataBaseConnectionResponse>> queryDataBaseConnection()
     {
         return dbhsmWarningConfigService.queryDataBaseConnection();
     }

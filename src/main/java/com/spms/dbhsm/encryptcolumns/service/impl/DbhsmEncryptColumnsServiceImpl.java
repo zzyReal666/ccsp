@@ -87,11 +87,11 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
     private String taskStatus = "Encrypting";
 
     static {
-            String sysDataToDB = JSONDataUtil.getSysDataToDB(DbConstants.DBENC_WEB_PORT);
-            if (StringUtils.isNotEmpty(sysDataToDB)){
-                assert sysDataToDB != null;
-                dbhsmPort = Integer.parseInt(sysDataToDB);
-            }
+//            String sysDataToDB = JSONDataUtil.getSysDataToDB(DbConstants.DBENC_WEB_PORT);
+//            if (StringUtils.isNotEmpty(sysDataToDB)){
+//                assert sysDataToDB != null;
+//                dbhsmPort = Integer.parseInt(sysDataToDB);
+//            }
     }
     /**
      * 查询数据库加密列

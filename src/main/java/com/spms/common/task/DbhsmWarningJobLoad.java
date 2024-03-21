@@ -1,9 +1,8 @@
 package com.spms.common.task;
 
-import cn.hutool.core.codec.Base64;
-import com.alibaba.fastjson.JSONObject;
 import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.SM3Util;
+import com.spms.common.CommandUtil;
 import com.spms.common.pool.hikariPool.DbConnectionPoolFactory;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
@@ -12,10 +11,10 @@ import com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig;
 import com.spms.dbhsm.warningConfig.mapper.DbhsmWarningConfigMapper;
 import com.spms.dbhsm.warningInfo.domain.DbhsmWarningInfo;
 import com.spms.dbhsm.warningInfo.mapper.DbhsmWarningInfoMapper;
-import org.apache.commons.lang3.StringUtils;
 import org.bouncycastle.util.encoders.Hex;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
 
@@ -24,7 +23,9 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.*;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -53,6 +54,7 @@ public class DbhsmWarningJobLoad {
     private DbhsmWarningInfoMapper dbhsmWarningInfoMapper;
 
 
+    @Async
     @PostConstruct
     public void initLoading() {
 
@@ -90,7 +92,7 @@ public class DbhsmWarningJobLoad {
             };
 
             // 执行任务初始延迟1秒，然后每X分钟执行一次任务
-            scheduleTask(task, 1, Integer.parseInt(cron), TimeUnit.SECONDS);
+            scheduleTask(task, 1, Integer.parseInt(cron), TimeUnit.MINUTES);
         }
     }
 
@@ -108,6 +110,7 @@ public class DbhsmWarningJobLoad {
         StringBuffer stringBuffer = new StringBuffer();
         DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
         if (!ObjectUtils.isEmpty(instance)) {
+            DbhsmWarningInfo dbhsmWarningInfo = new DbhsmWarningInfo();
             //创建数据库连接
             DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
             BeanUtils.copyProperties(instance, connDTO);
@@ -131,16 +134,18 @@ public class DbhsmWarningJobLoad {
                         System.out.println("校验一致,数据没有被更改");
                         return;
                     }
+                    String instanceInfo = CommandUtil.getInstance(instance);
                     //告警数据新增
-                    DbhsmWarningInfo dbhsmWarningInfo = new DbhsmWarningInfo();
-                    dbhsmWarningInfo.setResult("经校验:[" + field + "]字段数据被篡改");
+                    dbhsmWarningInfo.setResult("连接信息：" + instanceInfo + "，经校验：[" + field + "]字段数据被篡改");
                     dbhsmWarningInfo.setStatus(1L);
                     dbhsmWarningInfo.setOldVerificationValue(result);
                     dbhsmWarningInfo.setNewVerificationValue(verification);
                     dbhsmWarningInfo.setCreateTime(new Date());
-                    dbhsmWarningInfoMapper.insertDbhsmWarningInfo(dbhsmWarningInfo);
+
                 }
             } catch (SQLException | ZAYKException e) {
+                dbhsmWarningInfo.setResult(e.getMessage());
+                dbhsmWarningInfo.setStatus(0L);
                 e.printStackTrace();
             } finally {
                 if (stmt != null) {
@@ -164,6 +169,7 @@ public class DbhsmWarningJobLoad {
                         e.printStackTrace();
                     }
                 }
+                dbhsmWarningInfoMapper.insertDbhsmWarningInfo(dbhsmWarningInfo);
             }
         }
     }

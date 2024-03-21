@@ -1,6 +1,8 @@
 package com.spms.common;
 
 import cn.hutool.core.util.RuntimeUtil;
+import com.spms.common.constant.DbConstants;
+import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.exec.CommandLine;
 import org.apache.commons.exec.DefaultExecutor;
@@ -12,6 +14,21 @@ import java.io.*;
 @Slf4j
 public class CommandUtil {
 
+    public static String getInstance(DbhsmDbInstance instance) {
+        String databaseType = "";
+        if (DbConstants.DB_TYPE_ORACLE.equals(instance.getDatabaseType())) {
+            databaseType = DbConstants.DB_TYPE_ORACLE_DESC;
+        } else if (DbConstants.DB_TYPE_SQLSERVER.equals(instance.getDatabaseType())) {
+            databaseType = DbConstants.DB_TYPE_SQLSERVER_DESC;
+        } else if (DbConstants.DB_TYPE_MYSQL.equals(instance.getDatabaseType())) {
+            databaseType = DbConstants.DB_TYPE_MYSQL_DESC;
+        } else if(DbConstants.DB_TYPE_POSTGRESQL.equals(instance.getDatabaseType())) {
+            databaseType = DbConstants.DB_TYPE_POSTGRESQL_DESC;
+        }else if(DbConstants.DB_TYPE_DM.equals(instance.getDatabaseType())) {
+            databaseType = DbConstants.DB_TYPE_DM_DESC;
+        }
+        return databaseType + ":" + instance.getDatabaseIp() + ":" + instance.getDatabasePort() + instance.getDatabaseExampleType() + instance.getDatabaseServerName();
+    }
     public static String excCommand(String command) {
         return exeCmd(command, 10);
     }

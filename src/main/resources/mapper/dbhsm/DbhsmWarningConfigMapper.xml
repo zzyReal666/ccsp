@@ -62,6 +62,7 @@
             <if test="databaseConnectionInfo != null and databaseConnectionInfo != ''">database_connection_info,</if>
             <if test="databaseTableInfo != null and databaseTableInfo != ''">database_table_info,</if>
             <if test="verificationType != null">verification_type,</if>
+            <if test="verificationFields != null">verification_fields,</if>
             <if test="cron != null">cron,</if>
             <if test="enableTiming != null">enable_timing,</if>
             <if test="jobName != null">job_name,</if>
@@ -73,6 +74,7 @@
             <if test="databaseConnectionInfo != null and databaseConnectionInfo != ''">#{databaseConnectionInfo},</if>
             <if test="databaseTableInfo != null and databaseTableInfo != ''">#{databaseTableInfo},</if>
             <if test="verificationType != null">#{verificationType},</if>
+            <if test="verificationFields != null">#{verificationFields},</if>
             <if test="cron != null">#{cron},</if>
             <if test="enableTiming != null">#{enableTiming},</if>
             <if test="jobName != null">#{jobName},</if>

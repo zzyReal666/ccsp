@@ -1,25 +1,20 @@
-package com.spms.dbhsm.warningConfig.domain;
+package com.spms.dbhsm.warningConfig.vo;
 
-import io.swagger.annotations.ApiModelProperty;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.commons.lang3.builder.ToStringStyle;
 import com.ccsp.common.core.annotation.Excel;
 import com.ccsp.common.core.web.domain.BaseEntity;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.Data;
 
 /**
- * warningConfig对象 dbhsm_warning_config
- * 
- * @author diq
- * @date 2024-03-21
+ * <p> description: TODO the method is used to </p>
+ *
+ * <p> Powered by wzh On 2024-03-21 16:29 </p>
+ * <p> @author wzh [zhwang2012@yeah.net] </p>
+ * <p> @version 1.0 </p>
  */
 
 @Data
-public class DbhsmWarningConfig extends BaseEntity
-{
-    private static final long serialVersionUID = 1L;
-
+public class DbhsmWarningConfigListResponse extends BaseEntity {
     /** 主键 */
     private Long id;
 
@@ -52,7 +47,6 @@ public class DbhsmWarningConfig extends BaseEntity
     /** 任务名称 */
     @Excel(name = "任务名称")
     private String jobName;
-
 
     @ApiModelProperty(value = "连接信息")
     private String connectionInfo;
