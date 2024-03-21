@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.spms.dbhsm.warningConfig.mapper.DbhsmWarningConfigMapper">
+
+    <resultMap type="com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig" id="DbhsmWarningConfigResult">
+        <result property="id" column="id"/>
+        <result property="tableFields" column="table_fields"/>
+        <result property="databaseConnectionInfo" column="database_connection_info"/>
+        <result property="databaseTableInfo" column="database_table_info"/>
+        <result property="verificationType" column="verification_type"/>
+        <result property="verificationFields" column="verification_fields"/>
+        <result property="cron" column="cron"/>
+        <result property="enableTiming" column="enable_timing"/>
+        <result property="jobName" column="job_name"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectDbhsmWarningConfigVo">
+        select id,
+               table_fields,
+               database_connection_info,
+               database_table_info,
+               verification_type,
+               verification_fields,
+               cron,
+               enable_timing,
+               job_name,
+               create_time,
+               update_time
+        from dbhsm_warning_config
+    </sql>
+
+    <select id="selectDbhsmWarningConfigList" parameterType="com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig" resultMap="DbhsmWarningConfigResult">
+        <include refid="selectDbhsmWarningConfigVo"/>
+        <where>
+            <if test="tableFields != null  and tableFields != ''">and table_fields = #{tableFields}</if>
+            <if test="databaseConnectionInfo != null  and databaseConnectionInfo != ''">and database_connection_info =
+                #{databaseConnectionInfo}
+            </if>
+            <if test="databaseTableInfo != null  and databaseTableInfo != ''">and database_table_info =
+                #{databaseTableInfo}
+            </if>
+            <if test="verificationType != null ">and verification_type = #{verificationType}</if>
+            <if test="cron != null  and cron != ''">and cron = #{cron}</if>
+            <if test="enableTiming != null ">and enable_timing = #{enableTiming}</if>
+            <if test="jobName != null  and jobName != ''">and job_name like concat('%', #{jobName}, '%')</if>
+        </where>
+    </select>
+
+    <select id="selectDbhsmWarningConfigById" parameterType="Long" resultMap="DbhsmWarningConfigResult">
+        <include refid="selectDbhsmWarningConfigVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertDbhsmWarningConfig" parameterType="com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig" useGeneratedKeys="true" keyProperty="id">
+        insert into dbhsm_warning_config
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="tableFields != null and tableFields != ''">table_fields,</if>
+            <if test="databaseConnectionInfo != null and databaseConnectionInfo != ''">database_connection_info,</if>
+            <if test="databaseTableInfo != null and databaseTableInfo != ''">database_table_info,</if>
+            <if test="verificationType != null">verification_type,</if>
+            <if test="cron != null">cron,</if>
+            <if test="enableTiming != null">enable_timing,</if>
+            <if test="jobName != null">job_name,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="tableFields != null and tableFields != ''">#{tableFields},</if>
+            <if test="databaseConnectionInfo != null and databaseConnectionInfo != ''">#{databaseConnectionInfo},</if>
+            <if test="databaseTableInfo != null and databaseTableInfo != ''">#{databaseTableInfo},</if>
+            <if test="verificationType != null">#{verificationType},</if>
+            <if test="cron != null">#{cron},</if>
+            <if test="enableTiming != null">#{enableTiming},</if>
+            <if test="jobName != null">#{jobName},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateDbhsmWarningConfig" parameterType="com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig">
+        update dbhsm_warning_config
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="tableFields != null and tableFields != ''">table_fields = #{tableFields},</if>
+            <if test="databaseConnectionInfo != null and databaseConnectionInfo != ''">database_connection_info =
+                #{databaseConnectionInfo},
+            </if>
+            <if test="databaseTableInfo != null and databaseTableInfo != ''">database_table_info =
+                #{databaseTableInfo},
+            </if>
+            <if test="verificationType != null">verification_type = #{verificationType},</if>
+            <if test="cron != null">cron = #{cron},</if>
+            <if test="enableTiming != null">enable_timing = #{enableTiming},</if>
+            <if test="jobName != null">job_name = #{jobName},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteDbhsmWarningConfigById" parameterType="Long">
+        delete
+        from dbhsm_warning_config
+        where id = #{id}
+    </delete>
+
+    <delete id="deleteDbhsmWarningConfigByIds" parameterType="String">
+        delete from dbhsm_warning_config where id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

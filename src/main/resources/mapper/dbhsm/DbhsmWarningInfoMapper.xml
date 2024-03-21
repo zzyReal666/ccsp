@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.spms.dbhsm.warningInfo.mapper.DbhsmWarningInfoMapper">
+    
+    <resultMap type="DbhsmWarningInfo" id="DbhsmWarningInfoResult">
+        <result property="id"    column="id"    />
+        <result property="status"    column="status"    />
+        <result property="result"    column="result"    />
+        <result property="oldVerificationValue"    column="old_verification_value"    />
+        <result property="newVerificationValue"    column="new_verification_value"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectDbhsmWarningInfoVo">
+        select id, status, result, old_verification_value, new_verification_value, create_time, update_time from dbhsm_warning_info
+    </sql>
+
+    <select id="selectDbhsmWarningInfoList" parameterType="DbhsmWarningInfo" resultMap="DbhsmWarningInfoResult">
+        <include refid="selectDbhsmWarningInfoVo"/>
+        <where>  
+            <if test="result != null  and result != ''"> and result = #{result}</if>
+            <if test="oldVerificationValue != null  and oldVerificationValue != ''"> and old_verification_value = #{oldVerificationValue}</if>
+            <if test="newVerificationValue != null  and newVerificationValue != ''"> and new_verification_value = #{newVerificationValue}</if>
+            <if test="createTime != null "> and create_time = #{createTime}</if>
+        </where>
+    </select>
+    
+    <select id="selectDbhsmWarningInfoById" parameterType="Long" resultMap="DbhsmWarningInfoResult">
+        <include refid="selectDbhsmWarningInfoVo"/>
+        where id = #{id}
+    </select>
+        
+    <insert id="insertDbhsmWarningInfo" parameterType="DbhsmWarningInfo" useGeneratedKeys="true" keyProperty="id">
+        insert into dbhsm_warning_info
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="status != null">status,</if>
+            <if test="result != null">result,</if>
+            <if test="oldVerificationValue != null">old_verification_value,</if>
+            <if test="newVerificationValue != null">new_verification_value,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="status != null">#{status},</if>
+            <if test="result != null">#{result},</if>
+            <if test="oldVerificationValue != null">#{oldVerificationValue},</if>
+            <if test="newVerificationValue != null">#{newVerificationValue},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateDbhsmWarningInfo" parameterType="DbhsmWarningInfo">
+        update dbhsm_warning_info
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="status != null">status = #{status},</if>
+            <if test="result != null">result = #{result},</if>
+            <if test="oldVerificationValue != null">old_verification_value = #{oldVerificationValue},</if>
+            <if test="newVerificationValue != null">new_verification_value = #{newVerificationValue},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteDbhsmWarningInfoById" parameterType="Long">
+        delete from dbhsm_warning_info where id = #{id}
+    </delete>
+
+    <delete id="deleteDbhsmWarningInfoByIds" parameterType="String">
+        delete from dbhsm_warning_info where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>
