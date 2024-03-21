@@ -11,6 +11,7 @@ import com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig;
 import com.spms.dbhsm.warningConfig.mapper.DbhsmWarningConfigMapper;
 import com.spms.dbhsm.warningInfo.domain.DbhsmWarningInfo;
 import com.spms.dbhsm.warningInfo.mapper.DbhsmWarningInfoMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.util.encoders.Hex;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +40,7 @@ import java.util.stream.Collectors;
  * <p> @version 1.0 </p>
  */
 
+@Slf4j
 @Component
 public class DbhsmWarningJobLoad {
 
@@ -83,11 +85,11 @@ public class DbhsmWarningJobLoad {
             String databaseTableInfo = dbhsmWarningConfig.getDatabaseTableInfo();
             //定时任务执行时间 x分钟
             String cron = dbhsmWarningConfig.getCron();
-
             //校验字段
             stringBuffer.append(dbhsmWarningConfig.getVerificationFields());
             Runnable task = () -> {
                 // 创建一个任务
+                log.info("创建任务数据库连接：{}",databaseConnectionInfo);
                 connectionParam(Long.parseLong(databaseConnectionInfo), databaseTableInfo, stringBuffer.toString());
             };
 
@@ -114,18 +116,19 @@ public class DbhsmWarningJobLoad {
         StringBuffer resultMsg = new StringBuffer();
         DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
         if (!ObjectUtils.isEmpty(instance)) {
-            DbhsmWarningInfo dbhsmWarningInfo = new DbhsmWarningInfo();
             //创建数据库连接
             DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
             BeanUtils.copyProperties(instance, connDTO);
             try {
                 conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
+                String instanceInfo = CommandUtil.getInstance(instance);
                 if (Optional.ofNullable(conn).isPresent()) {
                     stmt = conn.createStatement();
                     sql = "SELECT " + field + " FROM " + table + ";";
                     resultSet = stmt.executeQuery(sql);
                     String[] split = field.split(",");
                     while (resultSet.next()) {
+                        DbhsmWarningInfo dbhsmWarningInfo = new DbhsmWarningInfo();
                         for (int i = 0; i < split.length - 1; i++) {
                             stringBuffer.append(resultSet.getString(split[i]));
                             resultMsg.append(split[i] + "=" + resultSet.getString(split[i]));
@@ -138,19 +141,23 @@ public class DbhsmWarningJobLoad {
                             System.out.println("校验一致,数据没有被更改");
                             return;
                         }
-                        String instanceInfo = CommandUtil.getInstance(instance);
                         //告警数据新增
                         dbhsmWarningInfo.setResult("连接信息：" + instanceInfo + "，经校验：[" + resultMsg + "]字段数据被篡改");
                         dbhsmWarningInfo.setStatus(1L);
                         dbhsmWarningInfo.setOldVerificationValue(result);
                         dbhsmWarningInfo.setNewVerificationValue(verification);
                         dbhsmWarningInfo.setCreateTime(new Date());
+                        //数据库新增
+                        dbhsmWarningInfoMapper.insertDbhsmWarningInfo(dbhsmWarningInfo);
                     }
                 }
             } catch (SQLException | ZAYKException e) {
+                DbhsmWarningInfo dbhsmWarningInfo = new DbhsmWarningInfo();
                 dbhsmWarningInfo.setResult(e.getMessage());
                 dbhsmWarningInfo.setStatus(0L);
-                e.printStackTrace();
+                dbhsmWarningInfo.setCreateTime(new Date());
+                dbhsmWarningInfoMapper.insertDbhsmWarningInfo(dbhsmWarningInfo);
+                log.error("任务同步异常：{}",e.getMessage());
             } finally {
                 if (stmt != null) {
                     try {
@@ -173,7 +180,6 @@ public class DbhsmWarningJobLoad {
                         e.printStackTrace();
                     }
                 }
-                dbhsmWarningInfoMapper.insertDbhsmWarningInfo(dbhsmWarningInfo);
             }
         }
     }
