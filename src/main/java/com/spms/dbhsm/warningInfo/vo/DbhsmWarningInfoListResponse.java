@@ -28,18 +28,18 @@ public class DbhsmWarningInfoListResponse {
     private Long status;
 
     /** 校验结果 */
-    @Excel(name = "告警信息")
+    @Excel(name = "告警信息",width = 70)
     private String result;
 
     /** 原校验值 */
-    @Excel(name = "原校验值")
+    @Excel(name = "原校验值",width = 70)
     private String oldVerificationValue;
 
     /** 校验值 */
-    @Excel(name = "计算校验值")
+    @Excel(name = "计算校验值",width = 70)
     private String newVerificationValue;
 
-    @Excel(name = "告警时间")
+    @Excel(name = "告警时间",dateFormat="yyyy-MM-dd HH:mm:ss",width = 32)
     @ApiModelProperty(value = "创建时间" , hidden = true)
     @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
