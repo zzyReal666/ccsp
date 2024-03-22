@@ -3,6 +3,7 @@ package com.spms.dbhsm.warningConfig.service;
 import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig;
 import com.spms.dbhsm.warningConfig.vo.DataBaseConnectionResponse;
+import com.spms.dbhsm.warningConfig.vo.DbhsmWarningConfigListRequest;
 
 import java.util.List;
 
@@ -28,7 +29,7 @@ public interface IDbhsmWarningConfigService
      * @param dbhsmWarningConfig warningConfig
      * @return warningConfig集合
      */
-    public List<DbhsmWarningConfig> selectDbhsmWarningConfigList(DbhsmWarningConfig dbhsmWarningConfig);
+    public List<DbhsmWarningConfig> selectDbhsmWarningConfigList(DbhsmWarningConfigListRequest dbhsmWarningConfig);
 
     /**
      * 新增warningConfig

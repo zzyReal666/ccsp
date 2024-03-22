@@ -2,8 +2,11 @@ package com.spms.dbhsm.warningConfig.vo;
 
 import com.ccsp.common.core.annotation.Excel;
 import com.ccsp.common.core.web.domain.BaseEntity;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+
+import java.util.Date;
 
 /**
  * <p> description: TODO the method is used to </p>
@@ -14,7 +17,7 @@ import lombok.Data;
  */
 
 @Data
-public class DbhsmWarningConfigListResponse extends BaseEntity {
+public class DbhsmWarningConfigListRequest extends BaseEntity {
     /** 主键 */
     private Long id;
 
@@ -48,6 +51,12 @@ public class DbhsmWarningConfigListResponse extends BaseEntity {
     @Excel(name = "任务名称")
     private String jobName;
 
-    @ApiModelProperty(value = "连接信息")
-    private String connectionInfo;
+
+    @JsonFormat(locale = "zh", timezone = "GMT+8", pattern = "yyyy-MM-dd HH:mm:ss")
+    @ApiModelProperty(name = "startTime", value = "时间(范围-开始)")
+    private Date startTime;
+
+    @JsonFormat(locale = "zh", timezone = "GMT+8", pattern = "yyyy-MM-dd HH:mm:ss")
+    @ApiModelProperty(name = "endTime", value = "时间(范围-结束)")
+    private Date endTime;
 }

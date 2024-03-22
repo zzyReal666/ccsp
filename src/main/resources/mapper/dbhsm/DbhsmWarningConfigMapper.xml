@@ -33,7 +33,7 @@
         from dbhsm_warning_config
     </sql>
 
-    <select id="selectDbhsmWarningConfigList" parameterType="com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig" resultMap="DbhsmWarningConfigResult">
+    <select id="selectDbhsmWarningConfigList" parameterType="com.spms.dbhsm.warningConfig.vo.DbhsmWarningConfigListRequest" resultMap="DbhsmWarningConfigResult">
         <include refid="selectDbhsmWarningConfigVo"/>
         <where>
             <if test="tableFields != null  and tableFields != ''">and table_fields = #{tableFields}</if>
@@ -47,6 +47,12 @@
             <if test="cron != null  and cron != ''">and cron = #{cron}</if>
             <if test="enableTiming != null ">and enable_timing = #{enableTiming}</if>
             <if test="jobName != null  and jobName != ''">and job_name like concat('%', #{jobName}, '%')</if>
+            <if test="startTime!=null">
+                and DATE_FORMAT(create_time,'%Y-%m-%d') &gt;= DATE_FORMAT(#{startTime},'%Y-%m-%d')
+            </if>
+            <if test="endTime!=null">
+                and DATE_FORMAT(CREATED_TIME,'%Y-%m-%d') &lt;= DATE_FORMAT(#{endTime},'%Y-%m-%d')
+            </if>
         </where>
     </select>
 

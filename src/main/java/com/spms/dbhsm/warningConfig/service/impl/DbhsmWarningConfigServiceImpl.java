@@ -10,6 +10,7 @@ import com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig;
 import com.spms.dbhsm.warningConfig.mapper.DbhsmWarningConfigMapper;
 import com.spms.dbhsm.warningConfig.service.IDbhsmWarningConfigService;
 import com.spms.dbhsm.warningConfig.vo.DataBaseConnectionResponse;
+import com.spms.dbhsm.warningConfig.vo.DbhsmWarningConfigListRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -52,7 +53,7 @@ public class DbhsmWarningConfigServiceImpl implements IDbhsmWarningConfigService
      * @return warningConfig
      */
     @Override
-    public List<DbhsmWarningConfig> selectDbhsmWarningConfigList(DbhsmWarningConfig dbhsmWarningConfig) {
+    public List<DbhsmWarningConfig> selectDbhsmWarningConfigList(DbhsmWarningConfigListRequest dbhsmWarningConfig) {
         List<DbhsmWarningConfig> dbhsmWarningConfigs = dbhsmWarningConfigMapper.selectDbhsmWarningConfigList(dbhsmWarningConfig);
 
         //数据转换
