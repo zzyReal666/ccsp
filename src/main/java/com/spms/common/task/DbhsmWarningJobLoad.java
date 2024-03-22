@@ -90,7 +90,7 @@ public class DbhsmWarningJobLoad {
             Runnable task = () -> {
                 // 创建一个任务
                 log.info("创建任务数据库连接：{}",databaseConnectionInfo);
-                connectionParam(Long.parseLong(databaseConnectionInfo), databaseTableInfo, stringBuffer.toString());
+                connectionParam(Long.parseLong(databaseConnectionInfo), databaseTableInfo, stringBuffer.toString(),dbhsmWarningConfig.getId());
             };
 
             // 执行任务初始延迟1秒，然后每X分钟执行一次任务
@@ -103,7 +103,7 @@ public class DbhsmWarningJobLoad {
         return Hex.toHexString(SM3Util.hash(srcData));
     }
 
-    public void connectionParam(Long id, String table, String field) {
+    public void connectionParam(Long id, String table, String field,Long configId) {
         //验证字段值
         String result = null;
         Connection conn = null;
@@ -147,6 +147,7 @@ public class DbhsmWarningJobLoad {
                         dbhsmWarningInfo.setOldVerificationValue(result);
                         dbhsmWarningInfo.setNewVerificationValue(verification);
                         dbhsmWarningInfo.setCreateTime(new Date());
+                        dbhsmWarningInfo.setConfigId(configId);
                         //数据库新增
                         dbhsmWarningInfoMapper.insertDbhsmWarningInfo(dbhsmWarningInfo);
                     }
@@ -156,6 +157,7 @@ public class DbhsmWarningJobLoad {
                 dbhsmWarningInfo.setResult(e.getMessage());
                 dbhsmWarningInfo.setStatus(0L);
                 dbhsmWarningInfo.setCreateTime(new Date());
+                dbhsmWarningInfo.setConfigId(configId);
                 dbhsmWarningInfoMapper.insertDbhsmWarningInfo(dbhsmWarningInfo);
                 log.error("任务同步异常：{}",e.getMessage());
             } finally {

@@ -10,13 +10,11 @@ import com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig;
 import com.spms.dbhsm.warningConfig.mapper.DbhsmWarningConfigMapper;
 import com.spms.dbhsm.warningConfig.service.IDbhsmWarningConfigService;
 import com.spms.dbhsm.warningConfig.vo.DataBaseConnectionResponse;
-import com.spms.dbhsm.warningConfig.vo.DbhsmWarningConfigListRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * warningConfigService业务层处理
@@ -53,21 +51,9 @@ public class DbhsmWarningConfigServiceImpl implements IDbhsmWarningConfigService
      * @return warningConfig
      */
     @Override
-    public List<DbhsmWarningConfig> selectDbhsmWarningConfigList(DbhsmWarningConfigListRequest dbhsmWarningConfig) {
-        List<DbhsmWarningConfig> dbhsmWarningConfigs = dbhsmWarningConfigMapper.selectDbhsmWarningConfigList(dbhsmWarningConfig);
-
-        //数据转换
-        dbhsmWarningConfigs = dbhsmWarningConfigs.stream().peek(warningConfig -> {
-            //获取实例信息
-            DbhsmDbInstance dbhsmDbInstance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(Long.valueOf(warningConfig.getDatabaseConnectionInfo()));
-            //组装实例信息
-            String instance = CommandUtil.getInstance(dbhsmDbInstance);
-            warningConfig.setConnectionInfo(instance);
-        }).collect(Collectors.toList());
-
-        return dbhsmWarningConfigs;
+    public List<DbhsmWarningConfig> selectDbhsmWarningConfigList(DbhsmWarningConfig dbhsmWarningConfig) {
+        return dbhsmWarningConfigMapper.selectDbhsmWarningConfigList(dbhsmWarningConfig);
     }
-
     /**
      * 新增warningConfig
      *

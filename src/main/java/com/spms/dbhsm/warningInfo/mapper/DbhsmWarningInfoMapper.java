@@ -2,6 +2,8 @@ package com.spms.dbhsm.warningInfo.mapper;
 
 import java.util.List;
 import com.spms.dbhsm.warningInfo.domain.DbhsmWarningInfo;
+import com.spms.dbhsm.warningInfo.vo.DbhsmWarningInfoListRequest;
+import com.spms.dbhsm.warningInfo.vo.DbhsmWarningInfoListResponse;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
@@ -28,6 +30,8 @@ public interface DbhsmWarningInfoMapper
      * @return warningInfo集合
      */
     public List<DbhsmWarningInfo> selectDbhsmWarningInfoList(DbhsmWarningInfo dbhsmWarningInfo);
+
+   List<DbhsmWarningInfoListResponse> queryDbhsmWarningInfoAllList (DbhsmWarningInfoListRequest dbhsmWarningInfo);
 
     /**
      * 新增warningInfo

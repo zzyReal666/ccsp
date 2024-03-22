@@ -1,12 +1,20 @@
 package com.spms.dbhsm.warningInfo.service.impl;
 
-import java.util.List;
 import com.ccsp.common.core.utils.DateUtils;
+import com.ccsp.common.core.utils.bean.BeanConvertUtils;
+import com.spms.common.CommandUtil;
+import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
+import com.spms.dbhsm.dbInstance.mapper.DbhsmDbInstanceMapper;
+import com.spms.dbhsm.warningInfo.domain.DbhsmWarningInfo;
+import com.spms.dbhsm.warningInfo.mapper.DbhsmWarningInfoMapper;
+import com.spms.dbhsm.warningInfo.service.IDbhsmWarningInfoService;
+import com.spms.dbhsm.warningInfo.vo.DbhsmWarningInfoListRequest;
+import com.spms.dbhsm.warningInfo.vo.DbhsmWarningInfoListResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import com.spms.dbhsm.warningInfo.mapper.DbhsmWarningInfoMapper;
-import com.spms.dbhsm.warningInfo.domain.DbhsmWarningInfo;
-import com.spms.dbhsm.warningInfo.service.IDbhsmWarningInfoService;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * warningInfoService业务层处理
@@ -19,6 +27,9 @@ public class DbhsmWarningInfoServiceImpl implements IDbhsmWarningInfoService
 {
     @Autowired
     private DbhsmWarningInfoMapper dbhsmWarningInfoMapper;
+
+    @Autowired
+    private DbhsmDbInstanceMapper dbhsmDbInstanceMapper;
 
     /**
      * 查询warningInfo
@@ -39,9 +50,17 @@ public class DbhsmWarningInfoServiceImpl implements IDbhsmWarningInfoService
      * @return warningInfo
      */
     @Override
-    public List<DbhsmWarningInfo> selectDbhsmWarningInfoList(DbhsmWarningInfo dbhsmWarningInfo)
+    public List<DbhsmWarningInfoListResponse> selectDbhsmWarningInfoList(DbhsmWarningInfoListRequest dbhsmWarningInfo)
     {
-        return dbhsmWarningInfoMapper.selectDbhsmWarningInfoList(dbhsmWarningInfo);
+        List<DbhsmWarningInfoListResponse> dbhsmWarningConfigs = dbhsmWarningInfoMapper.queryDbhsmWarningInfoAllList(dbhsmWarningInfo);
+
+        //数据转换
+        dbhsmWarningConfigs = dbhsmWarningConfigs.stream().peek(warningInfo -> {
+            //组装实例信息
+            String instance = CommandUtil.getInstance(BeanConvertUtils.beanToBean(warningInfo,DbhsmDbInstance.class));
+            warningInfo.setConnectionInfo(instance);
+        }).collect(Collectors.toList());
+        return dbhsmWarningConfigs;
     }
 
     /**

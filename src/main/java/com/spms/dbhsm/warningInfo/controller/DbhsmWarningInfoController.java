@@ -1,26 +1,21 @@
 package com.spms.dbhsm.warningInfo.controller;
 
-import java.util.List;
-import java.io.IOException;
-import javax.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.ccsp.common.core.utils.poi.ExcelUtil;
+import com.ccsp.common.core.web.controller.BaseController;
+import com.ccsp.common.core.web.domain.AjaxResult;
+import com.ccsp.common.core.web.page.TableDataInfo;
 import com.ccsp.common.log.annotation.Log;
 import com.ccsp.common.log.enums.BusinessType;
 import com.ccsp.common.security.annotation.RequiresPermissions;
 import com.spms.dbhsm.warningInfo.domain.DbhsmWarningInfo;
 import com.spms.dbhsm.warningInfo.service.IDbhsmWarningInfoService;
-import com.ccsp.common.core.web.controller.BaseController;
-import com.ccsp.common.core.web.domain.AjaxResult;
-import com.ccsp.common.core.utils.poi.ExcelUtil;
-import com.ccsp.common.core.web.page.TableDataInfo;
+import com.spms.dbhsm.warningInfo.vo.DbhsmWarningInfoListRequest;
+import com.spms.dbhsm.warningInfo.vo.DbhsmWarningInfoListResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletResponse;
+import java.util.List;
 
 /**
  * warningInfoController
@@ -40,10 +35,10 @@ public class DbhsmWarningInfoController extends BaseController
      */
     @RequiresPermissions("warningInfo:warningInfo:list")
     @GetMapping("/list")
-    public TableDataInfo list(DbhsmWarningInfo dbhsmWarningInfo)
+    public TableDataInfo list(DbhsmWarningInfoListRequest dbhsmWarningInfo)
     {
         startPage();
-        List<DbhsmWarningInfo> list = dbhsmWarningInfoService.selectDbhsmWarningInfoList(dbhsmWarningInfo);
+        List<DbhsmWarningInfoListResponse> list = dbhsmWarningInfoService.selectDbhsmWarningInfoList(dbhsmWarningInfo);
         return getDataTable(list);
     }
 
@@ -53,10 +48,10 @@ public class DbhsmWarningInfoController extends BaseController
     @RequiresPermissions("warningInfo:warningInfo:export")
     @Log(title = "warningInfo", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
-    public void export(HttpServletResponse response, DbhsmWarningInfo dbhsmWarningInfo)
+    public void export(HttpServletResponse response, DbhsmWarningInfoListRequest dbhsmWarningInfo)
     {
-        List<DbhsmWarningInfo> list = dbhsmWarningInfoService.selectDbhsmWarningInfoList(dbhsmWarningInfo);
-        ExcelUtil<DbhsmWarningInfo> util = new ExcelUtil<DbhsmWarningInfo>(DbhsmWarningInfo.class);
+        List<DbhsmWarningInfoListResponse> list = dbhsmWarningInfoService.selectDbhsmWarningInfoList(dbhsmWarningInfo);
+        ExcelUtil<DbhsmWarningInfoListResponse> util = new ExcelUtil<DbhsmWarningInfoListResponse>(DbhsmWarningInfoListResponse.class);
         util.exportExcel(response, list, "warningInfo数据");
     }
 

@@ -2,6 +2,8 @@ package com.spms.dbhsm.warningInfo.service;
 
 import java.util.List;
 import com.spms.dbhsm.warningInfo.domain.DbhsmWarningInfo;
+import com.spms.dbhsm.warningInfo.vo.DbhsmWarningInfoListRequest;
+import com.spms.dbhsm.warningInfo.vo.DbhsmWarningInfoListResponse;
 
 /**
  * warningInfoService接口
@@ -25,7 +27,7 @@ public interface IDbhsmWarningInfoService
      * @param dbhsmWarningInfo warningInfo
      * @return warningInfo集合
      */
-    public List<DbhsmWarningInfo> selectDbhsmWarningInfoList(DbhsmWarningInfo dbhsmWarningInfo);
+    public List<DbhsmWarningInfoListResponse> selectDbhsmWarningInfoList(DbhsmWarningInfoListRequest dbhsmWarningInfo);
 
     /**
      * 新增warningInfo

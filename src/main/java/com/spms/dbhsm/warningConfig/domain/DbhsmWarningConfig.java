@@ -54,6 +54,4 @@ public class DbhsmWarningConfig extends BaseEntity
     private String jobName;
 
 
-    @ApiModelProperty(value = "连接信息")
-    private String connectionInfo;
 }
