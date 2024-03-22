@@ -72,7 +72,7 @@ public class ZaStrategyController {
     public static String ALGORITHM_TYPE_SYK = "SYK";
 
     static {
-        getCrytoCartType();
+//        getCrytoCartType();
     }
     private static void getCrytoCartType() {
         try {

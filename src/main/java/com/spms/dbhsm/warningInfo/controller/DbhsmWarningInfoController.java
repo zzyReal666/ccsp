@@ -52,7 +52,7 @@ public class DbhsmWarningInfoController extends BaseController
     {
         List<DbhsmWarningInfoListResponse> list = dbhsmWarningInfoService.selectDbhsmWarningInfoList(dbhsmWarningInfo);
         ExcelUtil<DbhsmWarningInfoListResponse> util = new ExcelUtil<DbhsmWarningInfoListResponse>(DbhsmWarningInfoListResponse.class);
-        util.exportExcel(response, list, "warningInfo数据");
+        util.exportExcel(response, list, "告警信息数据");
     }
 
     /**

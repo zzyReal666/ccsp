@@ -28,7 +28,7 @@ public class DbhsmWarningInfoListResponse {
     private Long status;
 
     /** 校验结果 */
-    @Excel(name = "校验结果")
+    @Excel(name = "告警信息")
     private String result;
 
     /** 原校验值 */
@@ -36,9 +36,10 @@ public class DbhsmWarningInfoListResponse {
     private String oldVerificationValue;
 
     /** 校验值 */
-    @Excel(name = "校验值")
+    @Excel(name = "计算校验值")
     private String newVerificationValue;
 
+    @Excel(name = "告警时间")
     @ApiModelProperty(value = "创建时间" , hidden = true)
     @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
@@ -47,22 +48,17 @@ public class DbhsmWarningInfoListResponse {
     private String connectionInfo;
 
     /** 数据库类型 */
-    @Excel(name = "数据库类型")
     private String databaseType;
 
     /** 数据库IP地址 */
-    @Excel(name = "数据库IP地址")
     private String databaseIp;
 
     /** 数据库端口号 */
-    @Excel(name = "数据库端口号")
     private String databasePort;
 
     /** 数据库服务名 */
-    @Excel(name = "数据库服务名")
     private String databaseServerName;
 
     /** 实例类型 */
-    @Excel(name = "实例类型 1 SID取值 : , 2 服务名取值 /")
     private String databaseExampleType;
 }
