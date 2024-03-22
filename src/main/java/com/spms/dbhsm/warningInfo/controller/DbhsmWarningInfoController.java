@@ -3,10 +3,13 @@ package com.spms.dbhsm.warningInfo.controller;
 import com.ccsp.common.core.utils.poi.ExcelUtil;
 import com.ccsp.common.core.web.controller.BaseController;
 import com.ccsp.common.core.web.domain.AjaxResult;
+import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.ccsp.common.core.web.page.TableDataInfo;
+import com.ccsp.common.core.web.page.TableDataInfo2;
 import com.ccsp.common.log.annotation.Log;
 import com.ccsp.common.log.enums.BusinessType;
 import com.ccsp.common.security.annotation.RequiresPermissions;
+import com.ccsp.system.api.chsmVsm0088Api.docker.DockerVirmachVo;
 import com.spms.dbhsm.warningInfo.domain.DbhsmWarningInfo;
 import com.spms.dbhsm.warningInfo.service.IDbhsmWarningInfoService;
 import com.spms.dbhsm.warningInfo.vo.DbhsmWarningInfoListRequest;
@@ -35,11 +38,11 @@ public class DbhsmWarningInfoController extends BaseController
      */
     @RequiresPermissions("warningInfo:warningInfo:list")
     @GetMapping("/list")
-    public TableDataInfo list(DbhsmWarningInfoListRequest dbhsmWarningInfo)
+    public AjaxResult2<TableDataInfo2<DbhsmWarningInfoListResponse>> list(DbhsmWarningInfoListRequest dbhsmWarningInfo)
     {
         startPage();
         List<DbhsmWarningInfoListResponse> list = dbhsmWarningInfoService.selectDbhsmWarningInfoList(dbhsmWarningInfo);
-        return getDataTable(list);
+        return getDataList(list);
     }
 
     /**
