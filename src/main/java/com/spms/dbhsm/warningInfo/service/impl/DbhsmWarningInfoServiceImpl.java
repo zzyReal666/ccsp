@@ -1,7 +1,7 @@
 package com.spms.dbhsm.warningInfo.service.impl;
 
 import com.ccsp.common.core.utils.DateUtils;
-import com.ccsp.common.core.utils.bean.BeanConvertUtils;
+import com.ccsp.common.core.utils.bean.BeanUtils;
 import com.spms.common.CommandUtil;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import com.spms.dbhsm.dbInstance.mapper.DbhsmDbInstanceMapper;
@@ -57,7 +57,9 @@ public class DbhsmWarningInfoServiceImpl implements IDbhsmWarningInfoService
         //数据转换
         dbhsmWarningConfigs = dbhsmWarningConfigs.stream().peek(warningInfo -> {
             //组装实例信息
-            String instance = CommandUtil.getInstance(BeanConvertUtils.beanToBean(warningInfo,DbhsmDbInstance.class));
+            DbhsmDbInstance dbInstance = new DbhsmDbInstance();
+            BeanUtils.copyProperties(warningInfo,dbInstance);
+            String instance = CommandUtil.getInstance(dbInstance);
             warningInfo.setConnectionInfo(instance);
         }).collect(Collectors.toList());
         return dbhsmWarningConfigs;
