@@ -1,6 +1,7 @@
 package com.spms.dbhsm.warningConfig.vo;
 
 import com.ccsp.common.core.annotation.Excel;
+import com.ccsp.common.core.web.domain.BaseEntity;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
@@ -13,7 +14,7 @@ import lombok.Data;
  */
 
 @Data
-public class DbhsmWarningConfigListResponse {
+public class DbhsmWarningConfigListResponse extends BaseEntity {
 
     /** 主键 */
     private Long id;

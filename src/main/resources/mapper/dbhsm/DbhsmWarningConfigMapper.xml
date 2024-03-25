@@ -20,20 +20,20 @@
 
     <sql id="selectDbhsmWarningConfigVo">
         select id,
-               table_fields,
-               database_connection_info,
-               database_table_info,
-               verification_type,
-               verification_fields,
+               table_fields as "tableFields",
+               database_connection_info as "databaseConnectionInfo",
+               database_table_info as "databaseTableInfo",
+               verification_type as "verificationType",
+               verification_fields as "verificationFields",
                cron,
-               enable_timing,
-               job_name,
-               create_time,
-               update_time
+               enable_timing as "enableTiming",
+               job_name as "jobName",
+               create_time as "createTime",
+               update_time as "updateTime"
         from dbhsm_warning_config
     </sql>
 
-    <select id="selectDbhsmWarningConfigList" parameterType="com.spms.dbhsm.warningConfig.vo.DbhsmWarningConfigListResponse" resultMap="DbhsmWarningConfigResult">
+    <select id="selectDbhsmWarningConfigList" parameterType="com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig" resultType="com.spms.dbhsm.warningConfig.vo.DbhsmWarningConfigListResponse">
         <include refid="selectDbhsmWarningConfigVo"/>
         <where>
             <if test="tableFields != null  and tableFields != ''">and table_fields = #{tableFields}</if>

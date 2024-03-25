@@ -9,6 +9,7 @@ import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import com.spms.dbhsm.dbInstance.mapper.DbhsmDbInstanceMapper;
 import com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig;
 import com.spms.dbhsm.warningConfig.mapper.DbhsmWarningConfigMapper;
+import com.spms.dbhsm.warningConfig.vo.DbhsmWarningConfigListResponse;
 import com.spms.dbhsm.warningInfo.domain.DbhsmWarningInfo;
 import com.spms.dbhsm.warningInfo.mapper.DbhsmWarningInfoMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -60,9 +61,9 @@ public class DbhsmWarningJobLoad {
     @PostConstruct
     public void initLoading() {
 
-        List<DbhsmWarningConfig> dbhsmWarningConfigs = dbhsmWarningConfigMapper.selectDbhsmWarningConfigList(new DbhsmWarningConfig());
+        List<DbhsmWarningConfigListResponse> dbhsmWarningConfigs = dbhsmWarningConfigMapper.selectDbhsmWarningConfigList(new DbhsmWarningConfig());
 
-        List<DbhsmWarningConfig> jobList = dbhsmWarningConfigs.stream().filter(dbhsmWarningConfig -> 0 == dbhsmWarningConfig.getEnableTiming()).collect(Collectors.toList());
+        List<DbhsmWarningConfigListResponse> jobList = dbhsmWarningConfigs.stream().filter(dbhsmWarningConfig -> 0 == dbhsmWarningConfig.getEnableTiming()).collect(Collectors.toList());
 
         /**
          * 1.查询数据库配置，获取：数据库连接信息、表、字段信息
@@ -71,7 +72,7 @@ public class DbhsmWarningJobLoad {
          */
         //任务数
         this.scheduler = Executors.newScheduledThreadPool(jobList.size());
-        for (DbhsmWarningConfig dbhsmWarningConfig : jobList) {
+        for (DbhsmWarningConfigListResponse dbhsmWarningConfig : jobList) {
             //数据库连接信息
             String databaseConnectionInfo = dbhsmWarningConfig.getDatabaseConnectionInfo();
             //需要校验的字段
