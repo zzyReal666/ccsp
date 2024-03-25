@@ -1,6 +1,7 @@
 package com.spms.dbhsm.warningConfig.service.impl;
 
 import com.ccsp.common.core.utils.DateUtils;
+import com.ccsp.common.core.utils.bean.BeanUtils;
 import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.spms.common.CommandUtil;
 import com.spms.common.task.DbhsmWarningJobLoad;
@@ -10,6 +11,8 @@ import com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig;
 import com.spms.dbhsm.warningConfig.mapper.DbhsmWarningConfigMapper;
 import com.spms.dbhsm.warningConfig.service.IDbhsmWarningConfigService;
 import com.spms.dbhsm.warningConfig.vo.DataBaseConnectionResponse;
+import com.spms.dbhsm.warningConfig.vo.DbhsmWarningConfigListResponse;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -51,8 +54,19 @@ public class DbhsmWarningConfigServiceImpl implements IDbhsmWarningConfigService
      * @return warningConfig
      */
     @Override
-    public List<DbhsmWarningConfig> selectDbhsmWarningConfigList(DbhsmWarningConfig dbhsmWarningConfig) {
-        return dbhsmWarningConfigMapper.selectDbhsmWarningConfigList(dbhsmWarningConfig);
+    public List<DbhsmWarningConfigListResponse> selectDbhsmWarningConfigList(DbhsmWarningConfig dbhsmWarningConfig) {
+        List<DbhsmWarningConfigListResponse> dbhsmWarningConfigs = dbhsmWarningConfigMapper.selectDbhsmWarningConfigList(dbhsmWarningConfig);
+
+        for (DbhsmWarningConfigListResponse dbhsmWarningConfigListResponse : dbhsmWarningConfigs) {
+            if (StringUtils.isNotBlank(dbhsmWarningConfigListResponse.getDatabaseConnectionInfo())) {
+                DbhsmDbInstance dbInstance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(Long.valueOf(dbhsmWarningConfigListResponse.getDatabaseConnectionInfo()));
+                BeanUtils.copyProperties(dbhsmWarningConfig, dbInstance);
+                String instance = CommandUtil.getInstance(dbInstance);
+                dbhsmWarningConfigListResponse.setConnectionInfo(instance);
+            }
+        }
+
+        return dbhsmWarningConfigs;
     }
     /**
      * 新增warningConfig

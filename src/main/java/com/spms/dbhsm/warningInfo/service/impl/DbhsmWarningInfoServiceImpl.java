@@ -52,7 +52,7 @@ public class DbhsmWarningInfoServiceImpl implements IDbhsmWarningInfoService {
         List<DbhsmWarningInfoListResponse> dbhsmWarningConfigs = dbhsmWarningInfoMapper.queryDbhsmWarningInfoAllList(dbhsmWarningInfo);
 
         for (DbhsmWarningInfoListResponse dbhsmWarningConfig : dbhsmWarningConfigs) {
-            if (StringUtils.isNoneBlank(dbhsmWarningConfig.getDatabaseIp())) {
+            if (StringUtils.isNotBlank(dbhsmWarningConfig.getDatabaseIp())) {
                 DbhsmDbInstance dbInstance = new DbhsmDbInstance();
                 BeanUtils.copyProperties(dbhsmWarningConfig, dbInstance);
                 String instance = CommandUtil.getInstance(dbInstance);

@@ -1,6 +1,7 @@
 package com.spms.dbhsm.warningConfig.mapper;
 
 import com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig;
+import com.spms.dbhsm.warningConfig.vo.DbhsmWarningConfigListResponse;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;
@@ -28,7 +29,7 @@ public interface DbhsmWarningConfigMapper
      * @param dbhsmWarningConfig warningConfig
      * @return warningConfig集合
      */
-    public List<DbhsmWarningConfig> selectDbhsmWarningConfigList(DbhsmWarningConfig dbhsmWarningConfig);
+    public List<DbhsmWarningConfigListResponse> selectDbhsmWarningConfigList(DbhsmWarningConfig dbhsmWarningConfig);
 
     /**
      * 新增warningConfig

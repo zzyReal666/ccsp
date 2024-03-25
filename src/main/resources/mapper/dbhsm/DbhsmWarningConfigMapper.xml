@@ -33,7 +33,7 @@
         from dbhsm_warning_config
     </sql>
 
-    <select id="selectDbhsmWarningConfigList" parameterType="com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig" resultMap="DbhsmWarningConfigResult">
+    <select id="selectDbhsmWarningConfigList" parameterType="com.spms.dbhsm.warningConfig.vo.DbhsmWarningConfigListResponse" resultMap="DbhsmWarningConfigResult">
         <include refid="selectDbhsmWarningConfigVo"/>
         <where>
             <if test="tableFields != null  and tableFields != ''">and table_fields = #{tableFields}</if>

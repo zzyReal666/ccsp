@@ -11,6 +11,7 @@ import com.ccsp.common.security.annotation.RequiresPermissions;
 import com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig;
 import com.spms.dbhsm.warningConfig.service.IDbhsmWarningConfigService;
 import com.spms.dbhsm.warningConfig.vo.DataBaseConnectionResponse;
+import com.spms.dbhsm.warningConfig.vo.DbhsmWarningConfigListResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,7 +39,7 @@ public class DbhsmWarningConfigController extends BaseController
     public TableDataInfo list(DbhsmWarningConfig dbhsmWarningConfig)
     {
         startPage();
-        List<DbhsmWarningConfig> list = dbhsmWarningConfigService.selectDbhsmWarningConfigList(dbhsmWarningConfig);
+        List<DbhsmWarningConfigListResponse> list = dbhsmWarningConfigService.selectDbhsmWarningConfigList(dbhsmWarningConfig);
         return getDataTable(list);
     }
 
@@ -50,8 +51,8 @@ public class DbhsmWarningConfigController extends BaseController
     @PostMapping("/export")
     public void export(HttpServletResponse response, DbhsmWarningConfig dbhsmWarningConfig)
     {
-        List<DbhsmWarningConfig> list = dbhsmWarningConfigService.selectDbhsmWarningConfigList(dbhsmWarningConfig);
-        ExcelUtil<DbhsmWarningConfig> util = new ExcelUtil<DbhsmWarningConfig>(DbhsmWarningConfig.class);
+        List<DbhsmWarningConfigListResponse> list = dbhsmWarningConfigService.selectDbhsmWarningConfigList(dbhsmWarningConfig);
+        ExcelUtil<DbhsmWarningConfigListResponse> util = new ExcelUtil<DbhsmWarningConfigListResponse>(DbhsmWarningConfigListResponse.class);
         util.exportExcel(response, list, "warningConfig数据");
     }
 
