@@ -2,7 +2,6 @@ package com.spms.dbhsm.warningInfo.vo;
 
 import com.ccsp.common.core.annotation.Excel;
 import com.ccsp.common.core.web.domain.BaseEntity;
-import com.ccsp.common.core.web.domain.PageRequest;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -16,7 +15,7 @@ import lombok.Data;
  */
 
 @Data
-public class DbhsmWarningInfoListRequest extends PageRequest {
+public class DbhsmWarningInfoListRequest extends BaseEntity {
     /** 主键 */
     private Long id;
 
