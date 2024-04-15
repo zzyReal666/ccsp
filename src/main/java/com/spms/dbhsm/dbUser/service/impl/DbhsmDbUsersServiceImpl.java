@@ -628,6 +628,10 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
             throw new ZAYKException("创建用户失败：授权失败，MySQL不支持的授权SQL: " + permissionsSql);
         }
         sql = "FLUSH PRIVILEGES;";
+        if (connection.isClosed()){
+            log.info("connection.isClosed(),重新获取连接");
+            connection =  DbConnectionPoolFactory.getInstance().getConnection(instance);
+        }
         preparedStatement = connection.prepareStatement(sql);
         executeUpdate = preparedStatement.executeUpdate();
         //创建加解密函数
