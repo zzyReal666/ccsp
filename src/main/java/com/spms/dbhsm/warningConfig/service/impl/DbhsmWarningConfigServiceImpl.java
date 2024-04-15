@@ -60,9 +60,11 @@ public class DbhsmWarningConfigServiceImpl implements IDbhsmWarningConfigService
         for (DbhsmWarningConfigListResponse dbhsmWarningConfigListResponse : dbhsmWarningConfigs) {
             if (StringUtils.isNotBlank(dbhsmWarningConfigListResponse.getDatabaseConnectionInfo())) {
                 DbhsmDbInstance dbInstance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(Long.valueOf(dbhsmWarningConfigListResponse.getDatabaseConnectionInfo()));
-                BeanUtils.copyProperties(dbhsmWarningConfig, dbInstance);
-                String instance = CommandUtil.getInstance(dbInstance);
-                dbhsmWarningConfigListResponse.setConnectionInfo(instance);
+                if (null != dbInstance) {
+                    BeanUtils.copyProperties(dbhsmWarningConfig, dbInstance);
+                    String instance = CommandUtil.getInstance(dbInstance);
+                    dbhsmWarningConfigListResponse.setConnectionInfo(instance);
+                }
             }
         }
 
