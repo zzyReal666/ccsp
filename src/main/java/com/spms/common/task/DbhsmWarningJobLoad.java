@@ -13,6 +13,7 @@ import com.spms.dbhsm.warningConfig.vo.DbhsmWarningConfigListResponse;
 import com.spms.dbhsm.warningInfo.domain.DbhsmWarningInfo;
 import com.spms.dbhsm.warningInfo.mapper.DbhsmWarningInfoMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.bouncycastle.util.encoders.Hex;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -90,8 +91,7 @@ public class DbhsmWarningJobLoad {
             stringBuffer.append(dbhsmWarningConfig.getVerificationFields());
             Runnable task = () -> {
                 // 创建一个任务
-                log.info("创建任务数据库连接：{}",databaseConnectionInfo);
-                connectionParam(Long.parseLong(databaseConnectionInfo), databaseTableInfo, stringBuffer.toString(),dbhsmWarningConfig.getId());
+                connectionParam(Long.parseLong(databaseConnectionInfo), databaseTableInfo, stringBuffer.toString(), dbhsmWarningConfig.getId());
             };
 
             // 执行任务初始延迟1秒，然后每X分钟执行一次任务
@@ -104,17 +104,13 @@ public class DbhsmWarningJobLoad {
         return Hex.toHexString(SM3Util.hash(srcData));
     }
 
-    public void connectionParam(Long id, String table, String field,Long configId) {
+    public void connectionParam(Long id, String table, String field, Long configId) {
         //验证字段值
         String result = null;
         Connection conn = null;
         Statement stmt = null;
         ResultSet resultSet = null;
         String sql;
-        //校验字段 -- 数据
-        StringBuffer stringBuffer = new StringBuffer();
-        //result返回拼接数据
-        StringBuffer resultMsg = new StringBuffer();
         DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
         if (!ObjectUtils.isEmpty(instance)) {
             //创建数据库连接
@@ -129,17 +125,42 @@ public class DbhsmWarningJobLoad {
                     resultSet = stmt.executeQuery(sql);
                     String[] split = field.split(",");
                     while (resultSet.next()) {
+                        //校验字段 -- 数据
+                        StringBuilder stringBuffer = new StringBuilder();
+                        //result返回拼接数据
+                        StringBuilder resultMsg = new StringBuilder();
                         DbhsmWarningInfo dbhsmWarningInfo = new DbhsmWarningInfo();
                         for (int i = 0; i < split.length - 1; i++) {
+                            //校验列
                             stringBuffer.append(resultSet.getString(split[i]));
+                            //result组装
                             resultMsg.append(split[i] + "=" + resultSet.getString(split[i]));
                         }
                         //获取最后一个字段值
                         result = resultSet.getString(split[split.length - 1]);
                         String verification = verification(stringBuffer.toString());
+                        if (StringUtils.isBlank(result)) {
+                            //更新数据 -- 条件字段
+                            StringBuffer whereIsBuffer = new StringBuffer();
+                            for (int i = 0; i < split.length - 1; i++) {
+                                if (i != 0){
+                                    whereIsBuffer.append(" and ").append(split[i]).append(" = '").append(resultSet.getString(split[i])).append("'");
+                                    continue;
+                                }
+                                whereIsBuffer.append(" where ").append(split[i]).append(" = '").append(resultSet.getString(split[i])).append("'");
+                            }
+                            //如果原校验值为空，更新原表数据
+                            sql = "update " + table + " set " + split[split.length - 1] + "='" + verification +"'" +  whereIsBuffer +";";
+                            System.out.println(sql);
+                            int i = stmt.executeUpdate(sql);
+                            //提交事务
+                            conn.commit();
+                            log.info("原校验值为空，更新原校验值列数据：{}", i);
+                            return;
+                        }
                         //如果校验值相同不需要更改
                         if (verification.equals(result)) {
-                            System.out.println("校验一致,数据没有被更改");
+                            log.error("校验一致,数据没有被更改");
                             return;
                         }
                         //告警数据新增
@@ -160,7 +181,7 @@ public class DbhsmWarningJobLoad {
                 dbhsmWarningInfo.setCreateTime(new Date());
                 dbhsmWarningInfo.setConfigId(configId);
                 dbhsmWarningInfoMapper.insertDbhsmWarningInfo(dbhsmWarningInfo);
-                log.error("任务同步异常：{}",e.getMessage());
+                log.error("任务同步异常：{}", e.getMessage());
             } finally {
                 if (stmt != null) {
                     try {
