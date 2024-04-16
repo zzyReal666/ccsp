@@ -476,7 +476,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                         preparedStatement = connection.prepareStatement(sql);
                         resultSet = preparedStatement.executeUpdate();
                     }else  if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
-                        sql = "DROP TRIGGER tri_"  + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
+                        sql = "DROP TRIGGER tri_za_"  + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
                         preparedStatement = connection.prepareStatement(sql);
                         resultSet = preparedStatement.executeUpdate();
 

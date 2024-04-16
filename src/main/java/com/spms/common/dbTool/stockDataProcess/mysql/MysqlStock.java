@@ -75,7 +75,7 @@ public class MysqlStock {
             // 1、定义触发器
             log.info("1、创建Mysql存量数据触发器start");
             //函数名是动态的
-            StringBuffer transFun = new StringBuffer(StringUtils.format("create trigger tri_update_{} before update",encryptColumns));
+            StringBuffer transFun = new StringBuffer(StringUtils.format("create trigger tri_za_update_{} before update",encryptColumns));
             transFun.append(LINE_SEPARATOR);
             transFun.append(StringUtils.format("on {}.{}", dbName,dbTable));
             transFun.append(LINE_SEPARATOR);
@@ -208,7 +208,7 @@ public class MysqlStock {
      * @throws Exception
      */
     public static void delTrFunStockMysql(Connection conn, DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd) throws Exception {
-        String funName = "tri_update_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
+        String funName = "tri_za_update_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
 
         try {
             String sql ="drop TRIGGER  IF EXISTS "+funName;
