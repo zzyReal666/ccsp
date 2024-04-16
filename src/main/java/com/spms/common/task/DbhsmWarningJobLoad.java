@@ -23,6 +23,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
 import javax.annotation.PostConstruct;
+import java.math.BigInteger;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -64,7 +65,7 @@ public class DbhsmWarningJobLoad {
     public void initLoading() {
 
         List<DbhsmWarningConfigListResponse> dbhsmWarningConfigs = dbhsmWarningConfigMapper.selectDbhsmWarningConfigList(new DbhsmWarningConfig());
-        if (CollectionUtils.isEmpty(dbhsmWarningConfigs)){
+        if (CollectionUtils.isEmpty(dbhsmWarningConfigs)) {
             return;
         }
 
@@ -105,14 +106,16 @@ public class DbhsmWarningJobLoad {
 
     private String verification(String value) {
         byte[] srcData = value.getBytes();
-        return Hex.toHexString(SM3Util.hash(srcData));
+        BigInteger p = new BigInteger("FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFF", 16);
+        return Hex.toHexString(SM3Util.hmac(p.toByteArray(),srcData));
     }
 
-    public void connectionParam(Long id, String table, String field, Long configId) {
+    public synchronized void connectionParam(Long id, String table, String field, Long configId) {
         //验证字段值
         String result = null;
         Connection conn = null;
         Statement stmt = null;
+        Statement upStmt = null;
         ResultSet resultSet = null;
         String sql;
         DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
@@ -147,25 +150,26 @@ public class DbhsmWarningJobLoad {
                             //更新数据 -- 条件字段
                             StringBuffer whereIsBuffer = new StringBuffer();
                             for (int i = 0; i < split.length - 1; i++) {
-                                if (i != 0){
+                                if (i != 0) {
                                     whereIsBuffer.append(" and ").append(split[i]).append(" = '").append(resultSet.getString(split[i])).append("'");
                                     continue;
                                 }
                                 whereIsBuffer.append(" where ").append(split[i]).append(" = '").append(resultSet.getString(split[i])).append("'");
                             }
                             //如果原校验值为空，更新原表数据
-                            sql = "update " + table + " set " + split[split.length - 1] + "='" + verification +"'" +  whereIsBuffer +";";
+                            sql = "update " + table + " set " + split[split.length - 1] + "='" + verification + "'" + whereIsBuffer + ";";
                             System.out.println(sql);
-                            int i = stmt.executeUpdate(sql);
+                            upStmt = conn.createStatement();
+                            int i = upStmt.executeUpdate(sql);
                             //提交事务
                             conn.commit();
                             log.info("原校验值为空，更新原校验值列数据：{}", i);
-                            return;
+                            continue;
                         }
                         //如果校验值相同不需要更改
                         if (verification.equals(result)) {
                             log.error("校验一致,数据没有被更改");
-                            return;
+                            continue;
                         }
                         //告警数据新增
                         dbhsmWarningInfo.setResult("连接信息：" + instanceInfo + "，经校验：[" + resultMsg + "]字段数据被篡改");
@@ -190,6 +194,13 @@ public class DbhsmWarningJobLoad {
                 if (stmt != null) {
                     try {
                         stmt.close();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (upStmt != null) {
+                    try {
+                        upStmt.close();
                     } catch (SQLException e) {
                         e.printStackTrace();
                     }
