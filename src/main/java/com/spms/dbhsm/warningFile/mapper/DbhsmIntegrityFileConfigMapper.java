@@ -1,6 +1,7 @@
 package com.spms.dbhsm.warningFile.mapper;
 
 import com.spms.dbhsm.warningFile.domain.DbhsmIntegrityFileConfig;
+import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;
 
@@ -10,6 +11,7 @@ import java.util.List;
  * @author diq
  * @date 2024-04-17
  */
+@Mapper
 public interface DbhsmIntegrityFileConfigMapper 
 {
     /**
