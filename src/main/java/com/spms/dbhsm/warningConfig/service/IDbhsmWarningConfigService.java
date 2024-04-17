@@ -1,5 +1,6 @@
 package com.spms.dbhsm.warningConfig.service;
 
+import com.ccsp.common.core.web.domain.AjaxResult;
 import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig;
 import com.spms.dbhsm.warningConfig.vo.DataBaseConnectionResponse;
@@ -37,7 +38,7 @@ public interface IDbhsmWarningConfigService
      * @param dbhsmWarningConfig warningConfig
      * @return 结果
      */
-    public int insertDbhsmWarningConfig(DbhsmWarningConfig dbhsmWarningConfig);
+    public AjaxResult insertDbhsmWarningConfig(DbhsmWarningConfig dbhsmWarningConfig);
 
     /**
      * 修改warningConfig

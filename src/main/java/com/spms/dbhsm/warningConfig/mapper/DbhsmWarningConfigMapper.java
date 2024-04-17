@@ -3,6 +3,7 @@ package com.spms.dbhsm.warningConfig.mapper;
 import com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig;
 import com.spms.dbhsm.warningConfig.vo.DbhsmWarningConfigListResponse;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -22,6 +23,14 @@ public interface DbhsmWarningConfigMapper
      * @return warningConfig
      */
     public DbhsmWarningConfig selectDbhsmWarningConfigById(Long id);
+
+    /**
+     * 查询warningConfig
+     *
+     * @param verificationValue 校验值
+     * @return warningConfig
+     */
+    DbhsmWarningConfig selectDbhsmWarningConfigByVerificationValue(@Param("verificationValue") String verificationValue);
 
     /**
      * 查询warningConfig列表

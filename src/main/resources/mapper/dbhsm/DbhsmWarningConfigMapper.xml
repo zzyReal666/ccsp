@@ -11,6 +11,7 @@
         <result property="databaseTableInfo" column="database_table_info"/>
         <result property="verificationType" column="verification_type"/>
         <result property="verificationFields" column="verification_fields"/>
+        <result property="verificationValue" column="verification_value"/>
         <result property="cron" column="cron"/>
         <result property="enableTiming" column="enable_timing"/>
         <result property="jobName" column="job_name"/>
@@ -25,6 +26,7 @@
                database_table_info,
                verification_type,
                verification_fields,
+               verification_value,
                cron,
                enable_timing,
                job_name,
@@ -66,6 +68,11 @@
         where id = #{id}
     </select>
 
+    <select id="selectDbhsmWarningConfigByVerificationValue" parameterType="java.lang.String" resultMap="DbhsmWarningConfigResult">
+        <include refid="selectDbhsmWarningConfigVo"/>
+        where verification_value = #{verificationValue}
+    </select>
+
     <insert id="insertDbhsmWarningConfig" parameterType="com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig" useGeneratedKeys="true" keyProperty="id">
         insert into dbhsm_warning_config
         <trim prefix="(" suffix=")" suffixOverrides=",">
@@ -74,6 +81,7 @@
             <if test="databaseTableInfo != null and databaseTableInfo != ''">database_table_info,</if>
             <if test="verificationType != null">verification_type,</if>
             <if test="verificationFields != null">verification_fields,</if>
+            <if test="verificationValue != null">verification_value,</if>
             <if test="cron != null">cron,</if>
             <if test="enableTiming != null">enable_timing,</if>
             <if test="jobName != null">job_name,</if>
@@ -86,6 +94,7 @@
             <if test="databaseTableInfo != null and databaseTableInfo != ''">#{databaseTableInfo},</if>
             <if test="verificationType != null">#{verificationType},</if>
             <if test="verificationFields != null">#{verificationFields},</if>
+            <if test="verificationValue != null">#{verificationValue},</if>
             <if test="cron != null">#{cron},</if>
             <if test="enableTiming != null">#{enableTiming},</if>
             <if test="jobName != null">#{jobName},</if>

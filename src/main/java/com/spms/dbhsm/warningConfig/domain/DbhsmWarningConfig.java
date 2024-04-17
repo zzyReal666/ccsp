@@ -53,5 +53,8 @@ public class DbhsmWarningConfig extends BaseEntity
     @Excel(name = "任务名称")
     private String jobName;
 
+    /** 唯一性校验值 */
+    private String verificationValue;
+
 
 }

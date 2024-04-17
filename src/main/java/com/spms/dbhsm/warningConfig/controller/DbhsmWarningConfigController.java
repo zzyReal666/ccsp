@@ -74,7 +74,7 @@ public class DbhsmWarningConfigController extends BaseController
     @PostMapping
     public AjaxResult add(@RequestBody DbhsmWarningConfig dbhsmWarningConfig)
     {
-        return toAjax(dbhsmWarningConfigService.insertDbhsmWarningConfig(dbhsmWarningConfig));
+        return dbhsmWarningConfigService.insertDbhsmWarningConfig(dbhsmWarningConfig);
     }
 
     /**

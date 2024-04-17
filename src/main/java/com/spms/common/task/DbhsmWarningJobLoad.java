@@ -59,6 +59,9 @@ public class DbhsmWarningJobLoad {
     @Autowired
     private DbhsmWarningInfoMapper dbhsmWarningInfoMapper;
 
+    private static final String HMAC = "3";
+    private static final String SM3 = "1";
+
 
     @Async
     @PostConstruct
@@ -96,7 +99,7 @@ public class DbhsmWarningJobLoad {
             stringBuffer.append(dbhsmWarningConfig.getVerificationFields());
             Runnable task = () -> {
                 // 创建一个任务
-                connectionParam(Long.parseLong(databaseConnectionInfo), databaseTableInfo, stringBuffer.toString(), dbhsmWarningConfig.getId());
+                connectionParam(Long.parseLong(databaseConnectionInfo), databaseTableInfo, stringBuffer.toString(), dbhsmWarningConfig.getId(), String.valueOf(dbhsmWarningConfig.getVerificationType()));
             };
 
             // 执行任务初始延迟1秒，然后每X分钟执行一次任务
@@ -104,13 +107,64 @@ public class DbhsmWarningJobLoad {
         }
     }
 
-    private String verification(String value) {
-        byte[] srcData = value.getBytes();
-        BigInteger p = new BigInteger("FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFF", 16);
-        return Hex.toHexString(SM3Util.hmac(p.toByteArray(),srcData));
+    //清空原验证值
+    private void connectionDelOldCheckValue(Long id,String field,String table){
+        Connection conn = null;
+        Statement stmt = null;
+        ResultSet resultSet = null;
+        DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
+        if (!ObjectUtils.isEmpty(instance)) {
+            //创建数据库连接
+            DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
+            BeanUtils.copyProperties(instance, connDTO);
+            try {
+                conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
+                String instanceInfo = CommandUtil.getInstance(instance);
+                if (Optional.ofNullable(conn).isPresent()) {
+                    stmt = conn.createStatement();
+
+                    stmt.execute("update " + table +" set " + field +"=null where ");
+                    }
+            } catch (ZAYKException | SQLException e) {
+            } finally {
+                if (stmt != null) {
+                    try {
+                        stmt.close();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (conn != null) {
+                    try {
+                        conn.close();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (resultSet != null) {
+                    try {
+                        resultSet.close();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
     }
 
-    public synchronized void connectionParam(Long id, String table, String field, Long configId) {
+    private String verification(String value, String checkType) {
+        //校验数据
+        byte[] srcData = value.getBytes();
+        if (HMAC.equals(checkType)) {
+            //hmac加密
+            BigInteger p = new BigInteger("FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFF", 16);
+            return Hex.toHexString(SM3Util.hmac(p.toByteArray(), srcData));
+        }
+        //sm3加密
+        return Hex.toHexString(SM3Util.hash(srcData));
+    }
+
+    public void connectionParam(Long id, String table, String field, Long configId, String checkType) {
         //验证字段值
         String result = null;
         Connection conn = null;
@@ -145,7 +199,7 @@ public class DbhsmWarningJobLoad {
                         }
                         //获取最后一个字段值
                         result = resultSet.getString(split[split.length - 1]);
-                        String verification = verification(stringBuffer.toString());
+                        String verification = verification(stringBuffer.toString(), checkType);
                         if (StringUtils.isBlank(result)) {
                             //更新数据 -- 条件字段
                             StringBuffer whereIsBuffer = new StringBuffer();

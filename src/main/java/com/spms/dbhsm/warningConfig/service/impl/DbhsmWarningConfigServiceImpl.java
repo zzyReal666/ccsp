@@ -1,7 +1,10 @@
 package com.spms.dbhsm.warningConfig.service.impl;
 
+import cn.hutool.crypto.digest.SM3;
 import com.ccsp.common.core.utils.DateUtils;
+import com.ccsp.common.core.utils.SM3Util;
 import com.ccsp.common.core.utils.bean.BeanUtils;
+import com.ccsp.common.core.web.domain.AjaxResult;
 import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.spms.common.CommandUtil;
 import com.spms.common.task.DbhsmWarningJobLoad;
@@ -13,11 +16,14 @@ import com.spms.dbhsm.warningConfig.service.IDbhsmWarningConfigService;
 import com.spms.dbhsm.warningConfig.vo.DataBaseConnectionResponse;
 import com.spms.dbhsm.warningConfig.vo.DbhsmWarningConfigListResponse;
 import org.apache.commons.lang3.StringUtils;
+import org.bouncycastle.util.encoders.Hex;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * warningConfigService业务层处理
@@ -77,16 +83,33 @@ public class DbhsmWarningConfigServiceImpl implements IDbhsmWarningConfigService
      * @return 结果
      */
     @Override
-    public int insertDbhsmWarningConfig(DbhsmWarningConfig dbhsmWarningConfig) {
+    public AjaxResult insertDbhsmWarningConfig(DbhsmWarningConfig dbhsmWarningConfig) {
         dbhsmWarningConfig.setCreateTime(DateUtils.getNowDate());
 
+        //获取数据库连接
+        String instance = "";
+        DbhsmDbInstance dbInstance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(Long.valueOf(dbhsmWarningConfig.getDatabaseConnectionInfo()));
+        if (null != dbInstance) {
+            BeanUtils.copyProperties(dbhsmWarningConfig, dbInstance);
+            instance = CommandUtil.getInstance(dbInstance);
+        }
+        //数据库连接 + 表 + 校验列 组合进行唯一性校验
+        String check = instance+dbhsmWarningConfig.getDatabaseTableInfo()+dbhsmWarningConfig.getTableFields();
+        String hexString = Hex.toHexString(SM3Util.hash(check.getBytes()));
+
+        DbhsmWarningConfig verDb = dbhsmWarningConfigMapper.selectDbhsmWarningConfigByVerificationValue(hexString);
+        if (null != verDb) {
+            return AjaxResult.error("定时任务配置重复，创建失败");
+        }
+
+        dbhsmWarningConfig.setVerificationValue(hexString);
         int count = dbhsmWarningConfigMapper.insertDbhsmWarningConfig(dbhsmWarningConfig);
 
         if (0 == dbhsmWarningConfig.getEnableTiming()) {
             dbhsmWarningJobLoad.initLoading();
         }
 
-        return count;
+        return AjaxResult.success();
     }
 
     /**
@@ -99,10 +122,7 @@ public class DbhsmWarningConfigServiceImpl implements IDbhsmWarningConfigService
     public int updateDbhsmWarningConfig(DbhsmWarningConfig dbhsmWarningConfig) {
         dbhsmWarningConfig.setUpdateTime(DateUtils.getNowDate());
         int i = dbhsmWarningConfigMapper.updateDbhsmWarningConfig(dbhsmWarningConfig);
-
-        if (0 == dbhsmWarningConfig.getEnableTiming()) {
-            dbhsmWarningJobLoad.initLoading();
-        }
+        dbhsmWarningJobLoad.initLoading();
         return i;
     }
 
