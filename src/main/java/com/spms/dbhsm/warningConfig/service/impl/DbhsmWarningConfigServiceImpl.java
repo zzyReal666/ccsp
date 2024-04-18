@@ -1,6 +1,5 @@
 package com.spms.dbhsm.warningConfig.service.impl;
 
-import cn.hutool.crypto.digest.SM3;
 import com.ccsp.common.core.utils.DateUtils;
 import com.ccsp.common.core.utils.SM3Util;
 import com.ccsp.common.core.utils.bean.BeanUtils;
@@ -19,11 +18,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.bouncycastle.util.encoders.Hex;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * warningConfigService业务层处理
@@ -105,10 +102,7 @@ public class DbhsmWarningConfigServiceImpl implements IDbhsmWarningConfigService
         dbhsmWarningConfig.setVerificationValue(hexString);
         int count = dbhsmWarningConfigMapper.insertDbhsmWarningConfig(dbhsmWarningConfig);
 
-        if (0 == dbhsmWarningConfig.getEnableTiming()) {
-            dbhsmWarningJobLoad.initLoading();
-        }
-
+        dbhsmWarningJobLoad.dataIntegrityJob();
         return AjaxResult.success();
     }
 
@@ -122,7 +116,7 @@ public class DbhsmWarningConfigServiceImpl implements IDbhsmWarningConfigService
     public int updateDbhsmWarningConfig(DbhsmWarningConfig dbhsmWarningConfig) {
         dbhsmWarningConfig.setUpdateTime(DateUtils.getNowDate());
         int i = dbhsmWarningConfigMapper.updateDbhsmWarningConfig(dbhsmWarningConfig);
-        dbhsmWarningJobLoad.initLoading();
+        dbhsmWarningJobLoad.dataIntegrityJob();
         return i;
     }
 
@@ -135,7 +129,7 @@ public class DbhsmWarningConfigServiceImpl implements IDbhsmWarningConfigService
     @Override
     public int deleteDbhsmWarningConfigByIds(Long[] ids) {
         int i = dbhsmWarningConfigMapper.deleteDbhsmWarningConfigByIds(ids);
-        dbhsmWarningJobLoad.initLoading();
+        dbhsmWarningJobLoad.dataIntegrityJob();
         return i;
     }
 

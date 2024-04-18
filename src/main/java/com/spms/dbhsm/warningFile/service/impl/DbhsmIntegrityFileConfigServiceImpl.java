@@ -7,6 +7,7 @@ import com.ccsp.common.core.utils.DateUtils;
 import com.ccsp.common.core.utils.StringUtils;
 import com.ccsp.system.api.hsmSvsTsaApi.SpmsDevBaseDataService;
 import com.ccsp.system.api.hsmSvsTsaApi.domain.DevBaseData;
+import com.spms.common.task.DbhsmWarningJobLoad;
 import com.spms.dbhsm.warningFile.domain.DbhsmIntegrityFileConfig;
 import com.spms.dbhsm.warningFile.mapper.DbhsmIntegrityFileConfigMapper;
 import com.spms.dbhsm.warningFile.service.IDbhsmIntegrityFileConfigService;
@@ -30,6 +31,9 @@ public class DbhsmIntegrityFileConfigServiceImpl implements IDbhsmIntegrityFileC
 
     @Autowired
     private SpmsDevBaseDataService devBaseDataService;
+
+    @Autowired
+    private DbhsmWarningJobLoad dbhsmWarningJobLoad;
 
     /**
      * 查询文件完整性校验
@@ -78,7 +82,9 @@ public class DbhsmIntegrityFileConfigServiceImpl implements IDbhsmIntegrityFileC
         }
 
         dbhsmIntegrityFileConfig.setCreateTime(DateUtils.getNowDate());
-        return dbhsmIntegrityFileConfigMapper.insertDbhsmIntegrityFileConfig(dbhsmIntegrityFileConfig);
+        int i = dbhsmIntegrityFileConfigMapper.insertDbhsmIntegrityFileConfig(dbhsmIntegrityFileConfig);
+        dbhsmWarningJobLoad.fileIntegrityJob();
+        return i;
     }
 
     /**
@@ -91,7 +97,9 @@ public class DbhsmIntegrityFileConfigServiceImpl implements IDbhsmIntegrityFileC
     public int updateDbhsmIntegrityFileConfig(DbhsmIntegrityFileConfig dbhsmIntegrityFileConfig)
     {
         dbhsmIntegrityFileConfig.setUpdateTime(DateUtils.getNowDate());
-        return dbhsmIntegrityFileConfigMapper.updateDbhsmIntegrityFileConfig(dbhsmIntegrityFileConfig);
+        int i = dbhsmIntegrityFileConfigMapper.updateDbhsmIntegrityFileConfig(dbhsmIntegrityFileConfig);
+        dbhsmWarningJobLoad.fileIntegrityJob();
+        return i;
     }
 
     /**
@@ -103,7 +111,9 @@ public class DbhsmIntegrityFileConfigServiceImpl implements IDbhsmIntegrityFileC
     @Override
     public int deleteDbhsmIntegrityFileConfigByIds(Long[] ids)
     {
-        return dbhsmIntegrityFileConfigMapper.deleteDbhsmIntegrityFileConfigByIds(ids);
+        int i = dbhsmIntegrityFileConfigMapper.deleteDbhsmIntegrityFileConfigByIds(ids);
+        dbhsmWarningJobLoad.fileIntegrityJob();
+        return i;
     }
 
     /**
@@ -115,6 +125,8 @@ public class DbhsmIntegrityFileConfigServiceImpl implements IDbhsmIntegrityFileC
     @Override
     public int deleteDbhsmIntegrityFileConfigById(Long id)
     {
-        return dbhsmIntegrityFileConfigMapper.deleteDbhsmIntegrityFileConfigById(id);
+        int i = dbhsmIntegrityFileConfigMapper.deleteDbhsmIntegrityFileConfigById(id);
+        dbhsmWarningJobLoad.fileIntegrityJob();
+        return i;
     }
 }

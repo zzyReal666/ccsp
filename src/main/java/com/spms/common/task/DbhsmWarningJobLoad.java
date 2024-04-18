@@ -10,6 +10,8 @@ import com.spms.dbhsm.dbInstance.mapper.DbhsmDbInstanceMapper;
 import com.spms.dbhsm.warningConfig.domain.DbhsmWarningConfig;
 import com.spms.dbhsm.warningConfig.mapper.DbhsmWarningConfigMapper;
 import com.spms.dbhsm.warningConfig.vo.DbhsmWarningConfigListResponse;
+import com.spms.dbhsm.warningFile.domain.DbhsmIntegrityFileConfig;
+import com.spms.dbhsm.warningFile.mapper.DbhsmIntegrityFileConfigMapper;
 import com.spms.dbhsm.warningInfo.domain.DbhsmWarningInfo;
 import com.spms.dbhsm.warningInfo.mapper.DbhsmWarningInfoMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +25,10 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
 import javax.annotation.PostConstruct;
+import java.io.File;
+import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -48,7 +53,8 @@ import java.util.stream.Collectors;
 @Component
 public class DbhsmWarningJobLoad {
 
-    private ScheduledExecutorService scheduler;
+    @Autowired
+    private DbhsmIntegrityFileConfigMapper fileConfigMapper;
 
     @Autowired
     private DbhsmWarningConfigMapper dbhsmWarningConfigMapper;
@@ -59,13 +65,22 @@ public class DbhsmWarningJobLoad {
     @Autowired
     private DbhsmWarningInfoMapper dbhsmWarningInfoMapper;
 
+    private static final String integrityFilePath = "D:\\kvm\\";
+
     private static final String HMAC = "3";
     private static final String SM3 = "1";
 
 
     @Async
     @PostConstruct
-    public void initLoading() {
+    public void init() {
+        //数据完整性校验
+        dataIntegrityJob();
+        //文件完整性校验
+//        fileIntegrityJob();
+    }
+
+    public void dataIntegrityJob() {
 
         List<DbhsmWarningConfigListResponse> dbhsmWarningConfigs = dbhsmWarningConfigMapper.selectDbhsmWarningConfigList(new DbhsmWarningConfig());
         if (CollectionUtils.isEmpty(dbhsmWarningConfigs)) {
@@ -79,8 +94,9 @@ public class DbhsmWarningJobLoad {
          * 2.创建数据库连接根据表、字段取出数据
          * 3.取出数据进行SM3加密SM3Util.hash
          */
-        //任务数
-        this.scheduler = Executors.newScheduledThreadPool(jobList.size());
+        //创建定时任务执行对象
+        ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(jobList.size());
+
         for (DbhsmWarningConfigListResponse dbhsmWarningConfig : jobList) {
             //数据库连接信息
             String databaseConnectionInfo = dbhsmWarningConfig.getDatabaseConnectionInfo();
@@ -89,7 +105,7 @@ public class DbhsmWarningJobLoad {
             String[] split = tableFields.split("\\,");
             StringBuffer stringBuffer = new StringBuffer();
             for (String s : split) {
-                stringBuffer.append("").append(s).append(",");
+                stringBuffer.append(s).append(",");
             }
             //需要校验的表信息
             String databaseTableInfo = dbhsmWarningConfig.getDatabaseTableInfo();
@@ -97,64 +113,81 @@ public class DbhsmWarningJobLoad {
             String cron = dbhsmWarningConfig.getCron();
             //校验字段
             stringBuffer.append(dbhsmWarningConfig.getVerificationFields());
+            //先清空校验值列的数据
+            connectionDelOldCheckValue(Long.parseLong(databaseConnectionInfo), dbhsmWarningConfig.getVerificationFields(), databaseTableInfo);
             Runnable task = () -> {
                 // 创建一个任务
                 connectionParam(Long.parseLong(databaseConnectionInfo), databaseTableInfo, stringBuffer.toString(), dbhsmWarningConfig.getId(), String.valueOf(dbhsmWarningConfig.getVerificationType()));
             };
 
             // 执行任务初始延迟1秒，然后每X分钟执行一次任务
-            scheduleTask(task, 1, Integer.parseInt(cron), TimeUnit.MINUTES);
+            scheduledExecutorService.scheduleAtFixedRate(task, 1, Integer.parseInt(cron), TimeUnit.SECONDS);
         }
     }
 
-    //清空原验证值
-    private void connectionDelOldCheckValue(Long id,String field,String table){
-        Connection conn = null;
-        Statement stmt = null;
-        ResultSet resultSet = null;
-        DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
-        if (!ObjectUtils.isEmpty(instance)) {
-            //创建数据库连接
-            DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
-            BeanUtils.copyProperties(instance, connDTO);
-            try {
-                conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
-                String instanceInfo = CommandUtil.getInstance(instance);
-                if (Optional.ofNullable(conn).isPresent()) {
-                    stmt = conn.createStatement();
+    public void fileIntegrityJob() {
+        try {
+            List<DbhsmIntegrityFileConfig> dbhsmIntegrityFileConfigs = fileConfigMapper.selectDbhsmIntegrityFileConfigList(new DbhsmIntegrityFileConfig());
 
-                    stmt.execute("update " + table +" set " + field +"=null where ");
-                    }
-            } catch (ZAYKException | SQLException e) {
-            } finally {
-                if (stmt != null) {
-                    try {
-                        stmt.close();
-                    } catch (SQLException e) {
-                        e.printStackTrace();
-                    }
-                }
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        e.printStackTrace();
-                    }
-                }
-                if (resultSet != null) {
-                    try {
-                        resultSet.close();
-                    } catch (SQLException e) {
-                        e.printStackTrace();
-                    }
-                }
+            if (CollectionUtils.isEmpty(dbhsmIntegrityFileConfigs)) {
+                return;
             }
+
+            //过滤可以执行的文件信息
+            dbhsmIntegrityFileConfigs = dbhsmIntegrityFileConfigs.stream().filter(file -> 0 == file.getEnableTiming()).collect(Collectors.toList());
+
+            //创建定时任务执行对象
+            ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(dbhsmIntegrityFileConfigs.size());
+
+            for (DbhsmIntegrityFileConfig fileConfig : dbhsmIntegrityFileConfigs) {
+                String filePath = fileConfig.getFilePath();
+                File file = new File(integrityFilePath + File.separator + filePath);
+                if (!file.exists()) {
+                    log.error("文件信息不存在：{}", file.getPath());
+                    return;
+                }
+
+                //定时任务执行时间 x分钟
+                String cron = fileConfig.getCron();
+                Runnable task = () -> {
+                    // 创建一个任务
+                    schedulerCheckFileJob(fileConfig, file);
+                };
+
+                scheduledExecutorService.scheduleAtFixedRate(task, 1, Long.parseLong(cron), TimeUnit.SECONDS);
+            }
+        } catch (Exception e) {
+            log.error("文件完整性定时任务启动失败：{}", e.getMessage());
         }
     }
 
-    private String verification(String value, String checkType) {
-        //校验数据
-        byte[] srcData = value.getBytes();
+    private void schedulerCheckFileJob(DbhsmIntegrityFileConfig fileConfig, File file) {
+        byte[] fileByte;
+        try {
+            fileByte = Files.readAllBytes(file.toPath());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        String verification = verification(fileByte, String.valueOf(fileConfig.getVerificationType()));
+
+        if (StringUtils.isBlank(fileConfig.getVerificationValue())) {
+            fileConfig.setVerificationValue(verification);
+            fileConfigMapper.updateDbhsmIntegrityFileConfig(fileConfig);
+            return;
+        }
+
+        if (!fileConfig.getVerificationValue().equals(verification)) {
+            DbhsmWarningInfo dbhsmWarningInfo = new DbhsmWarningInfo();
+            dbhsmWarningInfo.setStatus(1L);
+            dbhsmWarningInfo.setResult("经校验：" + fileConfig.getFilePath() + "文件被篡改");
+            dbhsmWarningInfo.setOldVerificationValue(fileConfig.getVerificationValue());
+            dbhsmWarningInfo.setNewVerificationValue(verification);
+            dbhsmWarningInfo.setCreateTime(new Date());
+            dbhsmWarningInfoMapper.insertDbhsmWarningInfo(dbhsmWarningInfo);
+        }
+    }
+
+    private String verification(byte[] srcData, String checkType) {
         if (HMAC.equals(checkType)) {
             //hmac加密
             BigInteger p = new BigInteger("FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFF", 16);
@@ -199,7 +232,7 @@ public class DbhsmWarningJobLoad {
                         }
                         //获取最后一个字段值
                         result = resultSet.getString(split[split.length - 1]);
-                        String verification = verification(stringBuffer.toString(), checkType);
+                        String verification = verification(stringBuffer.toString().getBytes(), checkType);
                         if (StringUtils.isBlank(result)) {
                             //更新数据 -- 条件字段
                             StringBuffer whereIsBuffer = new StringBuffer();
@@ -245,41 +278,72 @@ public class DbhsmWarningJobLoad {
                 dbhsmWarningInfoMapper.insertDbhsmWarningInfo(dbhsmWarningInfo);
                 log.error("任务同步异常：{}", e.getMessage());
             } finally {
-                if (stmt != null) {
-                    try {
-                        stmt.close();
-                    } catch (SQLException e) {
-                        e.printStackTrace();
-                    }
-                }
-                if (upStmt != null) {
-                    try {
-                        upStmt.close();
-                    } catch (SQLException e) {
-                        e.printStackTrace();
-                    }
-                }
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        e.printStackTrace();
-                    }
-                }
-                if (resultSet != null) {
-                    try {
-                        resultSet.close();
-                    } catch (SQLException e) {
-                        e.printStackTrace();
-                    }
-                }
+                closeStatement(upStmt);
+                closeConnection(conn);
+                closeStatement(stmt);
+                closeResultSet(resultSet);
             }
         }
     }
 
-    public void scheduleTask(Runnable task, long initialDelay, long period, TimeUnit unit) {
-        // 取消之前可能存在的相同任务（如果有的话）
-        scheduler.scheduleAtFixedRate(task, initialDelay, period, unit);
+    //清空原验证值
+    private void connectionDelOldCheckValue(Long id, String field, String table) {
+        Connection conn = null;
+        Statement stmt = null;
+        ResultSet resultSet = null;
+        DbhsmDbInstance instance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
+        if (!ObjectUtils.isEmpty(instance)) {
+            //创建数据库连接
+            DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
+            BeanUtils.copyProperties(instance, connDTO);
+            try {
+                conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
+                if (Optional.ofNullable(conn).isPresent()) {
+                    stmt = conn.createStatement();
+                    String sql = "update " + table + " set " + field + "=NULL where " + field + " is null or " + field + " is not null";
+                    int execute = stmt.executeUpdate(sql);
+                    log.info("执行sql返回值：{}", execute);
+                    conn.commit();
+                }
+            } catch (ZAYKException | SQLException e) {
+                log.error("校验前清除数据失败：{}", e.getMessage());
+            } finally {
+                closeConnection(conn);
+                closeStatement(stmt);
+                closeResultSet(resultSet);
+            }
+        }
     }
+
+    public void closeConnection(Connection conn) {
+        if (conn != null) {
+            try {
+                conn.close();
+            } catch (SQLException e) {
+                log.error("关闭Connection失败：{}", e.getMessage());
+            }
+        }
+    }
+
+    public void closeStatement(Statement stmt) {
+        if (stmt != null) {
+            try {
+                stmt.close();
+            } catch (SQLException e) {
+                log.error("关闭Statement失败：{}", e.getMessage());
+            }
+        }
+    }
+
+    public void closeResultSet(ResultSet resultSet) {
+        if (resultSet != null) {
+            try {
+                resultSet.close();
+            } catch (SQLException e) {
+                log.error("关闭ResultSet失败：{}", e.getMessage());
+            }
+        }
+    }
+
 
 }
