@@ -65,7 +65,7 @@ public class DbhsmWarningJobLoad {
     @Autowired
     private DbhsmWarningInfoMapper dbhsmWarningInfoMapper;
 
-    private static final String integrityFilePath = "D:\\kvm\\";
+    private static final String integrityFilePath = "/opt/integrityFile/";
 
     private static final String HMAC = "3";
     private static final String SM3 = "1";
@@ -121,7 +121,7 @@ public class DbhsmWarningJobLoad {
             };
 
             // 执行任务初始延迟1秒，然后每X分钟执行一次任务
-            scheduledExecutorService.scheduleAtFixedRate(task, 1, Integer.parseInt(cron), TimeUnit.SECONDS);
+            scheduledExecutorService.scheduleAtFixedRate(task, 1, Integer.parseInt(cron), TimeUnit.MINUTES);
         }
     }
 
@@ -154,7 +154,7 @@ public class DbhsmWarningJobLoad {
                     schedulerCheckFileJob(fileConfig, file);
                 };
 
-                scheduledExecutorService.scheduleAtFixedRate(task, 1, Long.parseLong(cron), TimeUnit.SECONDS);
+                scheduledExecutorService.scheduleAtFixedRate(task, 1, Long.parseLong(cron), TimeUnit.MINUTES);
             }
         } catch (Exception e) {
             log.error("文件完整性定时任务启动失败：{}", e.getMessage());
