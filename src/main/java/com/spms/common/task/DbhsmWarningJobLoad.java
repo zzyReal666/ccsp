@@ -77,7 +77,7 @@ public class DbhsmWarningJobLoad {
         //数据完整性校验
         dataIntegrityJob();
         //文件完整性校验
-//        fileIntegrityJob();
+        fileIntegrityJob();
     }
 
     public void dataIntegrityJob() {
@@ -142,17 +142,6 @@ public class DbhsmWarningJobLoad {
             for (DbhsmIntegrityFileConfig fileConfig : dbhsmIntegrityFileConfigs) {
                 String filePath = fileConfig.getFilePath();
                 File file = new File(integrityFilePath + File.separator + filePath);
-                if (!file.exists()) {
-                    log.error("文件信息不存在：{}", file.getPath());
-                    DbhsmWarningInfo dbhsmWarningInfo = new DbhsmWarningInfo();
-                    dbhsmWarningInfo.setStatus(0L);
-                    dbhsmWarningInfo.setResult("文件不存在, 文件名：" + filePath);
-                    dbhsmWarningInfo.setOldVerificationValue(fileConfig.getVerificationValue());
-                    dbhsmWarningInfo.setCreateTime(new Date());
-                    dbhsmWarningInfoMapper.insertDbhsmWarningInfo(dbhsmWarningInfo);
-                    continue;
-                }
-
                 //定时任务执行时间 x分钟
                 String cron = fileConfig.getCron();
                 Runnable task = () -> {
@@ -168,6 +157,17 @@ public class DbhsmWarningJobLoad {
     }
 
     private void schedulerCheckFileJob(DbhsmIntegrityFileConfig fileConfig, File file) {
+        if (!file.exists()) {
+            log.error("文件信息不存在：{}", file.getPath());
+            DbhsmWarningInfo dbhsmWarningInfo = new DbhsmWarningInfo();
+            dbhsmWarningInfo.setStatus(0L);
+            dbhsmWarningInfo.setResult("文件名为" + fileConfig.getFilePath() + "的文件已经被删除：" );
+            dbhsmWarningInfo.setOldVerificationValue(fileConfig.getVerificationValue());
+            dbhsmWarningInfo.setCreateTime(new Date());
+            dbhsmWarningInfoMapper.insertDbhsmWarningInfo(dbhsmWarningInfo);
+            return;
+        }
+
         byte[] fileByte;
         try {
             fileByte = Files.readAllBytes(file.toPath());
