@@ -144,7 +144,13 @@ public class DbhsmWarningJobLoad {
                 File file = new File(integrityFilePath + File.separator + filePath);
                 if (!file.exists()) {
                     log.error("文件信息不存在：{}", file.getPath());
-                    return;
+                    DbhsmWarningInfo dbhsmWarningInfo = new DbhsmWarningInfo();
+                    dbhsmWarningInfo.setStatus(0L);
+                    dbhsmWarningInfo.setResult("文件不存在, 文件名：" + filePath);
+                    dbhsmWarningInfo.setOldVerificationValue(fileConfig.getVerificationValue());
+                    dbhsmWarningInfo.setCreateTime(new Date());
+                    dbhsmWarningInfoMapper.insertDbhsmWarningInfo(dbhsmWarningInfo);
+                    continue;
                 }
 
                 //定时任务执行时间 x分钟
