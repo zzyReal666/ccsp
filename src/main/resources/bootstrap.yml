@@ -3,6 +3,8 @@ server:
   port: 10013
 # spring配置
 spring:
+  main:
+    allow-bean-definition-overriding: true
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
@@ -137,6 +139,7 @@ apache:
     ConsumeThreadMax: 20
 backup-path: /home/develop/backup
 size: 30000
+integrityFile: /opt/integrityFile/
 # 安全配置
 security:
   # 不校验白名单

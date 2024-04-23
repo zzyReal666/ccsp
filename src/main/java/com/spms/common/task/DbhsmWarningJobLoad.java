@@ -19,6 +19,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.bouncycastle.util.encoders.Hex;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
@@ -26,9 +27,7 @@ import org.springframework.util.ObjectUtils;
 
 import javax.annotation.PostConstruct;
 import java.io.File;
-import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -65,7 +64,8 @@ public class DbhsmWarningJobLoad {
     @Autowired
     private DbhsmWarningInfoMapper dbhsmWarningInfoMapper;
 
-    private static final String integrityFilePath = "/opt/integrityFile/";
+    @Value("${integrityFile}")
+    private String integrityFilePath;
 
     private static final String HMAC = "3";
     private static final String SM3 = "1";
@@ -73,58 +73,58 @@ public class DbhsmWarningJobLoad {
 
     @Async
     @PostConstruct
-    public void init() {
-        //数据完整性校验
-        dataIntegrityJob();
-        //文件完整性校验
-        fileIntegrityJob();
-    }
-
     public void dataIntegrityJob() {
+        try {
 
-        List<DbhsmWarningConfigListResponse> dbhsmWarningConfigs = dbhsmWarningConfigMapper.selectDbhsmWarningConfigList(new DbhsmWarningConfig());
-        if (CollectionUtils.isEmpty(dbhsmWarningConfigs)) {
-            return;
-        }
-
-        List<DbhsmWarningConfigListResponse> jobList = dbhsmWarningConfigs.stream().filter(dbhsmWarningConfig -> 0 == dbhsmWarningConfig.getEnableTiming()).collect(Collectors.toList());
-
-        /**
-         * 1.查询数据库配置，获取：数据库连接信息、表、字段信息
-         * 2.创建数据库连接根据表、字段取出数据
-         * 3.取出数据进行SM3加密SM3Util.hash
-         */
-        //创建定时任务执行对象
-        ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(jobList.size());
-
-        for (DbhsmWarningConfigListResponse dbhsmWarningConfig : jobList) {
-            //数据库连接信息
-            String databaseConnectionInfo = dbhsmWarningConfig.getDatabaseConnectionInfo();
-            //需要校验的字段
-            String tableFields = dbhsmWarningConfig.getTableFields();
-            String[] split = tableFields.split("\\,");
-            StringBuffer stringBuffer = new StringBuffer();
-            for (String s : split) {
-                stringBuffer.append(s).append(",");
+            List<DbhsmWarningConfigListResponse> dbhsmWarningConfigs = dbhsmWarningConfigMapper.selectDbhsmWarningConfigList(new DbhsmWarningConfig());
+            if (CollectionUtils.isEmpty(dbhsmWarningConfigs)) {
+                return;
             }
-            //需要校验的表信息
-            String databaseTableInfo = dbhsmWarningConfig.getDatabaseTableInfo();
-            //定时任务执行时间 x分钟
-            String cron = dbhsmWarningConfig.getCron();
-            //校验字段
-            stringBuffer.append(dbhsmWarningConfig.getVerificationFields());
-            //先清空校验值列的数据
-            connectionDelOldCheckValue(Long.parseLong(databaseConnectionInfo), dbhsmWarningConfig.getVerificationFields(), databaseTableInfo);
-            Runnable task = () -> {
-                // 创建一个任务
-                connectionParam(Long.parseLong(databaseConnectionInfo), databaseTableInfo, stringBuffer.toString(), dbhsmWarningConfig.getId(), String.valueOf(dbhsmWarningConfig.getVerificationType()));
-            };
 
-            // 执行任务初始延迟1秒，然后每X分钟执行一次任务
-            scheduledExecutorService.scheduleAtFixedRate(task, 1, Integer.parseInt(cron), TimeUnit.MINUTES);
+            List<DbhsmWarningConfigListResponse> jobList = dbhsmWarningConfigs.stream().filter(dbhsmWarningConfig -> 0 == dbhsmWarningConfig.getEnableTiming()).collect(Collectors.toList());
+
+            /**
+             * 1.查询数据库配置，获取：数据库连接信息、表、字段信息
+             * 2.创建数据库连接根据表、字段取出数据
+             * 3.取出数据进行SM3加密SM3Util.hash
+             */
+            //创建定时任务执行对象
+            ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(jobList.size());
+
+            for (DbhsmWarningConfigListResponse dbhsmWarningConfig : jobList) {
+                //数据库连接信息
+                String databaseConnectionInfo = dbhsmWarningConfig.getDatabaseConnectionInfo();
+                //需要校验的字段
+                String tableFields = dbhsmWarningConfig.getTableFields();
+                String[] split = tableFields.split("\\,");
+                StringBuffer stringBuffer = new StringBuffer();
+                for (String s : split) {
+                    stringBuffer.append(s).append(",");
+                }
+                //需要校验的表信息
+                String databaseTableInfo = dbhsmWarningConfig.getDatabaseTableInfo();
+                //定时任务执行时间 x分钟
+                String cron = dbhsmWarningConfig.getCron();
+                //校验字段
+                stringBuffer.append(dbhsmWarningConfig.getVerificationFields());
+                //先清空校验值列的数据
+                connectionDelOldCheckValue(Long.parseLong(databaseConnectionInfo), dbhsmWarningConfig.getVerificationFields(), databaseTableInfo);
+                Runnable task = () -> {
+                    // 创建一个任务
+                    connectionParam(Long.parseLong(databaseConnectionInfo), databaseTableInfo, stringBuffer.toString(), dbhsmWarningConfig.getId(), String.valueOf(dbhsmWarningConfig.getVerificationType()));
+                };
+
+                // 执行任务初始延迟1秒，然后每X分钟执行一次任务
+                scheduledExecutorService.scheduleAtFixedRate(task, 1, Integer.parseInt(cron), TimeUnit.MINUTES);
+            }
+        } catch (Exception e) {
+            log.error("定时任务调度失败：{}", e.getMessage());
         }
     }
 
+
+    @Async
+    @PostConstruct
     public void fileIntegrityJob() {
         try {
             List<DbhsmIntegrityFileConfig> dbhsmIntegrityFileConfigs = fileConfigMapper.selectDbhsmIntegrityFileConfigList(new DbhsmIntegrityFileConfig());
@@ -140,18 +140,27 @@ public class DbhsmWarningJobLoad {
             ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(dbhsmIntegrityFileConfigs.size());
 
             for (DbhsmIntegrityFileConfig fileConfig : dbhsmIntegrityFileConfigs) {
-                String filePath = fileConfig.getFilePath();
-                File file = new File(integrityFilePath + File.separator + filePath);
-                //定时任务执行时间 x分钟
-                String cron = fileConfig.getCron();
-                Runnable task = () -> {
-                    // 创建一个任务
-                    schedulerCheckFileJob(fileConfig, file);
-                };
+                try {
+                    String filePath = fileConfig.getFilePath();
+                    File file = new File(integrityFilePath + File.separator + filePath);
+                    //定时任务执行时间 x分钟
+                    String cron = fileConfig.getCron();
 
-                scheduledExecutorService.scheduleAtFixedRate(task, 1, Long.parseLong(cron), TimeUnit.MINUTES);
+                    //先清空校验值列的数据
+                    fileConfig.setVerificationValue(null);
+                    fileConfigMapper.updateDbhsmIntegrityFileConfig(fileConfig);
+                    Runnable task = () -> {
+                        // 创建一个任务
+                        schedulerCheckFileJob(fileConfig, file);
+                    };
+
+                    scheduledExecutorService.scheduleAtFixedRate(task, 1, Long.parseLong(cron), TimeUnit.MINUTES);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         } catch (Exception e) {
+            e.printStackTrace();
             log.error("文件完整性定时任务启动失败：{}", e.getMessage());
         }
     }
@@ -161,20 +170,17 @@ public class DbhsmWarningJobLoad {
             log.error("文件信息不存在：{}", file.getPath());
             DbhsmWarningInfo dbhsmWarningInfo = new DbhsmWarningInfo();
             dbhsmWarningInfo.setStatus(0L);
-            dbhsmWarningInfo.setResult("文件名为" + fileConfig.getFilePath() + "的文件已经被删除：" );
+            dbhsmWarningInfo.setResult("文件名为" + fileConfig.getFilePath() + "的文件已经被删除：");
             dbhsmWarningInfo.setOldVerificationValue(fileConfig.getVerificationValue());
             dbhsmWarningInfo.setCreateTime(new Date());
             dbhsmWarningInfoMapper.insertDbhsmWarningInfo(dbhsmWarningInfo);
             return;
         }
 
-        byte[] fileByte;
-        try {
-            fileByte = Files.readAllBytes(file.toPath());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        String verification = verification(fileByte, String.valueOf(fileConfig.getVerificationType()));
+        String[] sha1sum = CommandUtil.exeCmd("sha1sum " + file.getPath()).split(" ");
+        log.info("sha1计算值：{}", sha1sum[0]);
+
+        String verification = verification(sha1sum[0].getBytes(), String.valueOf(fileConfig.getVerificationType()));
 
         if (StringUtils.isBlank(fileConfig.getVerificationValue())) {
             fileConfig.setVerificationValue(verification);
@@ -190,7 +196,10 @@ public class DbhsmWarningJobLoad {
             dbhsmWarningInfo.setNewVerificationValue(verification);
             dbhsmWarningInfo.setCreateTime(new Date());
             dbhsmWarningInfoMapper.insertDbhsmWarningInfo(dbhsmWarningInfo);
+            return;
         }
+
+        log.info("数据一致，文件没有被篡改");
     }
 
     private String verification(byte[] srcData, String checkType) {
@@ -261,7 +270,7 @@ public class DbhsmWarningJobLoad {
                         }
                         //如果校验值相同不需要更改
                         if (verification.equals(result)) {
-                            log.error("校验一致,数据没有被更改");
+                            log.info("校验一致,数据没有被更改");
                             continue;
                         }
                         //告警数据新增
@@ -308,7 +317,7 @@ public class DbhsmWarningJobLoad {
                     stmt = conn.createStatement();
                     String sql = "update " + table + " set " + field + "=NULL where " + field + " is null or " + field + " is not null";
                     int execute = stmt.executeUpdate(sql);
-                    log.info("执行sql返回值：{}", execute);
+                    log.info("删除原校验值数据，执行sql返回值：{}", execute);
                     conn.commit();
                 }
             } catch (ZAYKException | SQLException e) {
