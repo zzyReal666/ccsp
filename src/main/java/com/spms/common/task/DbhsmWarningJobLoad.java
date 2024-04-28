@@ -14,6 +14,7 @@ import com.spms.dbhsm.warningFile.domain.DbhsmIntegrityFileConfig;
 import com.spms.dbhsm.warningFile.mapper.DbhsmIntegrityFileConfigMapper;
 import com.spms.dbhsm.warningInfo.domain.DbhsmWarningInfo;
 import com.spms.dbhsm.warningInfo.mapper.DbhsmWarningInfoMapper;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.bouncycastle.util.encoders.Hex;
@@ -35,10 +36,7 @@ import java.sql.Statement;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
+import java.util.concurrent.*;
 
 /**
  * <p> description: 报警定时任务加载 </p>
@@ -51,6 +49,9 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 public class DbhsmWarningJobLoad {
+
+    //控制任务状态，保证线程安全
+    private ConcurrentHashMap<String, Future> futureMap = new ConcurrentHashMap<>();
 
     @Autowired
     private DbhsmIntegrityFileConfigMapper fileConfigMapper;
@@ -70,18 +71,20 @@ public class DbhsmWarningJobLoad {
     private static final String HMAC = "3";
     private static final String SM3 = "1";
 
+    private static Integer jobCount = 0;
+
 
     @Async
     @PostConstruct
     public void dataIntegrityJob() {
         try {
 
-            List<DbhsmWarningConfigListResponse> dbhsmWarningConfigs = dbhsmWarningConfigMapper.selectDbhsmWarningConfigList(new DbhsmWarningConfig());
-            if (CollectionUtils.isEmpty(dbhsmWarningConfigs)) {
+            List<DbhsmWarningConfigListResponse> jobList = dbhsmWarningConfigMapper.selectDbhsmWarningConfigList(new DbhsmWarningConfig());
+            if (CollectionUtils.isEmpty(jobList)) {
                 return;
             }
 
-            List<DbhsmWarningConfigListResponse> jobList = dbhsmWarningConfigs.stream().filter(dbhsmWarningConfig -> 0 == dbhsmWarningConfig.getEnableTiming()).collect(Collectors.toList());
+//            List<DbhsmWarningConfigListResponse> jobList = dbhsmWarningConfigs.stream().filter(dbhsmWarningConfig -> 0 == dbhsmWarningConfig.getEnableTiming()).collect(Collectors.toList());
 
             /**
              * 1.查询数据库配置，获取：数据库连接信息、表、字段信息
@@ -92,6 +95,16 @@ public class DbhsmWarningJobLoad {
             ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(jobList.size());
 
             for (DbhsmWarningConfigListResponse dbhsmWarningConfig : jobList) {
+
+                if (1 == dbhsmWarningConfig.getEnableTiming()) {
+                    if (null != futureMap.get("data" + dbhsmWarningConfig.getId())) {
+                        //删除任务
+                        JobControlTask controlTask = new JobControlTask("data" + dbhsmWarningConfig.getId(), futureMap);
+                        controlTask.run();
+                    }
+                    continue;
+                }
+
                 //数据库连接信息
                 String databaseConnectionInfo = dbhsmWarningConfig.getDatabaseConnectionInfo();
                 //需要校验的字段
@@ -107,6 +120,7 @@ public class DbhsmWarningJobLoad {
                 String cron = dbhsmWarningConfig.getCron();
                 //校验字段
                 stringBuffer.append(dbhsmWarningConfig.getVerificationFields());
+
                 //先清空校验值列的数据
                 connectionDelOldCheckValue(Long.parseLong(databaseConnectionInfo), dbhsmWarningConfig.getVerificationFields(), databaseTableInfo);
                 Runnable task = () -> {
@@ -114,9 +128,13 @@ public class DbhsmWarningJobLoad {
                     connectionParam(Long.parseLong(databaseConnectionInfo), databaseTableInfo, stringBuffer.toString(), dbhsmWarningConfig.getId(), String.valueOf(dbhsmWarningConfig.getVerificationType()));
                 };
 
-                // 执行任务初始延迟1秒，然后每X分钟执行一次任务
-                scheduledExecutorService.scheduleAtFixedRate(task, 1, Integer.parseInt(cron), TimeUnit.MINUTES);
+                if (0 == dbhsmWarningConfig.getEnableTiming()) {
+                    // 执行任务初始延迟1秒，然后每X分钟执行一次任务
+                    ScheduledFuture<?> scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(task, 1, Integer.parseInt(cron), TimeUnit.MINUTES);
+                    futureMap.put("data" + dbhsmWarningConfig.getId(), scheduledFuture);
+                }
             }
+
         } catch (Exception e) {
             log.error("定时任务调度失败：{}", e.getMessage());
         }
@@ -134,12 +152,20 @@ public class DbhsmWarningJobLoad {
             }
 
             //过滤可以执行的文件信息
-            dbhsmIntegrityFileConfigs = dbhsmIntegrityFileConfigs.stream().filter(file -> 0 == file.getEnableTiming()).collect(Collectors.toList());
+//            dbhsmIntegrityFileConfigs = dbhsmIntegrityFileConfigs.stream().filter(file -> 0 == file.getEnableTiming()).collect(Collectors.toList());
 
             //创建定时任务执行对象
             ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(dbhsmIntegrityFileConfigs.size());
 
             for (DbhsmIntegrityFileConfig fileConfig : dbhsmIntegrityFileConfigs) {
+                if (1 == fileConfig.getEnableTiming()) {
+                    if (null != futureMap.get("file" + fileConfig.getId())) {
+                        //删除任务
+                        JobControlTask controlTask = new JobControlTask("file" + fileConfig.getId(), futureMap);
+                        controlTask.run();
+                    }
+                    continue;
+                }
                 try {
                     String filePath = fileConfig.getFilePath();
                     File file = new File(integrityFilePath + File.separator + filePath);
@@ -154,7 +180,11 @@ public class DbhsmWarningJobLoad {
                         schedulerCheckFileJob(fileConfig, file);
                     };
 
-                    scheduledExecutorService.scheduleAtFixedRate(task, 1, Long.parseLong(cron), TimeUnit.MINUTES);
+                    if (0 == fileConfig.getEnableTiming()) {
+                        // 执行任务初始延迟1秒，然后每X分钟执行一次任务
+                        ScheduledFuture<?> scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(task, 1, Long.parseLong(cron), TimeUnit.MINUTES);
+                        futureMap.put("file" + fileConfig.getId(), scheduledFuture);
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -360,5 +390,24 @@ public class DbhsmWarningJobLoad {
         }
     }
 
+
+    @Data
+    class JobControlTask implements Runnable {
+        private ConcurrentHashMap<String, Future> futureMap;
+        private String jobId;
+
+        public JobControlTask(String jobId, ConcurrentHashMap<String, Future> futureMap) {
+            this.jobId = jobId;
+            this.futureMap = futureMap;
+        }
+
+        @Override
+        public void run() {
+            Future future = futureMap.remove(jobId);
+            future.cancel(true);
+            log.info("{} had cancel", jobId);
+        }
+
+    }
 
 }
