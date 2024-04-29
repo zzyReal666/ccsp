@@ -19,6 +19,17 @@ public class ColumnDTO {
      */
     private String columnName;
 
+
+    /**
+     * 是否非空 true:非空 false:可空
+     */
+    private boolean notNull;
+
+    /**
+     * 注释
+     */
+    private String comment;
+
     /**
      * 加密算法
      */
