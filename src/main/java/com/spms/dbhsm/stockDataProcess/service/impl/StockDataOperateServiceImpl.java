@@ -132,7 +132,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
      * @param limit       每次执行的条数
      * @param finalOffset 当前执行到的位置
      */
-    private static void process(boolean operateType, String primaryKey, TableDTO tableDTO, SqlExecuteSPI sqlExecute, Connection serviceConn, int limit, int finalOffset) {
+    private void process(boolean operateType, String primaryKey, TableDTO tableDTO, SqlExecuteSPI sqlExecute, Connection serviceConn, int limit, int finalOffset) {
         try {
             //查询数据
             ArrayList<String> columns = new ArrayList<>();
@@ -188,7 +188,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
     }
 
     @Override
-    public void queryProgress(String tableId) {
-
+    public int queryProgress(String tableId) {
+        return progress;
     }
 }

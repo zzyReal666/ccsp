@@ -34,6 +34,6 @@ public interface StockDataOperateService {
     /**
      * 查询进度
      */
-    void queryProgress(String tableId) throws Exception;
+    int queryProgress(String tableId) throws Exception;
 
 }
