@@ -300,7 +300,6 @@ public class DbhsmWarningJobLoad {
                         }
                         //如果校验值相同不需要更改
                         if (verification.equals(result)) {
-                            log.info("校验一致,数据没有被更改");
                             continue;
                         }
                         //告警数据新增
@@ -316,7 +315,7 @@ public class DbhsmWarningJobLoad {
                 }
             } catch (SQLException | ZAYKException e) {
                 DbhsmWarningInfo dbhsmWarningInfo = new DbhsmWarningInfo();
-                dbhsmWarningInfo.setResult(e.getMessage());
+                dbhsmWarningInfo.setResult("数据库信息错误，当前表信息：" + table + "错误信息：" + e.getMessage());
                 dbhsmWarningInfo.setStatus(0L);
                 dbhsmWarningInfo.setCreateTime(new Date());
                 dbhsmWarningInfo.setConfigId(configId);
