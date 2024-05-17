@@ -4,9 +4,9 @@ import java.util.Collection;
 import java.util.Collections;
 
 /**
- * @author zzxka
- * @date 2023-07-17
- * @desc
+ * @author zzypersonally@gmail.com
+ * @description
+ * @since 2024/3/20 15:39
  */
 public interface TypedSPI {
 
@@ -14,11 +14,6 @@ public interface TypedSPI {
         return "";
     }
 
-    /**
-     * Get type aliases.
-     *
-     * @return type aliases
-     */
     default Collection<String> getTypeAliases() {
         return Collections.emptyList();
     }
