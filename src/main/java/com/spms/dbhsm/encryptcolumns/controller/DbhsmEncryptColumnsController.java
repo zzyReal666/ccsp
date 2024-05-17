@@ -13,6 +13,7 @@ import com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsAdd;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsDto;
 import com.spms.dbhsm.encryptcolumns.service.IDbhsmEncryptColumnsService;
+import com.spms.dbhsm.encryptcolumns.vo.UpEncryptColumnsRequest;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -126,9 +127,9 @@ public class DbhsmEncryptColumnsController extends BaseController
     @RequiresPermissions("dbhsm:encryptcolumns:edit")
     @Log(title = "数据库加密列", businessType = BusinessType.UPDATE)
     @PutMapping
-    public AjaxResult edit(@RequestBody DbhsmEncryptColumns dbhsmEncryptColumns)
+    public AjaxResult edit(@RequestBody UpEncryptColumnsRequest dbhsmEncryptColumns)
     {
-        return toAjax(dbhsmEncryptColumnsService.updateDbhsmEncryptColumns(dbhsmEncryptColumns));
+        return dbhsmEncryptColumnsService.updateDbhsmEncryptColumns(dbhsmEncryptColumns);
     }
 
     /**
