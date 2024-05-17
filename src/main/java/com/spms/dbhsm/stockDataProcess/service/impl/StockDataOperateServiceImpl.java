@@ -20,8 +20,11 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -33,22 +36,10 @@ import java.util.stream.Collectors;
 @Service
 public class StockDataOperateServiceImpl implements StockDataOperateService {
 
-
-    /**
-     * 线程池
-     */
-    private ExecutorService executor = null;
-
-    /**
-     * 暂停标志
-     */
-    private volatile boolean paused = false;
-
-    /**
-     * 执行进度 百分比
-     */
-    private volatile int progress = 0;
-
+    // 暂停标志的映射，每个线程有自己的暂停标志
+    private final Map<String, AtomicBoolean> pausedMap = new ConcurrentHashMap<>();
+    // 进度的映射，每个线程有自己的进度
+    private final Map<String, AtomicInteger> progressMap = new ConcurrentHashMap<>();
 
     /**
      * 存量数据加密/解密
@@ -62,6 +53,10 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         //表对象
         TableDTO tableDTO = databaseDTO.getTableDTOList().get(0);
 
+        //初始化暂停标志和进度
+        pausedMap.put(String.valueOf(tableDTO.getId()), new AtomicBoolean(false));
+        progressMap.put(String.valueOf(tableDTO.getId()), new AtomicInteger(0));
+
         //获取连接 DBA用于修改结构 业务账号用于修改数据
         Connection dbaConn = getConnction(databaseDTO, DatabaseToDbInstanceGetConnDTOAdapter.AdapterType.DBA);
         Connection serviceConn = getConnction(databaseDTO, DatabaseToDbInstanceGetConnDTOAdapter.AdapterType.SERVICE);
@@ -74,7 +69,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         SqlExecuteSPI sqlExecute = registeredService.get();
 
         //是否有主键，没有主键不能加密
-        String primaryKey = sqlExecute.hasPrimaryKey(dbaConn, databaseDTO.getDatabaseName(), tableDTO.getTableName());
+        String primaryKey = sqlExecute.getPrimaryKey(dbaConn, databaseDTO.getDatabaseName(), tableDTO.getTableName());
         if (primaryKey == null) {
             throw new ZAYKException("表没有主键，不能加密");
         }
@@ -85,7 +80,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         sqlExecute.addTempColumn(dbaConn, tableDTO.getTableName(), addColumnsDTOS);
 
         //分块 加/解密
-        blockOperate(operateType, sqlExecute, serviceConn, tableDTO, primaryKey);
+        blockOperate(operateType, sqlExecute, serviceConn, tableDTO, primaryKey, 0);
 
         //删除临时字段
         sqlExecute.dropColumn(dbaConn, tableDTO.getTableName(), tableDTO.getColumnDTOList().stream().map(ColumnDTO::getColumnName).collect(Collectors.toList()));
@@ -99,17 +94,18 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
      * @param serviceConn 业务连接
      * @param tableDTO    表信息
      * @param primaryKey  主键
+     * @param offset      偏移量 即当前执行到的位置
      */
-    private void blockOperate(boolean operateType, SqlExecuteSPI sqlExecute, Connection serviceConn, TableDTO tableDTO, String primaryKey) {
+    private void blockOperate(boolean operateType, SqlExecuteSPI sqlExecute, Connection serviceConn, TableDTO tableDTO, String primaryKey, int offset) {
         int count = sqlExecute.count(serviceConn, tableDTO.getTableName()); //总条数
         int limit = tableDTO.getBatchSize();  //块大小，每个线程每次执行的条数
         int threadNum = tableDTO.getThreadNum(); //线程数
-        int offset = 0;  //偏移量 当前执行到的位置
-        int totalPage = count % limit == 0 ? count / limit : count / limit + 1;  //总页数 用于计算进度
+        //从offset开始，总页数
+        int totalPage = (count - offset) / limit + 1;
         //多线程执行
-        executor = Executors.newFixedThreadPool(threadNum);
+        ExecutorService executor = Executors.newFixedThreadPool(threadNum);
         for (int i = 0; i < totalPage; i++) {
-            if (paused) {
+            if (pausedMap.get(String.valueOf(tableDTO.getId())).get()) {
                 break;
             }
             int finalOffset = offset;
@@ -117,8 +113,11 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
                 process(operateType, primaryKey, tableDTO, sqlExecute, serviceConn, limit, finalOffset);
             });
             offset += limit;
-            progress = (int) (((double) i / totalPage) * 100);
+            //进度
+            progressMap.get(String.valueOf(tableDTO.getId())).set((int) (((double) offset / count) * 100));
         }
+        //关闭线程池
+        executor.shutdown();
     }
 
     /**
@@ -162,6 +161,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         }
     }
 
+    //DTO转换
     private AddColumnsDTO convertToDTO(ColumnDTO columnDTO) {
         AddColumnsDTO addColumnsDTO = new AddColumnsDTO();
         addColumnsDTO.setColumnName(columnDTO.getColumnName());
@@ -176,19 +176,20 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         return factory.getConnection(dbInstanceGetConnDTO);
     }
 
+    //暂停
     @Override
     public void pause(String tableId) {
-        paused = true;
+        pausedMap.get(tableId).set(true);
     }
 
+    //继续
     @Override
     public void resume(String tableId) {
-        paused = false;
-
+        pausedMap.get(tableId).set(false);
     }
 
     @Override
     public int queryProgress(String tableId) {
-        return progress;
+        return progressMap.get(tableId).get();
     }
 }
