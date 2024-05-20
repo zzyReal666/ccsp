@@ -11,6 +11,7 @@ import com.spms.dbhsm.stockDataProcess.domain.dto.DatabaseDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.TableDTO;
 import com.spms.dbhsm.stockDataProcess.service.StockDataOperateService;
 import com.spms.dbhsm.stockDataProcess.sqlExecute.SqlExecuteSPI;
+import com.spms.dbhsm.stockDataProcess.threadTask.InitZookeeperTask;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,8 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
     // 进度的映射，每个线程有自己的进度
     private final Map<String, AtomicInteger> progressMap = new ConcurrentHashMap<>();
 
+
+
     /**
      * 存量数据加密/解密
      *
@@ -49,7 +52,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
      */
     @Async
     @Override
-    public void stockDataOperate(DatabaseDTO databaseDTO, boolean operateType) throws ZAYKException, SQLException {
+    public void stockDataOperate(DatabaseDTO databaseDTO, boolean operateType) throws ZAYKException, SQLException, InterruptedException {
         //表对象
         TableDTO tableDTO = databaseDTO.getTableDTOList().get(0);
 
@@ -58,8 +61,8 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         progressMap.put(String.valueOf(tableDTO.getId()), new AtomicInteger(0));
 
         //获取连接 DBA用于修改结构 业务账号用于修改数据
-        Connection dbaConn = getConnction(databaseDTO, DatabaseToDbInstanceGetConnDTOAdapter.AdapterType.DBA);
-        Connection serviceConn = getConnction(databaseDTO, DatabaseToDbInstanceGetConnDTOAdapter.AdapterType.SERVICE);
+        Connection dbaConn = getConnection(databaseDTO, DatabaseToDbInstanceGetConnDTOAdapter.AdapterType.DBA);
+        Connection serviceConn = getConnection(databaseDTO, DatabaseToDbInstanceGetConnDTOAdapter.AdapterType.SERVICE);
 
         //获取SQL执行器
         Optional<SqlExecuteSPI> registeredService = TypedSPIRegistry.findRegisteredService(SqlExecuteSPI.class, databaseDTO.getDatabaseType());
@@ -84,7 +87,19 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
 
         //删除临时字段
         sqlExecute.dropColumn(dbaConn, tableDTO.getTableName(), tableDTO.getColumnDTOList().stream().map(ColumnDTO::getColumnName).collect(Collectors.toList()));
+
+        writeConfigToZookeeper(databaseDTO);
+
     }
+
+    private void writeConfigToZookeeper(DatabaseDTO databaseDTO) throws InterruptedException {
+        //开一个线程将加密配置写入zookeeper，将该线程提前
+        Thread writeZkthread = new InitZookeeperTask(databaseDTO);
+        writeZkthread.join();
+        writeZkthread.start();
+    }
+
+
 
     /**
      * 分块 加/解密
@@ -97,11 +112,15 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
      * @param offset      偏移量 即当前执行到的位置
      */
     private void blockOperate(boolean operateType, SqlExecuteSPI sqlExecute, Connection serviceConn, TableDTO tableDTO, String primaryKey, int offset) {
-        int count = sqlExecute.count(serviceConn, tableDTO.getTableName()); //总条数
-        int limit = tableDTO.getBatchSize();  //块大小，每个线程每次执行的条数
-        int threadNum = tableDTO.getThreadNum(); //线程数
+        //总条数
+        int count = sqlExecute.count(serviceConn, tableDTO.getTableName());
+        //块大小，每个线程每次执行的条数
+        int limit = tableDTO.getBatchSize();
+        //线程数
+        int threadNum = tableDTO.getThreadNum();
         //从offset开始，总页数
         int totalPage = (count - offset) / limit + 1;
+
         //多线程执行
         ExecutorService executor = Executors.newFixedThreadPool(threadNum);
         for (int i = 0; i < totalPage; i++) {
@@ -116,6 +135,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
             //进度
             progressMap.get(String.valueOf(tableDTO.getId())).set((int) (((double) offset / count) * 100));
         }
+
         //关闭线程池
         executor.shutdown();
     }
@@ -170,7 +190,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         return addColumnsDTO;
     }
 
-    private static Connection getConnction(DatabaseDTO databaseDTO, DatabaseToDbInstanceGetConnDTOAdapter.AdapterType connType) throws ZAYKException, SQLException {
+    private static Connection getConnection(DatabaseDTO databaseDTO, DatabaseToDbInstanceGetConnDTOAdapter.AdapterType connType) throws ZAYKException, SQLException {
         DbInstanceGetConnDTO dbInstanceGetConnDTO = DatabaseToDbInstanceGetConnDTOAdapter.adapter(databaseDTO, connType);
         DbConnectionPoolFactory factory = new DbConnectionPoolFactory();
         return factory.getConnection(dbInstanceGetConnDTO);
@@ -188,6 +208,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         pausedMap.get(tableId).set(false);
     }
 
+    //查询执行进度
     @Override
     public int queryProgress(String tableId) {
         return progressMap.get(tableId).get();

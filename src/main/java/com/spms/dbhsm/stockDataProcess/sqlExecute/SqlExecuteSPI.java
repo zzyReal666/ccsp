@@ -15,6 +15,8 @@ import java.util.Map;
 public interface SqlExecuteSPI extends TypedSPI {
 
 
+
+
     /**
      * 查询主键 没有主键返回null 有主键返回主键字段名
      */
