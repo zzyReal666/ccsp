@@ -42,7 +42,6 @@ public class TemplateEngineTest {
 
             System.out.println(process);
 
-            System.out.println("path" +  PathEnum.VERSION.getValue());
 
 
         } catch (TemplateEngineException e) {

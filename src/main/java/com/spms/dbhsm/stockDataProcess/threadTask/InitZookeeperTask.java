@@ -1,19 +1,19 @@
 package com.spms.dbhsm.stockDataProcess.threadTask;
 
+import cn.hutool.core.io.FileUtil;
+import com.spms.common.Template.FreeMarkerTemplateEngine;
+import com.spms.common.Template.TemplateEngine;
+import com.spms.common.Template.TemplateEngineException;
 import com.spms.dbhsm.stockDataProcess.domain.dto.DatabaseDTO;
-import freemarker.template.Configuration;
-import freemarker.template.Template;
-import freemarker.template.TemplateException;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.Map;
+
 
 /**
  * @author zzypersonally@gmail.com
@@ -37,29 +37,21 @@ public class InitZookeeperTask extends Thread {
     public void run() {
 
         //生成配置文件
-        Configuration cfg = new Configuration(Configuration.VERSION_2_3_31);
-        cfg.setClassLoaderForTemplateLoading(this.getClass().getClassLoader(), "templates");
+        TemplateEngine templateEngine = new FreeMarkerTemplateEngine();
+        String filePath = "initConfig.ftl";
         try {
+            templateEngine.setTemplateFromFile(filePath);
 
-            // 加载模板文件
-            Template template = cfg.getTemplate("config_template.ftl");
+            //数据模型
+            templateEngine.setDataModel(getDataModelMap());
+            String result = templateEngine.process();
 
-            // 创建数据模型
-            Map<String, Object> dataModel = getDataModelMap();
-
-            // 合并模板和数据模型
-            StringWriter out = new StringWriter();
-            template.process(dataModel, out);
-
-            // 写入到文件
-            try (FileWriter fileWriter = new FileWriter("/Users/zhangzhongyuan/config/ftl/config.yaml")) {
-                template.process(dataModel, fileWriter);
-            }
-        } catch (IOException | TemplateException e) {
+            //result 写入文件 /Users/zhangzhongyuan/config/ftl/config.yaml
+            FileUtil.writeUtf8String(result, "/Users/zhangzhongyuan/config/ftl/config.yaml");
+        } catch (TemplateEngineException e) {
             throw new RuntimeException(e);
         }
-
-        //调用linux命令启动一个空的项目，使用生成的配置文件
+        //调用linux命令启动一个空的项目，使用生成的配置文件 用来初始化
         try {
             Runtime.getRuntime().exec("sh /Users/zhangzhongyuan/config/ftl/start.sh");
         } catch (IOException e) {

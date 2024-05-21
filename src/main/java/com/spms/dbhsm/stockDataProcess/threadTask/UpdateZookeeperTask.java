@@ -7,7 +7,6 @@ import com.spms.common.enums.PathEnum;
 import com.spms.common.zookeeperUtils.ZookeeperUtils;
 import com.spms.dbhsm.stockDataProcess.domain.dto.ColumnDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.DatabaseDTO;
-import freemarker.template.Configuration;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -33,13 +32,9 @@ public class UpdateZookeeperTask extends Thread {
 
     @Override
     public void run() {
-
-
         databaseDTO.getTableDTOList().get(0).getColumnDTOList().forEach(col -> {
-
             //添加加密器
             addEncryptor(col);
-
             //添加加密规则
             addEncryptRules(col);
         });
@@ -48,9 +43,7 @@ public class UpdateZookeeperTask extends Thread {
 
     private void addEncryptRules(ColumnDTO col) {
         //基础路径
-        String path = PathEnum.RULE.getValue()
-                .replace("${namespace}", databaseDTO.getId().toString())
-                .replace("${tableName}",databaseDTO.getTableDTOList().get(0).getTableName());
+        String path = PathEnum.RULE.getValue().replace("${namespace}", databaseDTO.getId().toString()).replace("${tableName}", databaseDTO.getTableDTOList().get(0).getTableName());
 
         //新增活跃版本号 active_version:0
         ZookeeperUtils.updateNode("0", path + PathEnum.VERSION.getValue());
@@ -61,71 +54,49 @@ public class UpdateZookeeperTask extends Thread {
         try {
             templateEngine.setTemplateFromFile(filePath);
 
-            //数据模型
-            //columns:
-            //<#list columns as column>
-            //    ${column.name}:
-            //    <#if column.assistedQuery??>
-            //        assistedQuery:
-            //        encryptorName: ${column.assistedQuery.encryptorName}
-            //        name: ${column.assistedQuery.name}
-            //    </#if>
-            //    <#if column.cipher??>
-            //        cipher:
-            //        encryptorName: ${column.cipher.encryptorName}
-            //        name: ${column.cipher.name}
-            //    </#if>
-            //    <#if column.likeQuery??>
-            //        likeQuery:
-            //        encryptorName: ${column.likeQuery.encryptorName}
-            //        name: ${column.likeQuery.name}
-            //    </#if>
-            //    name: ${column.name}
-            //</#list>
-            //name: ${tableName}
-
+            //数据模型-tableName
             Map<String, Object> dataModel = new HashMap<>();
             dataModel.put("tableName", databaseDTO.getTableDTOList().get(0).getTableName());
 
             //数据模型-columns列表
             List<Map<String, Object>> columns = new ArrayList<>();
-
             databaseDTO.getTableDTOList().get(0).getColumnDTOList().forEach(column -> {
                 Map<String, Object> columnMap = new HashMap<>();
                 columnMap.put("name", column.getColumnName());
-                if ((boolean)column.getAssistedQueryProps().get("enable") ) {
+                if ((boolean) column.getAssistedQueryProps().get("enable")) {
                     Map<String, Object> assistedQuery = new HashMap<>();
                     assistedQuery.put("encryptorName", column.getAssistedQueryProps().get("encryptor"));
                     assistedQuery.put("name", column.getAssistedQueryProps().get("columnName"));
                     columnMap.put("assistedQuery", assistedQuery);
                 }
-
-
-
+                if ((boolean) column.getLikeQueryProps().get("enable")) {
+                    Map<String, Object> likeQuery = new HashMap<>();
+                    likeQuery.put("encryptorName", column.getLikeQueryProps().get("alg"));
+                    likeQuery.put("name", column.getLikeQueryProps().get("columnName"));
+                    columnMap.put("likeQuery", likeQuery);
+                }
+                columnMap.put("name", column.getColumnName());
                 columns.add(columnMap);
             });
+            dataModel.put("columns", columns);
 
+            //替换模版
+            templateEngine.setDataModel(dataModel);
 
-
-
-
-
-
-
+            //写入zk
+            ZookeeperUtils.updateNode(templateEngine.process(), path + PathEnum.VERSION.getValue());
         } catch (TemplateEngineException ignore) {
         }
 
 
     }
 
-    private  void addEncryptor(ColumnDTO col) {
+    private void addEncryptor(ColumnDTO col) {
         //基础路径
-        String path = PathEnum.ENCRYPTOR.getValue()
-                .replace("${namespace}", databaseDTO.getId().toString())
-                .replace("${encryptorName}", col.getColumnName() + "_encryptor");
+        String path = PathEnum.ENCRYPTOR.getValue().replace("${namespace}", databaseDTO.getId().toString()).replace("${encryptorName}", col.getColumnName() + "_encryptor");
 
         //新增活跃版本号
-        ZookeeperUtils.updateNode("0", path +  PathEnum.VERSION.getValue());
+        ZookeeperUtils.updateNode("0", path + PathEnum.VERSION.getValue());
 
         //新增加密器  versions/0  目录下
         TemplateEngine templateEngine = new FreeMarkerTemplateEngine();
@@ -141,19 +112,19 @@ public class UpdateZookeeperTask extends Thread {
 
             //数据模型 props
             List<Map<String, String>> props = new ArrayList<>();
-            col.getProperty().forEach((k, v)->{
+            col.getProperty().forEach((k, v) -> {
                 Map<String, String> map = new HashMap<>();
                 map.put("key", k);
                 map.put("value", v);
                 props.add(map);
             });
+            dataModel.put("props", props);
 
             //替换模版
-            dataModel.put("props", props);
             templateEngine.setDataModel(dataModel);
 
             // 写入zk
-            ZookeeperUtils.updateNode(templateEngine.process(),path);
+            ZookeeperUtils.updateNode(templateEngine.process(), path+PathEnum.VERSION);
         } catch (Exception ignore) {
         }
     }
