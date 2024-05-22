@@ -1,12 +1,16 @@
 package com.spms.dbhsm.stockDataProcess.domain.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * @author zzypersonally@gmail.com
  * @description 新增临时字段信息
  * @since 2024/4/29 16:26
  */
+@AllArgsConstructor
+@NoArgsConstructor
 @Data
 public class AddColumnsDTO {
 

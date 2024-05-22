@@ -1,6 +1,5 @@
 package com.spms.common.Template;
 
-import com.spms.common.enums.PathEnum;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -19,7 +18,6 @@ public class TemplateEngineTest {
         String filePath = "encryptor.ftl";
         try {
             templateEngine.setTemplateFromFile(filePath);
-
 
             //数据模型
             Map<String, Object> dataModel = new HashMap<>();
@@ -41,8 +39,6 @@ public class TemplateEngineTest {
             String process = templateEngine.process();
 
             System.out.println(process);
-
-
 
         } catch (TemplateEngineException e) {
             e.printStackTrace();

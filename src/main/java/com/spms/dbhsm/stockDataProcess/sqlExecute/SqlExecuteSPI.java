@@ -4,6 +4,7 @@ import com.spms.common.spi.typed.TypedSPI;
 import com.spms.dbhsm.stockDataProcess.domain.dto.AddColumnsDTO;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
@@ -15,22 +16,19 @@ import java.util.Map;
 public interface SqlExecuteSPI extends TypedSPI {
 
 
-
-
     /**
      * 查询主键 没有主键返回null 有主键返回主键字段名
      */
-    String getPrimaryKey(Connection conn, String schema, String table);
+    String getPrimaryKey(Connection conn, String schema, String table) throws SQLException;
 
 
     /**
-     * 获取临时字段名字
+     * 获取临时表的前｜后缀
      */
-    String getTempColumnName(String column);
-
+    String getTempColumnSuffix();
 
     /**
-     * 修改表结构，新增临时字段，临时字段在原来字段后面
+     * 新增临时字段，注意 此处的table 为原始字段的名字
      */
     void addTempColumn(Connection conn, String table, List<AddColumnsDTO> addColumnsDtoList);
 
@@ -38,7 +36,7 @@ public interface SqlExecuteSPI extends TypedSPI {
     /**
      * 数据总条数
      */
-    int count(Connection conn, String table);
+    int count(Connection conn, String table) ;
 
 
     /**
@@ -55,7 +53,7 @@ public interface SqlExecuteSPI extends TypedSPI {
     /**
      * 字段重新命名
      */
-    void renameColumn(Connection conn, String table, String oldColumn, String newColumn);
+    void renameColumn(Connection conn, String schema,String table, String oldColumn, String newColumn);
 
 
     /**
