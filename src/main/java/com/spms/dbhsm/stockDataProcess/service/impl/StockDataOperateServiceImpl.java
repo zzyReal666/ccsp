@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -48,11 +49,11 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
     // 进度的映射，每个线程有自己的进度
     private final Map<String, AtomicInteger> progressMap = new ConcurrentHashMap<>();
 
-    //全局唯一标识，标志着是否是第一次调用该服务
+    //全局唯一标识，标志着是否是第一次调用该服务 dataBaseId:true
     private static final Map<Long, Boolean> FIRST_CALL = new ConcurrentHashMap<>();
 
-    //如果执行失败，记录当前表执行到的位置
-    private static final Map<Long, Integer> FAIL_POSITION = new ConcurrentHashMap<>();
+    //暂停｜失败 记录位置 tableId:offset
+    private static final Map<Long, Integer> STOP_POSITION = new ConcurrentHashMap<>();
 
 
     /**
@@ -65,24 +66,17 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
     @Override
     public void stockDataOperate(DatabaseDTO databaseDTO, boolean operateType) throws ZAYKException, SQLException, InterruptedException {
 
-
         //表对象
         TableDTO tableDTO = databaseDTO.getTableDTOList().get(0);
 
         //初始化暂停标志和进度
-        pausedMap.put(String.valueOf(tableDTO.getId()), new AtomicBoolean(false));
-        progressMap.put(String.valueOf(tableDTO.getId()), new AtomicInteger(0));
+        initPauseAndProcess(tableDTO);
 
-        //获取连接 DBA用于修改结构 业务账号用于修改数据
+        //获取连接 DBA用于修改结构
         Connection dbaConn = getConnection(databaseDTO, DatabaseToDbInstanceGetConnDTOAdapter.AdapterType.DBA);
-        Connection serviceConn = getConnection(databaseDTO, DatabaseToDbInstanceGetConnDTOAdapter.AdapterType.SERVICE);
 
         //获取SQL执行器
-        Optional<SqlExecuteSPI> registeredService = TypedSPIRegistry.findRegisteredService(SqlExecuteSPI.class, databaseDTO.getDatabaseType());
-        if (!registeredService.isPresent()) {
-            throw new ZAYKException("未找到对应的数据库类型");
-        }
-        SqlExecuteSPI sqlExecute = registeredService.get();
+        SqlExecuteSPI sqlExecute = getSqlExecute(databaseDTO);
 
         //是否有主键，没有主键不能加密
         String primaryKey = sqlExecute.getPrimaryKey(dbaConn, databaseDTO.getDatabaseName(), tableDTO.getTableName());
@@ -90,30 +84,78 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
             throw new ZAYKException("表没有主键，不能加密");
         }
 
-        //修改表结构 新增临时字段
-        ArrayList<AddColumnsDTO> addColumns = new ArrayList<>();
-        tableDTO.getColumnDTOList().forEach(columnDTO -> addColumns.add(convertToDTO(columnDTO)));
-        sqlExecute.addTempColumn(dbaConn, tableDTO.getTableName(), addColumns);
+        // 新增临时字段
+        addTempColumns(tableDTO, sqlExecute, dbaConn);
 
         //分块 加/解密
-        blockOperate(operateType, sqlExecute, serviceConn, tableDTO, primaryKey, 0);
+        blockOperate(operateType, sqlExecute, dbaConn, databaseDTO, primaryKey, 0);
 
         //交换字段名字
-        tableDTO.getColumnDTOList().forEach(columnDTO -> {
-            //原始字段更名为前缀+字段名字
-            sqlExecute.renameColumn(dbaConn,databaseDTO.getDatabaseName(),tableDTO.getTableName(),columnDTO.getColumnName(),sqlExecute.getTempColumnSuffix()+columnDTO.getColumnName());
+        exchangeColumnName(databaseDTO, tableDTO, sqlExecute, dbaConn);
 
-            //临时字段（cipher）由字段名+后缀更改为字段名
-            sqlExecute.renameColumn(dbaConn,databaseDTO.getDatabaseName(),tableDTO.getTableName(),sqlExecute.getTempColumnSuffix()+columnDTO.getColumnName(),columnDTO.getColumnName());
-        });
+        //删除旧字段 注意，此时旧字段经过名字交换已经变为 前缀+字段名 todo 后续改成原字段存留一段时间，手动执行删除
 
-        //删除旧字段
-        sqlExecute.dropColumn(dbaConn, tableDTO.getTableName(), tableDTO.getColumnDTOList().stream().map(ColumnDTO::getColumnName).collect(Collectors.toList()));
+        sqlExecute.dropColumn(dbaConn, tableDTO.getTableName(), tableDTO.getColumnDTOList().stream()
+                .map(columnDTO -> sqlExecute.getTempColumnSuffix() + columnDTO.getColumnName()).collect(Collectors.toList()));
 
-        writeConfigToZookeeper(databaseDTO);
+        // 加密策略写入 zookeeper
+//        writeConfigToZookeeper(databaseDTO);
 
     }
 
+
+    //暂停
+    @Override
+    public void pause(String tableId) {
+        pausedMap.get(tableId).set(true);
+    }
+
+    //继续
+    @Override
+    public void resume(String tableId) {
+        pausedMap.get(tableId).set(false);
+    }
+
+    //查询执行进度
+    @Override
+    public int queryProgress(String tableId) {
+        return progressMap.get(tableId).get();
+    }
+
+
+    //新增临时字段
+    private void addTempColumns(TableDTO tableDTO, SqlExecuteSPI sqlExecute, Connection dbaConn) {
+        ArrayList<AddColumnsDTO> addColumns = new ArrayList<>();
+        tableDTO.getColumnDTOList().forEach(columnDTO -> addColumns.add(convertToDTO(columnDTO)));
+        sqlExecute.addTempColumn(dbaConn, tableDTO.getTableName(), addColumns);
+    }
+
+    //交换字段名字
+    private static void exchangeColumnName(DatabaseDTO databaseDTO, TableDTO tableDTO, SqlExecuteSPI sqlExecute, Connection dbaConn) {
+        tableDTO.getColumnDTOList().forEach(columnDTO -> {
+            //原始字段更名为前缀+字段名字
+            sqlExecute.renameColumn(dbaConn, databaseDTO.getDatabaseName(), tableDTO.getTableName(), columnDTO.getColumnName(), sqlExecute.getTempColumnSuffix() + columnDTO.getColumnName());
+            //临时字段（cipher）由字段名+后缀更改为字段名
+            sqlExecute.renameColumn(dbaConn, databaseDTO.getDatabaseName(), tableDTO.getTableName(), columnDTO.getColumnName() + sqlExecute.getTempColumnSuffix(), columnDTO.getColumnName());
+        });
+    }
+
+    //获取sql执行器
+    private static SqlExecuteSPI getSqlExecute(DatabaseDTO databaseDTO) throws ZAYKException {
+        Optional<SqlExecuteSPI> registeredService = TypedSPIRegistry.findRegisteredService(SqlExecuteSPI.class, databaseDTO.getDatabaseType());
+        if (!registeredService.isPresent()) {
+            throw new ZAYKException("未找到对应的数据库类型");
+        }
+        return registeredService.get();
+    }
+
+    //初始化暂停标志和进度
+    private void initPauseAndProcess(TableDTO tableDTO) {
+        pausedMap.put(String.valueOf(tableDTO.getId()), new AtomicBoolean(false));
+        progressMap.put(String.valueOf(tableDTO.getId()), new AtomicInteger(0));
+    }
+
+    //写入加密策略到zookeeper
     private void writeConfigToZookeeper(DatabaseDTO databaseDTO) throws InterruptedException {
         //如果当前是第一次走该服务，初始化zk配置中心的数据 todo 这部分是否放在数据库管理部分更为合理？
         if (FIRST_CALL.get(databaseDTO.getId()) == null) {
@@ -125,6 +167,8 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         //开一个线程 写加密策略到zk
         Thread writeZkthread = new UpdateZookeeperTask(databaseDTO);
         writeZkthread.start();
+        writeZkthread.join();
+
     }
 
 
@@ -133,26 +177,30 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
      *
      * @param operateType true:加密 false:解密
      * @param sqlExecute  sql执行器
-     * @param serviceConn 业务连接
-     * @param tableDTO    表信息
+     * @param dbaConn     dba账号
+     * @param databaseDTO 数据库加密对象
      * @param primaryKey  主键
      * @param offset      偏移量 即当前执行到的位置
      */
-    private void blockOperate(boolean operateType, SqlExecuteSPI sqlExecute, Connection serviceConn, TableDTO tableDTO, String primaryKey, int offset) {
+    private void blockOperate(boolean operateType, SqlExecuteSPI sqlExecute, Connection dbaConn, DatabaseDTO databaseDTO, String primaryKey, int offset) {
+
+        TableDTO tableDTO = databaseDTO.getTableDTOList().get(0);
         //总条数
-        int count = sqlExecute.count(serviceConn, tableDTO.getTableName());
+        int count = sqlExecute.count(dbaConn, tableDTO.getTableName());
         //块大小，每个线程每次执行的条数
         int limit = tableDTO.getBatchSize();
         //线程数
         int threadNum = tableDTO.getThreadNum();
-        //从offset开始，总页数/总块数
-        int totalPage = (count - offset) / limit + 1;
+        //从offset开始，总块数
+        int blockCount = (count - offset) / limit + 1;
 
         //多线程执行
         ExecutorService executor = Executors.newFixedThreadPool(threadNum);
+
+        //块的开始
         LinkedBlockingQueue<Integer> offsetQueue = new LinkedBlockingQueue<>();
 
-        for (int i = 0; i < totalPage; i++) {
+        for (int i = 0; i < blockCount; i++) {
             offsetQueue.add(offset);
             offset += limit;
         }
@@ -161,25 +209,44 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
 
         for (int i = 0; i < threadNum; i++) {
             executor.execute(() -> {
-                try {
+                //循环次数
+                int loop = 1;
+                log.info("当前线程:{},线程id:{}", Thread.currentThread().getName(), Thread.currentThread().getId());
+                try (Connection connection = getConnection(databaseDTO, DatabaseToDbInstanceGetConnDTOAdapter.AdapterType.SERVICE)) {
                     while (!offsetQueue.isEmpty() && !paused.get()) {
                         Integer currentOffset = offsetQueue.poll();
+                        log.info("线程:{} 第{}轮执行，offset:{}", Thread.currentThread().getName(), loop, currentOffset);
                         if (currentOffset == null) {
                             break;
                         }
-                        process(operateType, primaryKey, tableDTO, sqlExecute, serviceConn, limit, currentOffset);
+                        process(operateType, primaryKey, tableDTO, sqlExecute, connection, limit, currentOffset);
                         int processed = currentOffset + limit;
                         progress.set((int) (((double) processed / count) * 100));
+                        // 检查暂停标志
+                        if (paused.get()) {
+                            STOP_POSITION.put(tableDTO.getId(), currentOffset);
+                            break;
+                        }
+                        loop++;
                     }
                 } catch (Exception e) {
                     //打印错误
-                    log.error("加密/解密失败，当前线程:" + Thread.currentThread().getId(), e);
+                    log.error("加密/解密失败，当前线程:{}", Thread.currentThread().getId(), e);
+                    throw new RuntimeException(e);
                 }
             });
-
         }
         //关闭线程池
         executor.shutdown();
+        try {
+            // 等待所有任务完成，最多等待1小时
+            if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**
@@ -189,17 +256,17 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
      * @param primaryKey  主键
      * @param tableDTO    表信息
      * @param sqlExecute  sql执行器
-     * @param serviceConn 业务连接
+     * @param conn        业务连接
      * @param limit       每次执行的条数
      * @param finalOffset 当前执行到的位置
      */
-    private void process(boolean operateType, String primaryKey, TableDTO tableDTO, SqlExecuteSPI sqlExecute, Connection serviceConn, int limit, int finalOffset) {
+    private void process(boolean operateType, String primaryKey, TableDTO tableDTO, SqlExecuteSPI sqlExecute, Connection conn, int limit, int finalOffset) {
         try {
             //查询数据
             ArrayList<String> columns = new ArrayList<>();
             columns.add(primaryKey);
             tableDTO.getColumnDTOList().forEach(columnDTO -> columns.add(columnDTO.getColumnName()));
-            List<Map<String, String>> data = sqlExecute.selectColumn(serviceConn, tableDTO.getTableName(), columns, limit, finalOffset);
+            List<Map<String, String>> data = sqlExecute.selectColumn(conn, tableDTO.getTableName(), columns, limit, finalOffset);
             //加密/解密
             data.forEach(map -> {
                 map.forEach((key, value) -> {
@@ -210,9 +277,10 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
                 });
             });
             //更新数据
-            sqlExecute.batchUpdate(serviceConn, tableDTO.getTableName(), data);
+            sqlExecute.batchUpdate(conn, tableDTO.getTableName(), data);
         } catch (Exception e) {
             log.error("加密/解密失败", e);
+            throw new RuntimeException();
         }
     }
 
@@ -236,6 +304,8 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         return valueRef.get();
     }
 
+
+    //region//======>工具方法
     //DTO转换
     private AddColumnsDTO convertToDTO(ColumnDTO columnDTO) {
         AddColumnsDTO addColumnsDTO = new AddColumnsDTO();
@@ -245,27 +315,12 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         return addColumnsDTO;
     }
 
+    //获取连接
     private static Connection getConnection(DatabaseDTO databaseDTO, DatabaseToDbInstanceGetConnDTOAdapter.AdapterType connType) throws ZAYKException, SQLException {
         DbInstanceGetConnDTO dbInstanceGetConnDTO = DatabaseToDbInstanceGetConnDTOAdapter.adapter(databaseDTO, connType);
         DbConnectionPoolFactory factory = new DbConnectionPoolFactory();
         return factory.getConnection(dbInstanceGetConnDTO);
     }
+    //endregion
 
-    //暂停
-    @Override
-    public void pause(String tableId) {
-        pausedMap.get(tableId).set(true);
-    }
-
-    //继续
-    @Override
-    public void resume(String tableId) {
-        pausedMap.get(tableId).set(false);
-    }
-
-    //查询执行进度
-    @Override
-    public int queryProgress(String tableId) {
-        return progressMap.get(tableId).get();
-    }
 }

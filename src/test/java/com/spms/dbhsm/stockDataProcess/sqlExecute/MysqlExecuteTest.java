@@ -13,6 +13,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -73,10 +74,10 @@ public class MysqlExecuteTest {
 
         ArrayList<Map<String,String>> list = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
-            HashMap<String, String> map = new HashMap<>();
+            HashMap<String, String> map = new LinkedHashMap<>();
             map.put("id", String.valueOf(i+1));
             for (int j = 0; j < 5; j++) {
-                map.put("column"+j+MysqlExecute.getTEMP_COLUMN_SUFFIX(), "update" + j);
+                map.put("column"+j, "update" + j);
             }
             list.add(map);
         }

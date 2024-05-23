@@ -2,6 +2,7 @@ package com.spms.dbhsm.stockDataProcess.domain.dto;
 
 import lombok.Data;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -20,6 +21,11 @@ public class ColumnDTO {
      * 列名
      */
     private String columnName;
+
+    /**
+     * 数据类型
+     */
+    private String dataType;
 
 
     /**
@@ -45,7 +51,7 @@ public class ColumnDTO {
     /**
      * 加密属性 非必须
      */
-    private Map<String, String> property;
+    private Map<String, String> property = new HashMap<>();
 
     /**
      * 辅助查询列参数
@@ -54,7 +60,7 @@ public class ColumnDTO {
      * encryptor：算法器名字
      * columnName：辅助查询列名字
      */
-    private Map<String, Object> assistedQueryProps;
+    private Map<String, Object> assistedQueryProps = new HashMap<>();
 
     /**
      * 模糊查询列参数
@@ -62,5 +68,5 @@ public class ColumnDTO {
      * enable：true 使用｜false 不使用 默认不使用
      * alg：算法
      */
-    private Map<String, Object> likeQueryProps;
+    private Map<String, Object> likeQueryProps = new HashMap<>();
 }

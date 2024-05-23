@@ -71,7 +71,7 @@ public class InitZookeeperTask extends Thread {
         dataModel.put("modeType", "Cluster");
         dataModel.put("repositoryType", "ZooKeeper");
         dataModel.put("namespace", databaseDTO.getId());
-        dataModel.put("serverLists", "localhost:12181");
+        dataModel.put("serverLists", "101.42.19.44:12181");
         dataModel.put("operationTimeoutMilliseconds", 50000);
 
         // 数据源配置

@@ -1,5 +1,7 @@
 package com.spms.dbhsm.stockDataProcess.adapter;
 
+import com.spms.common.constant.DbConstants;
+import com.spms.common.enums.DatabaseTypeEnum;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.DatabaseDTO;
 
@@ -13,13 +15,16 @@ public class DatabaseToDbInstanceGetConnDTOAdapter {
     /**
      * 适配方法
      *
-     * @param databaseDTO 数据库信息
+     * @param databaseDTO 数据库信息 databaseType需要转换 databaseDTO中是mysql  DbInstanceGetConnDTO中是数字
      * @return DbInstanceGetConnDTO
      */
     public static DbInstanceGetConnDTO adapter(DatabaseDTO databaseDTO, AdapterType adapterType) {
         DbInstanceGetConnDTO dbInstanceGetConnDTO = new DbInstanceGetConnDTO();
         dbInstanceGetConnDTO.setDatabaseIp(databaseDTO.getDatabaseIp());
-        dbInstanceGetConnDTO.setDatabaseType(databaseDTO.getDatabaseType());
+        if (databaseDTO.getDatabaseType().equals(DatabaseTypeEnum.MySQL.name())) {
+            dbInstanceGetConnDTO.setDatabaseType(DbConstants.DB_TYPE_MYSQL);
+        }
+
         dbInstanceGetConnDTO.setDatabasePort(databaseDTO.getDatabasePort());
         if (adapterType == AdapterType.DBA) {
             dbInstanceGetConnDTO.setDatabaseDba(databaseDTO.getDatabaseDba());

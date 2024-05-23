@@ -15,7 +15,7 @@ public class ZookeeperUtils {
 
     public static CuratorFramework client;
 
-    private static String defaultUrl = "localhost:12181";
+    private static String defaultUrl = "101.42.19.44:12181";
     private static int defaultSessionTimeoutMs = 10 * 1000;
     private static int defaultConnectionTimeoutMs = 2 * 1000;
     private static int defaultRetryTime = 1000;

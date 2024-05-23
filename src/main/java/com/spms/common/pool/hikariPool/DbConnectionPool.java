@@ -139,6 +139,7 @@ public class DbConnectionPool {
                     System.out.println(resultSet.getString("COLUMN_2"));
                 }
             }
+
         } catch (SQLException e) {
             // 处理异常
             e.printStackTrace();

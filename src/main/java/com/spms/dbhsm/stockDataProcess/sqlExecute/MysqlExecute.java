@@ -13,9 +13,10 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author zzypersonally@gmail.com
@@ -42,7 +43,7 @@ public class MysqlExecute implements SqlExecuteSPI {
     private static final String COUNT_DATA = "SELECT COUNT(*) FROM <table>";
 
     //分页查询
-    private static final String SELECT_COLUMN = "SELECT <columns> FROM <table> LIMIT <limit> OFFSET <offset>";
+    private static final String SELECT_COLUMN = "SELECT <columns> FROM <table>  ORDER BY <id> LIMIT <limit> OFFSET <offset>";
 
     //更新语句
     private static final String UPDATE = "UPDATE <table> SET <set> WHERE <where>";
@@ -135,7 +136,13 @@ public class MysqlExecute implements SqlExecuteSPI {
     @Override
     public List<Map<String, String>> selectColumn(Connection conn, String table, List<String> columns, int limit, int offset) {
         String columnStr = String.join(",", columns);
-        String sql = new ST(SELECT_COLUMN).add("columns", columnStr).add("table", table).add("limit", limit).add("offset", offset).render();
+        String sql = new ST(SELECT_COLUMN)
+                .add("columns", columnStr)
+                .add("id", columns.get(0))
+                .add("table", table)
+                .add("limit", limit)
+                .add("offset", offset)
+                .render();
         Statement statement;
         try {
             List<Map<String, String>> maps = new ArrayList<>();
@@ -150,7 +157,7 @@ public class MysqlExecute implements SqlExecuteSPI {
 
             //遍历结果集，查询出的数据放在map中，map放在list中，
             while (resultSet.next()) {
-                Map<String, String> map = new HashMap<>();
+                Map<String, String> map = new LinkedHashMap<>();
                 for (int i = 1; i <= columnCount; i++) {
                     String columnName = metaData.getColumnName(i);
                     String columnValue = resultSet.getString(i);
@@ -169,7 +176,7 @@ public class MysqlExecute implements SqlExecuteSPI {
      * 批量更新
      *
      * @param table 表名
-     * @param data  要更新的数据
+     * @param data  要更新的数据 必须是有序map
      */
     @Override
     public void batchUpdate(Connection conn, String table, List<Map<String, String>> data) {
@@ -184,12 +191,15 @@ public class MysqlExecute implements SqlExecuteSPI {
         }
         try (Statement statement = conn.createStatement()) {
             data.forEach(map -> {
+                AtomicBoolean isFirst = new AtomicBoolean(true);
                 map.forEach((k, v) -> {
-                    if (k.endsWith(TEMP_COLUMN_SUFFIX)) {
-                        set.append(k).append(" = ").append("'").append(v).append("'").append(",");
-                    } else {
+                    //第一个是主键
+                    if (isFirst.get()) {
                         where.append(k).append(" = ").append(v);
+                    } else {
+                        set.append(k).append(TEMP_COLUMN_SUFFIX).append(" = ").append("'").append(v).append("'").append(",");
                     }
+                    isFirst.set(false);
                 });
                 //删除最后一个逗号
                 set.deleteCharAt(set.length() - 1);
@@ -227,6 +237,7 @@ public class MysqlExecute implements SqlExecuteSPI {
     @Override
     public void renameColumn(Connection conn, String schema, String table, String oldColumn, String newColumn) {
         String sql = new ST(RENAME_COLUMN).add("table", table).add("old", oldColumn).add("new", newColumn).render();
+        log.info("renameColumn sql:{}", sql);
         try (Statement statement = conn.createStatement()) {
             statement.execute(sql);
         } catch (SQLException e) {

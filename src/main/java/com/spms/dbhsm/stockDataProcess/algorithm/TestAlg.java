@@ -11,12 +11,13 @@ public class TestAlg implements AlgorithmSPI{
     @Override
     public String encrypt(String data, String key, Map<String, String> props) {
 
-        return "encrypt" + "-"+data + "-" + key;
+        return data + ":" + key + ":" + props;
     }
 
     @Override
     public String decrypt(String data, String key, Map<String, String> props) {
-        return "decrypt" + "-"+data + "-" + key;
+        String[] split = data.split(":");
+        return split[0];
     }
 
     @Override
