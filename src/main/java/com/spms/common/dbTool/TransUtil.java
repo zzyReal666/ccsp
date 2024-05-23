@@ -305,7 +305,7 @@ public class TransUtil {
      */
     public static void transEncryptColumnsToMySql(Connection conn, DbhsmEncryptColumnsAdd encryptColumns) throws Exception {
         /**
-         create trigger tri_insert_name before insert
+         create trigger tri_za_insert_name before insert
          on testdb.tests
          for each row
          set NEW.name = StringEncrypt(
@@ -339,7 +339,7 @@ public class TransUtil {
         String funName = DbConstants.SGD_SM4.equals(algorithm)?"StringEncrypt(":"FpeStringEncrypt(";
         log.info("创建Mysql触发器start");
         //获取网口ip
-        StringBuffer transSql = new StringBuffer("CREATE TRIGGER tri_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns() + " before insert");
+        StringBuffer transSql = new StringBuffer("CREATE TRIGGER tri_za_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns() + " before insert");
         transSql.append(System.getProperty("line.separator"));
         transSql.append("on " + encryptColumns.getDatabaseServerName() + "." + encryptColumns.getDbTable() );
         transSql.append(System.getProperty("line.separator"));

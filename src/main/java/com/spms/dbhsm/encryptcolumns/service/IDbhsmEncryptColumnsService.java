@@ -2,11 +2,13 @@ package com.spms.dbhsm.encryptcolumns.service;
 
 
 import com.ccsp.common.core.exception.ZAYKException;
+import com.ccsp.common.core.web.domain.AjaxResult;
 import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.ccsp.system.api.systemApi.domain.SysDictData;
 import com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsAdd;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsDto;
+import com.spms.dbhsm.encryptcolumns.vo.UpEncryptColumnsRequest;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -49,7 +51,7 @@ public interface IDbhsmEncryptColumnsService
      * @param dbhsmEncryptColumns 数据库加密列
      * @return 结果
      */
-    public int updateDbhsmEncryptColumns(DbhsmEncryptColumns dbhsmEncryptColumns);
+    public AjaxResult updateDbhsmEncryptColumns(UpEncryptColumnsRequest dbhsmEncryptColumns);
 
     /**
      * 批量删除数据库加密列

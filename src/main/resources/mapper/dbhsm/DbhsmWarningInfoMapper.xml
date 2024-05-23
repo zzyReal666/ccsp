@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.spms.dbhsm.warningInfo.mapper.DbhsmWarningInfoMapper">
+    
+    <resultMap type="com.spms.dbhsm.warningInfo.domain.DbhsmWarningInfo" id="DbhsmWarningInfoResult">
+        <result property="id"    column="id"    />
+        <result property="status"    column="status"    />
+        <result property="result"    column="result"    />
+        <result property="oldVerificationValue"    column="old_verification_value"    />
+        <result property="newVerificationValue"    column="new_verification_value"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectDbhsmWarningInfoVo">
+        select id, status, result, old_verification_value, new_verification_value, create_time, update_time from dbhsm_warning_info
+    </sql>
+
+    <select id="selectDbhsmWarningInfoList" parameterType="com.spms.dbhsm.warningInfo.domain.DbhsmWarningInfo" resultMap="DbhsmWarningInfoResult">
+        <include refid="selectDbhsmWarningInfoVo"/>
+        <where>  
+            <if test="result != null  and result != ''"> and result = #{result}</if>
+            <if test="oldVerificationValue != null  and oldVerificationValue != ''"> and old_verification_value = #{oldVerificationValue}</if>
+            <if test="newVerificationValue != null  and newVerificationValue != ''"> and new_verification_value = #{newVerificationValue}</if>
+            <if test="createTime != null "> and create_time = #{createTime}</if>
+        </where>
+    </select>
+
+    <select id="queryDbhsmWarningInfoAllList" parameterType="com.spms.dbhsm.warningInfo.vo.DbhsmWarningInfoListRequest" resultType="com.spms.dbhsm.warningInfo.vo.DbhsmWarningInfoListResponse">
+        select
+        info.id as "id",
+        info.status as "status",
+        info.result as "result",
+        info.old_verification_value as "oldVerificationValue",
+        info.new_verification_value as "newVerificationValue",
+        info.create_time as "createTime",
+        dbi.database_type as "databaseType",
+        dbi.database_ip as "databaseIp",
+        dbi.database_port as "databasePort",
+        dbi.database_example_type as "databaseExampleType",
+        dbi.database_server_name as "databaseServerName"
+        from
+        dbhsm_warning_info info
+        left join dbhsm_warning_config con on
+        con.id = info.config_id
+        LEFT join dbhsm_db_instance dbi on dbi.id = con.database_connection_info
+        <where>
+            <if test="configId != null  and configId != ''">and con.id = #{configId}</if>
+            <if test="result != null  and result != ''">and info.result like concat('%',#{result},'%')</if>
+            <if test="oldVerificationValue != null  and oldVerificationValue != ''">and info.old_verification_value =
+                #{oldVerificationValue}
+            </if>
+            <if test="newVerificationValue != null  and newVerificationValue != ''">and info.new_verification_value =
+                #{newVerificationValue}
+            </if>
+            <if test="startTime!=null  and startTime != ''">
+                and DATE_FORMAT(info.create_time,'%Y-%m-%d %H:%i:%s') &gt;= DATE_FORMAT(#{startTime},'%Y-%m-%d %H:%i:%s')
+            </if>
+            <if test="endTime!=null  and endTime != ''">
+                and DATE_FORMAT(info.create_time,'%Y-%m-%d %H:%i:%s') &lt;= DATE_FORMAT(#{endTime},'%Y-%m-%d %H:%i:%s')
+            </if>
+        </where>
+        order by info.create_time desc
+    </select>
+    
+    <select id="selectDbhsmWarningInfoById" parameterType="Long" resultMap="DbhsmWarningInfoResult">
+        <include refid="selectDbhsmWarningInfoVo"/>
+        where id = #{id}
+    </select>
+        
+    <insert id="insertDbhsmWarningInfo" parameterType="com.spms.dbhsm.warningInfo.domain.DbhsmWarningInfo" useGeneratedKeys="true" keyProperty="id">
+        insert into dbhsm_warning_info
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="configId != null">config_id,</if>
+            <if test="status != null">status,</if>
+            <if test="result != null">result,</if>
+            <if test="oldVerificationValue != null">old_verification_value,</if>
+            <if test="newVerificationValue != null">new_verification_value,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="configId != null">#{configId},</if>
+            <if test="status != null">#{status},</if>
+            <if test="result != null">#{result},</if>
+            <if test="oldVerificationValue != null">#{oldVerificationValue},</if>
+            <if test="newVerificationValue != null">#{newVerificationValue},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateDbhsmWarningInfo" parameterType="com.spms.dbhsm.warningInfo.domain.DbhsmWarningInfo">
+        update dbhsm_warning_info
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="status != null">status = #{status},</if>
+            <if test="result != null">result = #{result},</if>
+            <if test="oldVerificationValue != null">old_verification_value = #{oldVerificationValue},</if>
+            <if test="newVerificationValue != null">new_verification_value = #{newVerificationValue},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteDbhsmWarningInfoById" parameterType="Long">
+        delete from dbhsm_warning_info where id = #{id}
+    </delete>
+
+    <delete id="deleteDbhsmWarningInfoByIds" parameterType="String">
+        delete from dbhsm_warning_info where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

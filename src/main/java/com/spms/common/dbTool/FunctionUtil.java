@@ -30,10 +30,17 @@ public class FunctionUtil {
      *
      * */
     public static void createMysqlStringEncryptDecryptFunction(Connection connection) throws SQLException {
-        String stringEncryptFunction = "CREATE FUNCTION StringEncrypt RETURNS STRING SONAME 'mysqldll.dll'";
-        String stringDecryptFunction = "CREATE FUNCTION StringDecrypt RETURNS STRING SONAME 'mysqldll.dll'";
-        String fpeEncryptFunction = "CREATE FUNCTION FpeStringEncrypt RETURNS STRING SONAME 'mysqldll.dll'";
-        String fpeDecryptFunction = "CREATE FUNCTION FpeStringDecrypt RETURNS STRING SONAME 'mysqldll.dll'";
+
+        String osName = System.getProperty("os.name");
+        String libName = "mysqldll.dll";
+        if (osName.toLowerCase().startsWith("linux")) {
+            libName = "libmysqlext.so";
+        }
+
+        String stringEncryptFunction = "CREATE FUNCTION StringEncrypt RETURNS STRING SONAME '" + libName + "'";
+        String stringDecryptFunction = "CREATE FUNCTION StringDecrypt RETURNS STRING SONAME '" + libName + "'";
+        String fpeEncryptFunction = "CREATE FUNCTION FpeStringEncrypt RETURNS STRING SONAME '" + libName + "'";
+        String fpeDecryptFunction = "CREATE FUNCTION FpeStringDecrypt RETURNS STRING SONAME '" + libName + "'";
         PreparedStatement preparedStatement = null;
         try {
             log.info("CREATE MYSQL STRINGENCRYPT  Function INFO：\n" + stringEncryptFunction);

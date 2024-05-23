@@ -13,6 +13,9 @@ import com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsAdd;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsDto;
 import com.spms.dbhsm.encryptcolumns.service.IDbhsmEncryptColumnsService;
+import com.spms.dbhsm.encryptcolumns.vo.UpEncryptColumnsRequest;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +30,7 @@ import java.util.List;
  * @author diq
  * @date 2023-09-27
  */
+@Api(tags = "数据库加密列")
 @RestController
 @RequestMapping("/encryptcolumns")
 public class DbhsmEncryptColumnsController extends BaseController
@@ -38,6 +42,7 @@ public class DbhsmEncryptColumnsController extends BaseController
      * 查询数据库加密列列表
      */
 //    @RequiresPermissions("dbhsm:encryptcolumns:list")
+    @ApiOperation(value = "获取数据库加密列列表")
     @GetMapping("/list")
     public AjaxResult list(DbhsmEncryptColumnsDto dbhsmEncryptColumns)
     {
@@ -99,6 +104,7 @@ public class DbhsmEncryptColumnsController extends BaseController
      * 新增数据库加密列
      */
 //    @RequiresPermissions("dbhsm:encryptcolumns:add")
+    @ApiOperation(value = "新增数据库加密列")
     @Log(title = "数据库加密列", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@RequestBody DbhsmEncryptColumnsAdd dbhsmEncryptColumns)
@@ -117,18 +123,20 @@ public class DbhsmEncryptColumnsController extends BaseController
     /**
      * 修改数据库加密列
      */
+    @ApiOperation(value = "修改数据库加密列")
     @RequiresPermissions("dbhsm:encryptcolumns:edit")
     @Log(title = "数据库加密列", businessType = BusinessType.UPDATE)
     @PutMapping
-    public AjaxResult edit(@RequestBody DbhsmEncryptColumns dbhsmEncryptColumns)
+    public AjaxResult edit(@RequestBody UpEncryptColumnsRequest dbhsmEncryptColumns)
     {
-        return toAjax(dbhsmEncryptColumnsService.updateDbhsmEncryptColumns(dbhsmEncryptColumns));
+        return dbhsmEncryptColumnsService.updateDbhsmEncryptColumns(dbhsmEncryptColumns);
     }
 
     /**
      * 删除数据库加密列
      */
 //    @RequiresPermissions("dbhsm:encryptcolumns:remove")
+    @ApiOperation(value = "删除数据库加密列")
     @Log(title = "数据库加密列", businessType = BusinessType.DELETE)
 	@DeleteMapping("/{ids}")
     public AjaxResult remove(@PathVariable String[] ids) throws Exception {
@@ -145,6 +153,7 @@ public class DbhsmEncryptColumnsController extends BaseController
      * 数据库实例-用户-表树结构
      */
     @PostMapping(value = "/treeData")
+    @ApiOperation(value = "数据库实例-用户-表树结构")
     public AjaxResult2 treeData()
     {
         return dbhsmEncryptColumnsService.treeData();

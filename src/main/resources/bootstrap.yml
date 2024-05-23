@@ -3,6 +3,11 @@ server:
   port: 10013
 # spring配置
 spring:
+  main:
+    allow-bean-definition-overriding: true
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
   redis:
     host: 192.168.7.131
     port: 6379
@@ -31,17 +36,17 @@ spring:
         poolPreparedStatements: true
         maxPoolPreparedStatementPerConnectionSize: 20
         filters: stat,slf4j
-       #connectionProperties: druid.stat.mergeSql\=true;druid.stat.slowSqlMillis\=5000
+        #connectionProperties: druid.stat.mergeSql\=true;druid.stat.slowSqlMillis\=5000
       datasource:
         # 主库数据源
         master:
-#          url: jdbc:dm://192.168.7.149:5236/TDCB?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
-#          username: root
-#          password: zasechsmserver
-#          driver-class-name: com.mysql.cj.jdbc.Driver
-          url: jdbc:mysql://192.168.7.131:3306/spms_cloud?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
-          username: yuancheng
-          password: 123456
+          #          url: jdbc:dm://192.168.7.149:5236/TDCB?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+          #          username: root
+          #          password: zasechsmserver
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: jdbc:mysql://127.0.0.1:3306/spms_cloud?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+          username: root
+          password: zasechsmserver
           # 从库数据源
           # slave:
           # username:
@@ -134,6 +139,7 @@ apache:
     ConsumeThreadMax: 20
 backup-path: /home/develop/backup
 size: 30000
+integrityFile: /opt/integrityFile/
 # 安全配置
 security:
   # 不校验白名单

@@ -4,16 +4,21 @@ import cn.hutool.db.DbRuntimeException;
 import cn.hutool.db.DbUtil;
 import com.ccsp.cert.sanwei.ByteUtils;
 import com.ccsp.cert.sm4.SM4Utils;
+import com.ccsp.common.core.domain.R;
 import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.DateUtils;
 import com.ccsp.common.core.utils.SnowFlakeUtil;
 import com.ccsp.common.core.utils.StringUtils;
 import com.ccsp.common.core.utils.tree.EleTreeWrapper;
+import com.ccsp.common.core.web.domain.AjaxResult;
 import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.ccsp.common.security.utils.DictUtils;
 import com.ccsp.common.security.utils.SecurityUtils;
 import com.ccsp.system.api.hsmSvsTsaApi.RemoteSecretKeyService;
+import com.ccsp.system.api.hsmSvsTsaApi.domain.DevBaseData;
+import com.ccsp.system.api.systemApi.RemoteConfigService;
 import com.ccsp.system.api.systemApi.domain.SysDictData;
+import com.spms.common.CommandUtil;
 import com.spms.common.DBIpUtil;
 import com.spms.common.HttpClientUtil;
 import com.spms.common.JSONDataUtil;
@@ -38,6 +43,8 @@ import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsAdd;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsDto;
 import com.spms.dbhsm.encryptcolumns.mapper.DbhsmEncryptColumnsMapper;
 import com.spms.dbhsm.encryptcolumns.service.IDbhsmEncryptColumnsService;
+import com.spms.dbhsm.encryptcolumns.vo.EncryptColumns;
+import com.spms.dbhsm.encryptcolumns.vo.UpEncryptColumnsRequest;
 import com.spms.dbhsm.secretKey.domain.DbhsmSecretKeyManage;
 import com.spms.dbhsm.secretKey.mapper.DbhsmSecretKeyManageMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -48,12 +55,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.sql.*;
 import java.util.Date;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 数据库加密列Service业务层处理
@@ -81,18 +86,23 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
 
     @Autowired
     DbhsmSecretKeyManageMapper dbhsmSecretKeyManageMapper;
+
+    @Autowired
+    RemoteConfigService remoteConfigService;
+
     //@Value("${server.port:10013}")
-    private static int dbhsmPort =80;
+    private static int dbhsmPort = 80;
 
     private String taskStatus = "Encrypting";
 
     static {
-            String sysDataToDB = JSONDataUtil.getSysDataToDB(DbConstants.DBENC_WEB_PORT);
-            if (StringUtils.isNotEmpty(sysDataToDB)){
-                assert sysDataToDB != null;
-                dbhsmPort = Integer.parseInt(sysDataToDB);
-            }
+//            String sysDataToDB = JSONDataUtil.getSysDataToDB(DbConstants.DBENC_WEB_PORT);
+//            if (StringUtils.isNotEmpty(sysDataToDB)){
+//                assert sysDataToDB != null;
+//                dbhsmPort = Integer.parseInt(sysDataToDB);
+//            }
     }
+
     /**
      * 查询数据库加密列
      *
@@ -142,12 +152,12 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 tableName = dbUserInfo.getUserName() + "." + columnsDto.getDbTableName();
             } else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
                 tableName = columnsDto.getDbTableName();
-            }else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
+            } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
                 tableName = columnsDto.getDbTableName();
-            }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
+            } else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
                 tableName = columnsDto.getDbTableName();
-            }else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())) {
-                tableName = dbUserInfo.getUserName() + ".\"" + columnsDto.getDbTableName()+"\"";
+            } else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())) {
+                tableName = dbUserInfo.getUserName() + ".\"" + columnsDto.getDbTableName() + "\"";
             }
 
             List<Map<String, String>> columnsInfoList = DBUtil.findAllColumnsInfo(conn, tableName, instance.getDatabaseType());
@@ -156,7 +166,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 encryptColumns.setDbInstanceId(instance.getId());
                 encryptColumns.setDbInstance(getInstance(instance));
                 //Oracle数据库需要区分用户 查询使用
-                if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())|| DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())) {
+                if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType()) || DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())) {
                     encryptColumns.setDbUserName(dbUserInfo.getUserName());
                 }
                 encryptColumns.setDbTable(columnsDto.getDbTableName());
@@ -180,7 +190,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         } catch (Exception e) {
             e.printStackTrace();
             throw new Exception(e.getMessage());
-        }finally {
+        } finally {
             if (conn != null) {
                 conn.close();
             }
@@ -198,22 +208,36 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
     public int insertDbhsmEncryptColumns(DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd) throws Exception {
         String id = insertDbEncryptColumns(dbhsmEncryptColumnsAdd);
         taskStatus = "Encrypting";
-        Thread thread = new Thread(() -> {
-            try {
-                stockDataEnc(dbhsmEncryptColumnsAdd);
-            } catch (Exception e) {
-                dbhsmEncryptColumnsMapper.deleteDbhsmEncryptColumnsById(id);
-                e.printStackTrace();
-                taskStatus="加密失败！请查看日志信息！";
-            }
-        });
-        thread.setDaemon(true);
-        thread.start();
+
+
+        boolean isThread = true;
+        //判断使用哪种方式去加密
+        R<DevBaseData> devBaseData = remoteConfigService.selectBaseDataByKey("isThreadOrEncryptColumns");
+        DevBaseData data = devBaseData.getData();
+        if (null != data) {
+            isThread = Boolean.getBoolean(data.getDataValue());
+        }
+
+        //如果设置isThreadOrEncryptColumns为true直接进行加密操作
+        if (isThread) {
+            Thread thread = new Thread(() -> {
+                try {
+                    stockDataEnc(dbhsmEncryptColumnsAdd);
+                } catch (Exception e) {
+                    dbhsmEncryptColumnsMapper.deleteDbhsmEncryptColumnsById(id);
+                    e.printStackTrace();
+                    taskStatus = "加密失败！请查看日志信息！";
+                }
+            });
+            thread.setDaemon(true);
+            thread.start();
+        }
+
         return 1;
     }
 
     @Transactional(rollbackFor = Exception.class)
-     public void stockDataEnc(DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd) throws Exception {
+    public void stockDataEnc(DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd) throws Exception {
         // 使用DBA创建连接
         DbhsmDbInstance instance = instanceMapper.selectDbhsmDbInstanceById(dbhsmEncryptColumnsAdd.getDbInstanceId());
         dbhsmEncryptColumnsAdd.setDatabaseType(instance.getDatabaseType());
@@ -233,24 +257,24 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             BeanUtils.copyProperties(dbhsmEncryptColumnsAdd, dbhsmEncryptColumns);
             DbhsmDbUser user = new DbhsmDbUser();
             if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
-                OraclelStock.oracleStockEncOrDec(conn,instance, dbhsmEncryptColumnsAdd, DbConstants.STOCK_DATA_ENCRYPTION);
+                OraclelStock.oracleStockEncOrDec(conn, instance, dbhsmEncryptColumnsAdd, DbConstants.STOCK_DATA_ENCRYPTION);
             } else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
-                SqlServerStock.sqlserverStockEncOrDec(conn, dbhsmEncryptColumnsAdd,DbConstants.ENC_FLAG);
+                SqlServerStock.sqlserverStockEncOrDec(conn, dbhsmEncryptColumnsAdd, DbConstants.ENC_FLAG);
             } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
-                MysqlStock.mysqlStockEncOrDec(conn, dbhsmEncryptColumnsAdd,DbConstants.STOCK_DATA_ENCRYPTION);
-            }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
+                MysqlStock.mysqlStockEncOrDec(conn, dbhsmEncryptColumnsAdd, DbConstants.STOCK_DATA_ENCRYPTION);
+            } else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
                 //改成使用用户的连接
                 DbhsmDbUser dbUser = new DbhsmDbUser();
                 dbUser.setUserName(dbhsmEncryptColumnsAdd.getDbUserName());
                 dbUser.setDatabaseInstanceId(dbhsmEncryptColumnsAdd.getDbInstanceId());
                 List<DbhsmDbUser> dbhsmDbUsers = dbUsersMapper.selectDbhsmDbUsersList(dbUser);
-                if (StringUtils.isEmpty(dbhsmDbUsers)){
-                    log.error("根据实例ID和用户名未获取到用户信息, InstanceId：{}，DbUserName：{}", dbUser.getDatabaseInstanceId(),dbUser.getUserName());
+                if (StringUtils.isEmpty(dbhsmDbUsers)) {
+                    log.error("根据实例ID和用户名未获取到用户信息, InstanceId：{}，DbUserName：{}", dbUser.getDatabaseInstanceId(), dbUser.getUserName());
                     throw new Exception("根据实例ID和用户名未获取到用户信息,用户名：" + dbUser.getUserName());
                 }
                 user = dbhsmDbUsers.get(0);
                 PostgreSQLStock.postgreSQLStockEncOrDec(conn, dbhsmEncryptColumnsAdd, user, DbConstants.STOCK_DATA_ENCRYPTION);
-            }else if(DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())){
+            } else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())) {
                 //获取列原始定义
                 String columnDefinition = DBUtil.getColumnDefinition(conn, dbhsmEncryptColumnsAdd);
                 dbhsmEncryptColumnsAdd.setColumnDefinitions(columnDefinition);
@@ -258,7 +282,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 String secretKey = getSecretKey(dbhsmEncryptColumnsAdd.getSecretKeyId());
                 dbhsmEncryptColumnsAdd.setSecretKey(secretKey);
                 //创建加密
-                FunctionUtil.encOrdecColumnsSqlToDM(conn, dbhsmEncryptColumnsAdd,DbConstants.ENC_FLAG);
+                FunctionUtil.encOrdecColumnsSqlToDM(conn, dbhsmEncryptColumnsAdd, DbConstants.ENC_FLAG);
             }
             conn.commit();
             taskStatus = "finished";
@@ -276,8 +300,10 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             }
         }
     }
+
     /**
      * 获取密钥生成完成状态
+     *
      * @return
      */
     @Override
@@ -293,85 +319,85 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         dbhsmEncryptColumnsAdd.setDatabaseType(instance.getDatabaseType());
         dbhsmEncryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
         Connection conn = null;
-       try {
-        DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
-        BeanUtils.copyProperties(instance, connDTO);
-        conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
+        try {
+            DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
+            BeanUtils.copyProperties(instance, connDTO);
+            conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
 
-        //获取端口对应的IP
-        String ip = DBIpUtil.getIp(dbhsmEncryptColumnsAdd.getEthernetPort());
-        dbhsmEncryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);
-        dbhsmEncryptColumnsAdd.setEncryptionStatus(DbConstants.ENCRYPTING);
-        dbhsmEncryptColumnsAdd.setId(SnowFlakeUtil.getSnowflakeId());
+            //获取端口对应的IP
+            String ip = DBIpUtil.getIp(dbhsmEncryptColumnsAdd.getEthernetPort());
+            dbhsmEncryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);
+            dbhsmEncryptColumnsAdd.setEncryptionStatus(DbConstants.NOT_ENCRYPTED);
+            dbhsmEncryptColumnsAdd.setId(SnowFlakeUtil.getSnowflakeId());
 
-        dbhsmEncryptColumnsAdd.setCreateTime(DateUtils.getNowDate());
-        dbhsmEncryptColumnsAdd.setCreateBy(SecurityUtils.getUsername());
-        DbhsmEncryptColumns dbhsmEncryptColumns = new DbhsmEncryptColumns();
-        BeanUtils.copyProperties(dbhsmEncryptColumnsAdd, dbhsmEncryptColumns);
+            dbhsmEncryptColumnsAdd.setCreateTime(DateUtils.getNowDate());
+            dbhsmEncryptColumnsAdd.setCreateBy(SecurityUtils.getUsername());
+            DbhsmEncryptColumns dbhsmEncryptColumns = new DbhsmEncryptColumns();
+            BeanUtils.copyProperties(dbhsmEncryptColumnsAdd, dbhsmEncryptColumns);
 
-        DbhsmDbUser user = new DbhsmDbUser();
-        if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
-            //oracle创建触发器
-            if (DbConstants.SGD_SM4.equals(dbhsmEncryptColumnsAdd.getEncryptionAlgorithm())) {
-                TransUtil.transEncryptColumns(conn, dbhsmEncryptColumnsAdd);
+            DbhsmDbUser user = new DbhsmDbUser();
+            if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
+                //oracle创建触发器
+                if (DbConstants.SGD_SM4.equals(dbhsmEncryptColumnsAdd.getEncryptionAlgorithm())) {
+                    TransUtil.transEncryptColumns(conn, dbhsmEncryptColumnsAdd);
+                } else {
+                    TransUtil.transFPEEncryptColumns(conn, dbhsmEncryptColumnsAdd);
+                }
+            } else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
+                //创建 SqlServer 触发器
+                TransUtil.transEncryptColumnsToSqlServer(conn, dbhsmEncryptColumnsAdd);
+            } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
+                //创建Mysql触发器
+                TransUtil.transEncryptColumnsToMySql(conn, dbhsmEncryptColumnsAdd);
+            } else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
+                //改成使用用户的连接
+                DbhsmDbUser dbUser = new DbhsmDbUser();
+                dbUser.setUserName(dbhsmEncryptColumnsAdd.getDbUserName());
+                dbUser.setDatabaseInstanceId(dbhsmEncryptColumnsAdd.getDbInstanceId());
+                List<DbhsmDbUser> dbhsmDbUsers = dbUsersMapper.selectDbhsmDbUsersList(dbUser);
+                if (StringUtils.isEmpty(dbhsmDbUsers)) {
+                    log.error("根据实例ID和用户名未获取到用户信息, InstanceId：{}，DbUserName：{}", dbUser.getDatabaseInstanceId(), dbUser.getUserName());
+                    throw new Exception("根据实例ID和用户名未获取到用户信息,用户名：" + dbUser.getUserName());
+                }
+                user = dbhsmDbUsers.get(0);
+                //sm4/fpe触发器函数
+                TransUtil.transEncryptFunToPostgreSql(conn, dbhsmEncryptColumnsAdd, user);
+                //触发器
+                TransUtil.transEncryptColumnsToPostgreSql(conn, dbhsmEncryptColumnsAdd, user);
+
+            } else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())) {
+                //获取列原始定义
+                String columnDefinition = DBUtil.getColumnDefinition(conn, dbhsmEncryptColumnsAdd);
+                dbhsmEncryptColumns.setColumnDefinitions(columnDefinition);
+                dbhsmEncryptColumnsMapper.insertDbhsmEncryptColumns(dbhsmEncryptColumns);
+                return dbhsmEncryptColumnsAdd.getId();
+            }
+            int ret = dbhsmEncryptColumnsMapper.insertDbhsmEncryptColumns(dbhsmEncryptColumns);
+
+            //先删除之前的视图
+            ViewUtil.deleteView(conn, dbhsmEncryptColumnsAdd, "\"" + user.getDbSchema() + "\"");
+            //创建视图
+            boolean viewRet = ViewUtil.operView(conn, dbhsmEncryptColumnsAdd, dbhsmEncryptColumnsMapper, "\"" + user.getDbSchema() + "\"");
+            if (viewRet) {
+                conn.commit();
+
+                //存量数据加密
+                //ip = DBIpUtil.getIp(dbhsmEncryptColumnsAdd.getEthernetPort());
+                //dbhsmEncryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);;
+                //if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
+                //
+                //} else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
+                //    SqlServerStock.sqlserverStockEncOrDec(conn, dbhsmEncryptColumnsAdd,DbConstants.ENC_FLAG);
+                //} else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
+                //
+                //}else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
+                //    PostgreSQLStock.postgreSQLStockEncOrDec(conn, dbhsmEncryptColumnsAdd, user, DbConstants.STOCK_DATA_ENCRYPTION);
+                //}
+                //conn.commit();
             } else {
-                TransUtil.transFPEEncryptColumns(conn, dbhsmEncryptColumnsAdd);
+                log.error("创建视图异常");
+                throw new Exception("创建视图异常");
             }
-        } else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
-            //创建 SqlServer 触发器
-            TransUtil.transEncryptColumnsToSqlServer(conn, dbhsmEncryptColumnsAdd);
-        } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
-            //创建Mysql触发器
-            TransUtil.transEncryptColumnsToMySql(conn, dbhsmEncryptColumnsAdd);
-        }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
-            //改成使用用户的连接
-            DbhsmDbUser dbUser = new DbhsmDbUser();
-            dbUser.setUserName(dbhsmEncryptColumnsAdd.getDbUserName());
-            dbUser.setDatabaseInstanceId(dbhsmEncryptColumnsAdd.getDbInstanceId());
-            List<DbhsmDbUser> dbhsmDbUsers = dbUsersMapper.selectDbhsmDbUsersList(dbUser);
-            if (StringUtils.isEmpty(dbhsmDbUsers)){
-                log.error("根据实例ID和用户名未获取到用户信息, InstanceId：{}，DbUserName：{}", dbUser.getDatabaseInstanceId(),dbUser.getUserName());
-                throw new Exception("根据实例ID和用户名未获取到用户信息,用户名：" + dbUser.getUserName());
-            }
-            user = dbhsmDbUsers.get(0);
-            //sm4/fpe触发器函数
-            TransUtil.transEncryptFunToPostgreSql(conn,dbhsmEncryptColumnsAdd,user);
-            //触发器
-            TransUtil.transEncryptColumnsToPostgreSql(conn, dbhsmEncryptColumnsAdd,user);
-
-        } else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())) {
-            //获取列原始定义
-            String columnDefinition = DBUtil.getColumnDefinition(conn, dbhsmEncryptColumnsAdd);
-            dbhsmEncryptColumns.setColumnDefinitions(columnDefinition);
-            dbhsmEncryptColumnsMapper.insertDbhsmEncryptColumns(dbhsmEncryptColumns);
-            return dbhsmEncryptColumnsAdd.getId();
-        }
-        int ret = dbhsmEncryptColumnsMapper.insertDbhsmEncryptColumns(dbhsmEncryptColumns);
-
-        //先删除之前的视图
-        ViewUtil.deleteView(conn, dbhsmEncryptColumnsAdd,"\""+user.getDbSchema()+"\"");
-        //创建视图
-        boolean viewRet = ViewUtil.operView(conn, dbhsmEncryptColumnsAdd, dbhsmEncryptColumnsMapper,"\""+user.getDbSchema()+"\"");
-        if (viewRet) {
-            conn.commit();
-
-            //存量数据加密
-            //ip = DBIpUtil.getIp(dbhsmEncryptColumnsAdd.getEthernetPort());
-            //dbhsmEncryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);;
-            //if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
-            //
-            //} else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
-            //    SqlServerStock.sqlserverStockEncOrDec(conn, dbhsmEncryptColumnsAdd,DbConstants.ENC_FLAG);
-            //} else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
-            //
-            //}else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
-            //    PostgreSQLStock.postgreSQLStockEncOrDec(conn, dbhsmEncryptColumnsAdd, user, DbConstants.STOCK_DATA_ENCRYPTION);
-            //}
-            //conn.commit();
-        } else {
-            log.error("创建视图异常");
-            throw new Exception("创建视图异常");
-        }
             return dbhsmEncryptColumnsAdd.getId();
         } catch (Exception e) {
             e.printStackTrace();
@@ -389,8 +415,8 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         secretKeyManage1.setSecretKeyId(secretKeyId);
         List<DbhsmSecretKeyManage> dbhsmSecretKeyManages = dbhsmSecretKeyManageMapper.selectDbhsmSecretKeyManageList(secretKeyManage1);
         if (CollectionUtils.isEmpty(dbhsmSecretKeyManages) || StringUtils.isEmpty(dbhsmSecretKeyManages.get(0).getSecretKey())) {
-            log.info("加密失败，请检查"+secretKeyId+"密钥生成时所选密钥来源是否正确！");
-            throw new ZAYKException("密钥不存在，请检查"+secretKeyId+"密钥生成时所选密钥来源是否正确！");
+            log.info("加密失败，请检查" + secretKeyId + "密钥生成时所选密钥来源是否正确！");
+            throw new ZAYKException("密钥不存在，请检查" + secretKeyId + "密钥生成时所选密钥来源是否正确！");
         }
         String secretKey = dbhsmSecretKeyManages.get(0).getSecretKey();
         byte[] decode = Base64.decode(secretKey);
@@ -402,7 +428,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             systemMasterKey = systemMasterKeyObj.toString();
             log.info("已配置系统主密钥");
             plaintext = SM4Utils.decryptData_ECB(decode, ByteUtils.hexToBytes(systemMasterKey));
-        }else{
+        } else {
             log.info("未配置系统主密钥");
         }
         return new String(plaintext);
@@ -412,13 +438,64 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
     /**
      * 修改数据库加密列
      *
-     * @param dbhsmEncryptColumns 数据库加密列
+     * @param request 数据库加密列
      * @return 结果
      */
     @Override
-    public int updateDbhsmEncryptColumns(DbhsmEncryptColumns dbhsmEncryptColumns) {
-        dbhsmEncryptColumns.setUpdateTime(DateUtils.getNowDate());
-        return dbhsmEncryptColumnsMapper.updateDbhsmEncryptColumns(dbhsmEncryptColumns);
+    public AjaxResult updateDbhsmEncryptColumns(UpEncryptColumnsRequest request) {
+        /**
+         * 1.操作的数据库-表中的所有列未被加密     可以随意更改需要加密的列信息
+         * 2.操作的数据库-表中的所有列已有列被加密    被加密的列不能再次进行编辑，只能追加未被加密的列
+         * 3.操作的数据库-表中的所有列已有列被加密    只能追加
+         */
+        DbhsmEncryptColumns columns = new DbhsmEncryptColumns();
+        //根据数据库实例查询配置的加密列有哪些
+        String dbInstanceId = request.getDbInstanceId();
+        columns.setDbInstance(dbInstanceId);
+
+        //获取改实例在队列中的数据
+        List<DbhsmEncryptColumns> columnsList = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsList(columns);
+
+        //如果不存在，组装基本信息
+        if (CollectionUtils.isEmpty(columnsList)) {
+            DbhsmDbInstance dbhsmDbInstance = instanceMapper.selectDbhsmDbInstanceById(Long.valueOf(request.getDbInstanceId()));
+            BeanUtils.copyProperties(columns, request);
+            columns.setDbInstanceId(dbhsmDbInstance.getId());
+            String instance = CommandUtil.getInstance(dbhsmDbInstance);
+            columns.setDbInstance(instance);
+        }
+        List<EncryptColumns> list = request.getList();
+        List<String> cols = list.stream().map(EncryptColumns::getEncryptColumns).collect(Collectors.toList());
+        for (DbhsmEncryptColumns encryptColumns : columnsList) {
+            if (cols.contains(encryptColumns.getEncryptColumns())) {
+                //获取当前实例加密队列中的字段
+                if (!DbConstants.NOT_ENCRYPTED.equals(encryptColumns.getEncryptionStatus())) {
+                    //如果当前加密队列中的字段状态为加密中或者已加密
+                    //重复新增
+                    return AjaxResult.error("以下字段已经在加密队列存在，无法重复添加：" + encryptColumns.getEncryptColumns());
+                } else {
+                    //如果存在先删除
+                    int delCol = dbhsmEncryptColumnsMapper.deleteDbhsmEncryptColumnsById(encryptColumns.getId());
+                    log.info("删除已经存在的解密列信息：{}",delCol);
+                }
+            }
+        }
+
+        //新增数据
+        for (EncryptColumns encryptColumns : list) {
+            //赋值字段信息
+            BeanUtils.copyProperties(columns, encryptColumns);
+            columns.setBatchCount(request.getBatchCount());
+            columns.setEncryptionAlgorithm(encryptColumns.getEncryptType());
+            columns.setThreadCount(request.getThreadCount());
+            columns.setId(SnowFlakeUtil.getSnowflakeId());
+            columns.setCreateTime(DateUtils.getNowDate());
+            columns.setCreateBy(SecurityUtils.getUsername());
+            dbhsmEncryptColumnsMapper.insertDbhsmEncryptColumns(columns);
+        }
+
+
+        return AjaxResult.success();
     }
 
     /**
@@ -431,16 +508,16 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
     public int deleteDbhsmEncryptColumnsByIds(String[] ids) throws Exception {
         DbhsmEncryptColumns certView = null;
         String userSchema = "";
-        DbhsmEncryptColumns encryptColumns =new DbhsmEncryptColumns();
+        DbhsmEncryptColumns encryptColumns = new DbhsmEncryptColumns();
         DbhsmDbInstance instance = new DbhsmDbInstance();
         for (int i = 0; i < ids.length; i++) {
             encryptColumns = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsById(ids[i]);
             if (encryptColumns == null) {
-                log.error("未获取到ID为{}的加密列信息" , ids[i]);
+                log.error("未获取到ID为{}的加密列信息", ids[i]);
                 continue;
             }
 
-            if (i == 0){
+            if (i == 0) {
                 certView = new DbhsmEncryptColumns();
                 certView.setDbInstanceId(encryptColumns.getDbInstanceId());
                 certView.setDbUserName(encryptColumns.getDbUserName());
@@ -453,91 +530,91 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             PreparedStatement preparedStatement = null;
             String algorithm = encryptColumns.getEncryptionAlgorithm();
             String flag = DbConstants.SGD_SM4.equals(algorithm) ? "_" : "_fpe_";
-                String sql = "";
-                try {
-                    int resultSet = 0;
-                    DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
-                    BeanUtils.copyProperties(instance, connDTO);
-                    connection = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
+            String sql = "";
+            try {
+                int resultSet = 0;
+                DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
+                BeanUtils.copyProperties(instance, connDTO);
+                connection = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
 
-                    DbhsmEncryptColumnsAdd encryptColumnsAdd = new DbhsmEncryptColumnsAdd();
-                    BeanUtils.copyProperties(encryptColumns, encryptColumnsAdd);
-                    String ip = DBIpUtil.getIp(encryptColumnsAdd.getEthernetPort());
-                    encryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);
-                    encryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
-                    if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
-                        sql = "DROP TRIGGER IF EXISTS tr_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns()+"_" + DbConstants.algMapping(encryptColumns.getEncryptionAlgorithm()) + "_encrypt";
-                        preparedStatement = connection.prepareStatement(sql);
-                        resultSet = preparedStatement.executeUpdate();
-                        //删除加密列时存量数据解密
-                        //sqlserverStockEncOrDec(connection, encryptColumnsAdd);
-                    } else if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
-                        sql = "DROP TRIGGER " + encryptColumns.getDbUserName() + ".tr" + flag + encryptColumns.getDbUserName() + "_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
-                        preparedStatement = connection.prepareStatement(sql);
-                        resultSet = preparedStatement.executeUpdate();
-                    }else  if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
-                        sql = "DROP TRIGGER tri_"  + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
-                        preparedStatement = connection.prepareStatement(sql);
-                        resultSet = preparedStatement.executeUpdate();
+                DbhsmEncryptColumnsAdd encryptColumnsAdd = new DbhsmEncryptColumnsAdd();
+                BeanUtils.copyProperties(encryptColumns, encryptColumnsAdd);
+                String ip = DBIpUtil.getIp(encryptColumnsAdd.getEthernetPort());
+                encryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);
+                encryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
+                if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
+                    sql = "DROP TRIGGER IF EXISTS tr_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns() + "_" + DbConstants.algMapping(encryptColumns.getEncryptionAlgorithm()) + "_encrypt";
+                    preparedStatement = connection.prepareStatement(sql);
+                    resultSet = preparedStatement.executeUpdate();
+                    //删除加密列时存量数据解密
+                    //sqlserverStockEncOrDec(connection, encryptColumnsAdd);
+                } else if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
+                    sql = "DROP TRIGGER " + encryptColumns.getDbUserName() + ".tr" + flag + encryptColumns.getDbUserName() + "_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
+                    preparedStatement = connection.prepareStatement(sql);
+                    resultSet = preparedStatement.executeUpdate();
+                } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
+                    sql = "DROP TRIGGER tri_za_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
+                    preparedStatement = connection.prepareStatement(sql);
+                    resultSet = preparedStatement.executeUpdate();
 
-                    }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
-                        DbhsmDbUser dbUser = new DbhsmDbUser();
-                        dbUser.setUserName(encryptColumns.getDbUserName());
-                        dbUser.setDatabaseInstanceId(encryptColumns.getDbInstanceId());
-                        List<DbhsmDbUser> dbhsmDbUsers = dbUsersMapper.selectDbhsmDbUsersList(dbUser);
-                        if (StringUtils.isEmpty(dbhsmDbUsers)){
-                            log.error("根据实例ID和用户名未获取到用户信息, InstanceId：{}，DbUserName：{}", dbUser.getDatabaseInstanceId(),dbUser.getUserName());
-                            throw new Exception("根据实例ID和用户名未获取到用户信息,用户名：" + dbUser.getUserName());
-                        }
-                        DbhsmDbUser user = dbhsmDbUsers.get(0);
-
-                        userSchema="\"" + user.getDbSchema() +"\"";
-                        String transName = "tr_" + DbConstants.algMapping(encryptColumns.getEncryptionAlgorithm()) + "_" + encryptColumns.getDbTable()+ "_" + encryptColumns.getEncryptColumns() ;
-                        sql = "DROP TRIGGER IF EXISTS " + transName + " on " + encryptColumns.getDbTable() + " CASCADE";
-                        log.info(sql);
-                        preparedStatement = connection.prepareStatement(sql);
-                        resultSet = preparedStatement.executeUpdate();
-
-                        String funName = userSchema + ".tr_" + DbConstants.algMapping(encryptColumns.getEncryptionAlgorithm()) + "_" + user.getUserName() + "_" + encryptColumns.getDbTable()+ "_" + encryptColumns.getEncryptColumns();
-                        sql = "DROP FUNCTION " + funName +" CASCADE;";
-                        preparedStatement = connection.prepareStatement(sql);
-                         resultSet = preparedStatement.executeUpdate();
-                        connection.commit();
-
-                        //存量数据解密
-                        //postgreSQLStockEncOrDec(connection,encryptColumnsAdd, user);
-                    }else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())) {
-                        stockDecBeforeDel(encryptColumns,instance);
-                        int ret = dbhsmEncryptColumnsMapper.deleteDbhsmEncryptColumnsByIds(ids);
-                        return ret;
+                } else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
+                    DbhsmDbUser dbUser = new DbhsmDbUser();
+                    dbUser.setUserName(encryptColumns.getDbUserName());
+                    dbUser.setDatabaseInstanceId(encryptColumns.getDbInstanceId());
+                    List<DbhsmDbUser> dbhsmDbUsers = dbUsersMapper.selectDbhsmDbUsersList(dbUser);
+                    if (StringUtils.isEmpty(dbhsmDbUsers)) {
+                        log.error("根据实例ID和用户名未获取到用户信息, InstanceId：{}，DbUserName：{}", dbUser.getDatabaseInstanceId(), dbUser.getUserName());
+                        throw new Exception("根据实例ID和用户名未获取到用户信息,用户名：" + dbUser.getUserName());
                     }
-                    //执行删除视图
-                    try{
-                        encryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
-                        encryptColumnsAdd.setDatabaseType(instance.getDatabaseType());
-                        ViewUtil.deleteView(connection,encryptColumnsAdd,userSchema);
-                    }catch (Exception e){
-                        e.printStackTrace();
-                    }
+                    DbhsmDbUser user = dbhsmDbUsers.get(0);
+
+                    userSchema = "\"" + user.getDbSchema() + "\"";
+                    String transName = "tr_" + DbConstants.algMapping(encryptColumns.getEncryptionAlgorithm()) + "_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
+                    sql = "DROP TRIGGER IF EXISTS " + transName + " on " + encryptColumns.getDbTable() + " CASCADE";
+                    log.info(sql);
+                    preparedStatement = connection.prepareStatement(sql);
+                    resultSet = preparedStatement.executeUpdate();
+
+                    String funName = userSchema + ".tr_" + DbConstants.algMapping(encryptColumns.getEncryptionAlgorithm()) + "_" + user.getUserName() + "_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
+                    sql = "DROP FUNCTION " + funName + " CASCADE;";
+                    preparedStatement = connection.prepareStatement(sql);
+                    resultSet = preparedStatement.executeUpdate();
                     connection.commit();
-                } catch (SQLException e) {
-                    //触发器不存在异常不抛出，其他异常抛出
-                    if (!e.getMessage().contains("不存在")) {
-                        e.printStackTrace();
-                        throw new SQLException(e.getMessage());
-                    }
-                } finally {
-                    //释放资源
-                    if (preparedStatement != null) {
-                        preparedStatement.close();
-                    }
-                    if (connection != null) {
-                        connection.close();
-                    }
+
+                    //存量数据解密
+                    //postgreSQLStockEncOrDec(connection,encryptColumnsAdd, user);
+                } else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())) {
+                    stockDecBeforeDel(encryptColumns, instance);
+                    int ret = dbhsmEncryptColumnsMapper.deleteDbhsmEncryptColumnsByIds(ids);
+                    return ret;
                 }
+                //执行删除视图
+                try {
+                    encryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
+                    encryptColumnsAdd.setDatabaseType(instance.getDatabaseType());
+                    ViewUtil.deleteView(connection, encryptColumnsAdd, userSchema);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                connection.commit();
+            } catch (SQLException e) {
+                //触发器不存在异常不抛出，其他异常抛出
+                if (!e.getMessage().contains("不存在")) {
+                    e.printStackTrace();
+                    throw new SQLException(e.getMessage());
+                }
+            } finally {
+                //释放资源
+                if (preparedStatement != null) {
+                    preparedStatement.close();
+                }
+                if (connection != null) {
+                    connection.close();
+                }
+            }
         }
         //存量数据解密
-        stockDecBeforeDel(encryptColumns,instance);
+        stockDecBeforeDel(encryptColumns, instance);
         Thread.sleep(3000);
         int ret = dbhsmEncryptColumnsMapper.deleteDbhsmEncryptColumnsByIds(ids);
         if (ret > 0) {
@@ -556,7 +633,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                     dbhsmEncryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);
                     dbhsmEncryptColumnsAdd.setDatabaseType(instance.getDatabaseType());
                     dbhsmEncryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
-                    boolean viewRet = ViewUtil.operView(connection, dbhsmEncryptColumnsAdd, dbhsmEncryptColumnsMapper,userSchema);
+                    boolean viewRet = ViewUtil.operView(connection, dbhsmEncryptColumnsAdd, dbhsmEncryptColumnsMapper, userSchema);
                     if (viewRet) {
                         connection.commit();
                     } else {
@@ -576,75 +653,75 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         return ret;
     }
 
-    private void stockDecBeforeDel(DbhsmEncryptColumns encryptColumns,DbhsmDbInstance instance) throws Exception {
-            Connection connection = null;
-            //如果是SQLserver需要删除对应的触发器
-            PreparedStatement preparedStatement = null;
-            try {
-                DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
-                BeanUtils.copyProperties(instance, connDTO);
-                connection = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
+    private void stockDecBeforeDel(DbhsmEncryptColumns encryptColumns, DbhsmDbInstance instance) throws Exception {
+        Connection connection = null;
+        //如果是SQLserver需要删除对应的触发器
+        PreparedStatement preparedStatement = null;
+        try {
+            DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
+            BeanUtils.copyProperties(instance, connDTO);
+            connection = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
 
-                DbhsmEncryptColumnsAdd encryptColumnsAdd = new DbhsmEncryptColumnsAdd();
-                BeanUtils.copyProperties(encryptColumns, encryptColumnsAdd);
-                String ip = DBIpUtil.getIp(encryptColumnsAdd.getEthernetPort());
-                encryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);
-                encryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
-                if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
-                    //删除加密列时存量数据解密
-                    stockDec(connection, encryptColumnsAdd,instance);
-                } else if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
-                    stockDec(connection, encryptColumnsAdd,instance);
-                } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
-                    stockDec(connection, encryptColumnsAdd,instance);
-                } else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
-                    DbhsmDbUser dbUser = new DbhsmDbUser();
-                    dbUser.setUserName(encryptColumns.getDbUserName());
-                    dbUser.setDatabaseInstanceId(encryptColumns.getDbInstanceId());
-                    List<DbhsmDbUser> dbhsmDbUsers = dbUsersMapper.selectDbhsmDbUsersList(dbUser);
-                    if (StringUtils.isEmpty(dbhsmDbUsers)) {
-                        log.error("根据实例ID和用户名未获取到用户信息, InstanceId：{}，DbUserName：{}", dbUser.getDatabaseInstanceId(), dbUser.getUserName());
-                        throw new Exception("根据实例ID和用户名未获取到用户信息,用户名：" + dbUser.getUserName());
-                    }
-                    DbhsmDbUser user = dbhsmDbUsers.get(0);
-                    //存量数据解密
-                    postgreSQLStockEncOrDec(connection, encryptColumnsAdd, user);
-                }else if(DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())){
-                    stockDec(connection,encryptColumnsAdd,instance);
+            DbhsmEncryptColumnsAdd encryptColumnsAdd = new DbhsmEncryptColumnsAdd();
+            BeanUtils.copyProperties(encryptColumns, encryptColumnsAdd);
+            String ip = DBIpUtil.getIp(encryptColumnsAdd.getEthernetPort());
+            encryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);
+            encryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
+            if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
+                //删除加密列时存量数据解密
+                stockDec(connection, encryptColumnsAdd, instance);
+            } else if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
+                stockDec(connection, encryptColumnsAdd, instance);
+            } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
+                stockDec(connection, encryptColumnsAdd, instance);
+            } else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
+                DbhsmDbUser dbUser = new DbhsmDbUser();
+                dbUser.setUserName(encryptColumns.getDbUserName());
+                dbUser.setDatabaseInstanceId(encryptColumns.getDbInstanceId());
+                List<DbhsmDbUser> dbhsmDbUsers = dbUsersMapper.selectDbhsmDbUsersList(dbUser);
+                if (StringUtils.isEmpty(dbhsmDbUsers)) {
+                    log.error("根据实例ID和用户名未获取到用户信息, InstanceId：{}，DbUserName：{}", dbUser.getDatabaseInstanceId(), dbUser.getUserName());
+                    throw new Exception("根据实例ID和用户名未获取到用户信息,用户名：" + dbUser.getUserName());
                 }
-
-            } catch (SQLException e) {
-                //触发器不存在异常不抛出，其他异常抛出
-                if (!e.getMessage().contains("不存在")) {
-                    e.printStackTrace();
-                    throw new SQLException(e.getMessage());
-                }
-            } finally {
-                //释放资源
-                if (preparedStatement != null) {
-                    preparedStatement.close();
-                }
-
+                DbhsmDbUser user = dbhsmDbUsers.get(0);
+                //存量数据解密
+                postgreSQLStockEncOrDec(connection, encryptColumnsAdd, user);
+            } else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())) {
+                stockDec(connection, encryptColumnsAdd, instance);
             }
-        }
 
-    private void stockDec(Connection connection, DbhsmEncryptColumnsAdd encryptColumnsAdd,DbhsmDbInstance instance) throws Exception {
+        } catch (SQLException e) {
+            //触发器不存在异常不抛出，其他异常抛出
+            if (!e.getMessage().contains("不存在")) {
+                e.printStackTrace();
+                throw new SQLException(e.getMessage());
+            }
+        } finally {
+            //释放资源
+            if (preparedStatement != null) {
+                preparedStatement.close();
+            }
+
+        }
+    }
+
+    private void stockDec(Connection connection, DbhsmEncryptColumnsAdd encryptColumnsAdd, DbhsmDbInstance instance) throws Exception {
         Thread thread = new Thread(() -> {
             try {
                 if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
                     //存量数据解密
-                    SqlServerStock.sqlserverStockEncOrDec(connection, encryptColumnsAdd,DbConstants.DEC_FLAG);
+                    SqlServerStock.sqlserverStockEncOrDec(connection, encryptColumnsAdd, DbConstants.DEC_FLAG);
                 } else if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
-                    OraclelStock.oracleStockEncOrDec(connection,instance, encryptColumnsAdd,DbConstants.STOCK_DATA_DECRYPTION);
+                    OraclelStock.oracleStockEncOrDec(connection, instance, encryptColumnsAdd, DbConstants.STOCK_DATA_DECRYPTION);
                 } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
-                    MysqlStock.mysqlStockEncOrDec(connection, encryptColumnsAdd,DbConstants.STOCK_DATA_DECRYPTION);
-                }else if (DbConstants.DB_TYPE_DM.equals(instance.getDatabaseType())){
-                    FunctionUtil.encOrdecColumnsSqlToDM(connection,encryptColumnsAdd,DbConstants.DEC_FLAG);
+                    MysqlStock.mysqlStockEncOrDec(connection, encryptColumnsAdd, DbConstants.STOCK_DATA_DECRYPTION);
+                } else if (DbConstants.DB_TYPE_DM.equals(instance.getDatabaseType())) {
+                    FunctionUtil.encOrdecColumnsSqlToDM(connection, encryptColumnsAdd, DbConstants.DEC_FLAG);
                 }
                 connection.commit();
             } catch (Exception e) {
                 e.printStackTrace();
-            }finally {
+            } finally {
                 if (connection != null) {
                     try {
                         connection.close();
@@ -659,7 +736,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
 
     }
 
-    private void postgreSQLStockEncOrDec(Connection finalConnection,DbhsmEncryptColumnsAdd encryptColumnsAdd,DbhsmDbUser user ) {
+    private void postgreSQLStockEncOrDec(Connection finalConnection, DbhsmEncryptColumnsAdd encryptColumnsAdd, DbhsmDbUser user) {
         Thread thread = new Thread(() -> {
             try {
                 //存量数据解密
@@ -667,7 +744,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 finalConnection.commit();
             } catch (Exception e) {
                 e.printStackTrace();
-            }finally {
+            } finally {
                 if (finalConnection != null) {
                     try {
                         finalConnection.close();
@@ -680,8 +757,6 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         thread.setDaemon(true);
         thread.start();
     }
-
-
 
 
     /**
@@ -725,15 +800,15 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             try {
                 DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
                 BeanUtils.copyProperties(instance, connDTO);
-                String idPrefix = "$"+getInstance(instance);
+                String idPrefix = "$" + getInstance(instance);
                 Map<String, Object> instanceMap = new HashMap<String, Object>();
-                instanceMap.put("id", instance.getId()+idPrefix);
+                instanceMap.put("id", instance.getId() + idPrefix);
                 instanceMap.put("pId", "0");
                 instanceMap.put("title", instance.getDatabaseServerName() + getDataBaseName(instance.getDatabaseType(), dictDatas));
                 instanceMap.put("level", 1);
                 instanceMap.put("databaseType", instance.getDatabaseType());
                 instancetTrees.add(instanceMap);
-                if(HttpClientUtil.isDatabaseServerReachable(connDTO.getDatabaseIp(),Integer.parseInt(connDTO.getDatabasePort()),5)) {
+                if (HttpClientUtil.isDatabaseServerReachable(connDTO.getDatabaseIp(), Integer.parseInt(connDTO.getDatabasePort()), 5)) {
                     continue;
                 }
                 DbhsmDbUser dbUser = new DbhsmDbUser();
@@ -750,19 +825,19 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
 
                         //只有通过web创建的用户才允许创建加密列
                         Map<String, Object> userMap = new HashMap<String, Object>();
-                        userMap.put("id", user.getId()+idPrefix+user.getUserName());
-                        userMap.put("pId", instance.getId()+idPrefix);
+                        userMap.put("id", user.getId() + idPrefix + user.getUserName());
+                        userMap.put("pId", instance.getId() + idPrefix);
                         userMap.put("title", user.getUserName());
                         userMap.put("level", 2);
                         instancetTrees.add(userMap);
                         conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
                         if (Optional.ofNullable(conn).isPresent()) {
-                            List<String> tableNameList = DBUtil.findAllTables(conn, user.getUserName(), instance.getDatabaseType(),instance.getDatabaseServerName(),user.getDbSchema());
+                            List<String> tableNameList = DBUtil.findAllTables(conn, user.getUserName(), instance.getDatabaseType(), instance.getDatabaseServerName(), user.getDbSchema());
                             for (int k = 0; k < tableNameList.size(); k++) {
                                 tableName = tableNameList.get(k);
                                 Map<String, Object> dbTableMetaMap = new HashMap<String, Object>();
-                                dbTableMetaMap.put("id", tableName+idPrefix);
-                                dbTableMetaMap.put("pId", user.getId()+idPrefix+user.getUserName());
+                                dbTableMetaMap.put("id", tableName + idPrefix);
+                                dbTableMetaMap.put("pId", user.getId() + idPrefix + user.getUserName());
                                 dbTableMetaMap.put("title", tableName);
                                 dbTableMetaMap.put("level", 3);
                                 instancetTrees.add(dbTableMetaMap);
@@ -812,20 +887,21 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             while (rs.next()) {
                 algListArr.add(rs.getString("name"));
             }
-        }catch (SQLException e){
+        } catch (SQLException e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             assert rs != null;
             rs.close();
             stmt.close();
             conn.close();
         }
-    return DMAlgorithmsConvertedDic(algListArr);
+        return DMAlgorithmsConvertedDic(algListArr);
     }
 
     /**
-     * */
-    List<SysDictData> DMAlgorithmsConvertedDic(List<String> list){
+     *
+     */
+    List<SysDictData> DMAlgorithmsConvertedDic(List<String> list) {
         List<SysDictData> sysDictDataList = new ArrayList<>();
         for (int i = 0; i < list.size(); i++) {
             SysDictData sysDictData = new SysDictData();
@@ -915,9 +991,9 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             databaseType = DbConstants.DB_TYPE_SQLSERVER_DESC;
         } else if (DbConstants.DB_TYPE_MYSQL.equals(instance.getDatabaseType())) {
             databaseType = DbConstants.DB_TYPE_MYSQL_DESC;
-        } else if(DbConstants.DB_TYPE_POSTGRESQL.equals(instance.getDatabaseType())) {
+        } else if (DbConstants.DB_TYPE_POSTGRESQL.equals(instance.getDatabaseType())) {
             databaseType = DbConstants.DB_TYPE_POSTGRESQL_DESC;
-        }else if(DbConstants.DB_TYPE_DM.equals(instance.getDatabaseType())) {
+        } else if (DbConstants.DB_TYPE_DM.equals(instance.getDatabaseType())) {
             databaseType = DbConstants.DB_TYPE_DM_DESC;
         }
         return databaseType + ":" + instance.getDatabaseIp() + ":" + instance.getDatabasePort() + instance.getDatabaseExampleType() + instance.getDatabaseServerName();

@@ -1,51 +1,84 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper
-PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.spms.dbhsm.encryptcolumns.mapper.DbhsmEncryptColumnsMapper">
 
     <resultMap type="com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns" id="DbhsmEncryptColumnsResult">
-        <result property="id"    column="id"    />
-        <result property="dbInstanceId"    column="db_instance_id"    />
-        <result property="dbInstance"    column="db_instance"    />
-        <result property="dbUserName"    column="db_user_name"    />
-        <result property="dbTable"    column="db_table"    />
-        <result property="ethernetPort"    column="ethernet_port"    />
-        <result property="encryptColumns"    column="encrypt_columns"    />
-        <result property="columnsType"    column="columns_type"    />
-        <result property="encryptionStatus"    column="encryption_status"    />
-        <result property="encryptionAlgorithm"    column="encryption_algorithm"    />
-        <result property="establishRules"    column="establish_rules"    />
-        <result property="encryptionOffset"    column="encryption_offset"    />
-        <result property="encryptionLength"    column="encryption_length"    />
-        <result property="secretKeyId"    column="secret_key_id"    />
-        <result property="createTime"    column="create_time"    />
-        <result property="createBy"    column="create_by"    />
-        <result property="updateTime"    column="update_time"    />
-        <result property="updateBy"    column="update_by"    />
-        <result property="columnDefinitions"    column="column_definitions"    />
+        <result property="id" column="id"/>
+        <result property="dbInstanceId" column="db_instance_id"/>
+        <result property="dbInstance" column="db_instance"/>
+        <result property="dbUserName" column="db_user_name"/>
+        <result property="dbTable" column="db_table"/>
+        <result property="ethernetPort" column="ethernet_port"/>
+        <result property="encryptColumns" column="encrypt_columns"/>
+        <result property="columnsType" column="columns_type"/>
+        <result property="encryptionStatus" column="encryption_status"/>
+        <result property="encryptionAlgorithm" column="encryption_algorithm"/>
+        <result property="establishRules" column="establish_rules"/>
+        <result property="encryptionOffset" column="encryption_offset"/>
+        <result property="encryptionLength" column="encryption_length"/>
+        <result property="secretKeyId" column="secret_key_id"/>
+        <result property="batchCount" column="batch_count"/>
+        <result property="threadCount" column="thread_count"/>
+        <result property="secretKeyId" column="secret_key_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="columnDefinitions" column="column_definitions"/>
     </resultMap>
 
     <sql id="selectDbhsmEncryptColumnsVo">
-        select id, db_instance_id, db_instance, db_user_name, db_table, ethernet_port, encrypt_columns, columns_type, encryption_status, encryption_algorithm, establish_rules, encryption_offset, encryption_length, secret_key_id, create_time, create_by, update_time, update_by,column_definitions from dbhsm_encrypt_columns
+        select id,
+               db_instance_id,
+               db_instance,
+               db_user_name,
+               db_table,
+               ethernet_port,
+               encrypt_columns,
+               columns_type,
+               encryption_status,
+               encryption_algorithm,
+               establish_rules,
+               encryption_offset,
+               encryption_length,
+               secret_key_id,
+               batch_count,
+               thread_count,
+               create_time,
+               create_by,
+               update_time,
+               update_by,
+               column_definitions
+        from dbhsm_encrypt_columns
     </sql>
 
-    <select id="selectDbhsmEncryptColumnsList" parameterType="com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns" resultMap="DbhsmEncryptColumnsResult">
+    <select id="selectDbhsmEncryptColumnsList" parameterType="com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns"
+            resultMap="DbhsmEncryptColumnsResult">
         <include refid="selectDbhsmEncryptColumnsVo"/>
         <where>
-            <if test="dbInstanceId != null  and dbInstanceId != ''"> and db_instance_id = #{dbInstanceId}</if>
-            <if test="dbInstance != null  and dbInstance != ''"> and db_instance = #{dbInstance}</if>
-            <if test="dbUserName != null  and dbUserName != ''"> and db_user_name = #{dbUserName}</if>
-            <if test="dbTable != null  and dbTable != ''"> and db_table = #{dbTable}</if>
-            <if test="ethernetPort != null  and ethernetPort != ''"> and ethernet_port = #{ethernetPort}</if>
-            <if test="encryptColumns != null  and encryptColumns != ''"> and encrypt_columns = #{encryptColumns}</if>
-            <if test="columnsType != null  and columnsType != ''"> and columns_type = #{columnsType}</if>
-            <if test="encryptionStatus != null  and encryptionStatus != ''"> and encryption_status = #{encryptionStatus}</if>
-            <if test="encryptionAlgorithm != null  and encryptionAlgorithm != ''"> and encryption_algorithm = #{encryptionAlgorithm}</if>
-            <if test="establishRules != null  and establishRules != ''"> and establish_rules = #{establishRules}</if>
-            <if test="encryptionOffset != null  and encryptionOffset != ''"> and encryption_offset = #{encryptionOffset}</if>
-            <if test="encryptionLength != null  and encryptionLength != ''"> and encryption_length = #{encryptionLength}</if>
-            <if test="secretKeyId != null  and secretKeyId != ''"> and secret_key_id = #{secretKeyId}</if>
+            <if test="dbInstanceId != null  and dbInstanceId != ''">and db_instance_id = #{dbInstanceId}</if>
+            <if test="dbInstance != null  and dbInstance != ''">and db_instance = #{dbInstance}</if>
+            <if test="dbUserName != null  and dbUserName != ''">and db_user_name = #{dbUserName}</if>
+            <if test="dbTable != null  and dbTable != ''">and db_table = #{dbTable}</if>
+            <if test="ethernetPort != null  and ethernetPort != ''">and ethernet_port = #{ethernetPort}</if>
+            <if test="encryptColumns != null  and encryptColumns != ''">and encrypt_columns = #{encryptColumns}</if>
+            <if test="columnsType != null  and columnsType != ''">and columns_type = #{columnsType}</if>
+            <if test="encryptionStatus != null  and encryptionStatus != ''">and encryption_status =
+                #{encryptionStatus}
+            </if>
+            <if test="encryptionAlgorithm != null  and encryptionAlgorithm != ''">and encryption_algorithm =
+                #{encryptionAlgorithm}
+            </if>
+            <if test="establishRules != null  and establishRules != ''">and establish_rules = #{establishRules}</if>
+            <if test="encryptionOffset != null  and encryptionOffset != ''">and encryption_offset =
+                #{encryptionOffset}
+            </if>
+            <if test="encryptionLength != null  and encryptionLength != ''">and encryption_length =
+                #{encryptionLength}
+            </if>
+            <if test="secretKeyId != null  and secretKeyId != ''">and secret_key_id = #{secretKeyId}</if>
         </where>
     </select>
 
@@ -71,12 +104,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="encryptionOffset != null">encryption_offset,</if>
             <if test="encryptionLength != null">encryption_length,</if>
             <if test="secretKeyId != null">secret_key_id,</if>
+            <if test="batchCount != null">batch_count,</if>
+            <if test="threadCount != null">thread_count,</if>
             <if test="createTime != null">create_time,</if>
             <if test="createBy != null">create_by,</if>
             <if test="updateTime != null">update_time,</if>
             <if test="updateBy != null">update_by,</if>
             <if test="columnDefinitions != null">column_definitions,</if>
-         </trim>
+        </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="id != null">#{id},</if>
             <if test="dbInstanceId != null">#{dbInstanceId},</if>
@@ -92,12 +127,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="encryptionOffset != null">#{encryptionOffset},</if>
             <if test="encryptionLength != null">#{encryptionLength},</if>
             <if test="secretKeyId != null">#{secretKeyId},</if>
+            <if test="batchCount != null">#{batchCount},</if>
+            <if test="threadCount != null">#{threadCount},</if>
             <if test="createTime != null">#{createTime},</if>
             <if test="createBy != null">#{createBy},</if>
             <if test="updateTime != null">#{updateTime},</if>
             <if test="updateBy != null">#{updateBy},</if>
             <if test="columnDefinitions != null">#{columnDefinitions},</if>
-         </trim>
+        </trim>
     </insert>
 
     <update id="updateDbhsmEncryptColumns" parameterType="com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns">
@@ -116,6 +153,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="encryptionOffset != null">encryption_offset = #{encryptionOffset},</if>
             <if test="encryptionLength != null">encryption_length = #{encryptionLength},</if>
             <if test="secretKeyId != null">secret_key_id = #{secretKeyId},</if>
+            <if test="batchCount != null">batch_count = #{batchCount},</if>
+            <if test="threadCount != null">thread_count = #{threadCount},</if>
             <if test="createTime != null">create_time = #{createTime},</if>
             <if test="createBy != null">create_by = #{createBy},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
@@ -126,7 +165,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </update>
 
     <delete id="deleteDbhsmEncryptColumnsById" parameterType="String">
-        delete from dbhsm_encrypt_columns where id = #{id}
+        delete
+        from dbhsm_encrypt_columns
+        where id = #{id}
     </delete>
 
     <delete id="deleteDbhsmEncryptColumnsByIds" parameterType="String">
