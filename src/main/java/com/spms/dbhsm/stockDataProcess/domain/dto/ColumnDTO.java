@@ -23,9 +23,9 @@ public class ColumnDTO {
     private String columnName;
 
     /**
-     * 数据类型
+     * 列原始定义
      */
-    private String dataType;
+    private String columnDefinition;
 
 
     /**
