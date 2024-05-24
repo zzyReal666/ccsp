@@ -26,35 +26,61 @@ import java.util.Map;
 @ToString
 public class InitZookeeperTask extends Thread {
 
-
-    /**
-     * 数据库信息
-     */
+    //数据库信息
     private DatabaseDTO databaseDTO;
 
+    //模板引擎
+    private static final TemplateEngine TEMPLATE_ENGINE = new FreeMarkerTemplateEngine();
 
     @Override
     public void run() {
 
-        //生成配置文件
-        TemplateEngine templateEngine = new FreeMarkerTemplateEngine();
-        String filePath = "initConfig.ftl";
+        //生成<databaseId>.properties
+        generateProperties();
+
+        //生成<databaseId>.yaml
+        generateConfig();
+
+        //运行项目连接数据库，使用指定的配置文件
+//        runInitZookeeper();
+    }
+
+    private void generateProperties() {
+        String filePath = "properties.ftl";
         try {
-            templateEngine.setTemplateFromFile(filePath);
-
+            TEMPLATE_ENGINE.setTemplateFromFile(filePath);
             //数据模型
-            templateEngine.setDataModel(getDataModelMap());
-            String result = templateEngine.process();
-
-            //result 写入文件 /Users/zhangzhongyuan/config/ftl/config.yaml
-            FileUtil.writeUtf8String(result, "/Users/zhangzhongyuan/config/ftl/config.yaml");
+            TEMPLATE_ENGINE.setDataModel(new HashMap<String, String>() {
+                {
+                    put("databaseId", String.valueOf(databaseDTO.getId()));
+                }
+            });
+            //result 写入文件 /Users/zhangzhongyuan/config/ftl
+            FileUtil.writeUtf8String(TEMPLATE_ENGINE.process(), "/Users/zhangzhongyuan/config/ftl/" + databaseDTO.getId() + "/" + databaseDTO.getId() + ".properties");
         } catch (TemplateEngineException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void runInitZookeeper() {
         //调用linux命令启动一个空的项目，使用生成的配置文件 用来初始化
         try {
-            Runtime.getRuntime().exec("sh /Users/zhangzhongyuan/config/ftl/start.sh");
+            Runtime.getRuntime().exec("sh /Users/zhangzhongyuan/config/ftl/start.sh " + databaseDTO.getId());
         } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void generateConfig() {
+        //生成配置文件
+        String filePath = "initConfig.ftl";
+        try {
+            TEMPLATE_ENGINE.setTemplateFromFile(filePath);
+            //数据模型
+            TEMPLATE_ENGINE.setDataModel(getYamlDataModel());
+            //result 写入文件 /Users/zhangzhongyuan/config/ftl
+            FileUtil.writeUtf8String(TEMPLATE_ENGINE.process(), "/Users/zhangzhongyuan/config/ftl/" + databaseDTO.getId() + "/" + databaseDTO.getId() + ".yaml");
+        } catch (TemplateEngineException e) {
             throw new RuntimeException(e);
         }
     }
@@ -64,15 +90,15 @@ public class InitZookeeperTask extends Thread {
      *
      * @return 数据模型
      */
-    private Map<String, Object> getDataModelMap() {
-        Map<String, Object> dataModel = new HashMap<>();
+    private Map<String, String> getYamlDataModel() {
+        Map<String, String> dataModel = new HashMap<>();
 
         // mode配置
         dataModel.put("modeType", "Cluster");
         dataModel.put("repositoryType", "ZooKeeper");
-        dataModel.put("namespace", databaseDTO.getId());
+        dataModel.put("namespace", String.valueOf(databaseDTO.getId()));
         dataModel.put("serverLists", "101.42.19.44:12181");
-        dataModel.put("operationTimeoutMilliseconds", 50000);
+        dataModel.put("operationTimeoutMilliseconds", "50000");
 
         // 数据源配置
         dataModel.put("dataSourceClassName", "com.alibaba.druid.pool.DruidDataSource");
@@ -81,10 +107,8 @@ public class InitZookeeperTask extends Thread {
         dataModel.put("url", databaseDTO.getConnectUrl());
         dataModel.put("username", databaseDTO.getServiceUser());
         dataModel.put("password", databaseDTO.getServicePassword());
-        dataModel.put("maxPoolSize", 10);
+        dataModel.put("maxPoolSize", "10");
 
-        // 其他配置
-        dataModel.put("sqlShow", true);
         return dataModel;
     }
 }

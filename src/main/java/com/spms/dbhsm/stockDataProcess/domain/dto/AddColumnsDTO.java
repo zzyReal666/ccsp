@@ -22,4 +22,7 @@ public class AddColumnsDTO {
 
     //是否为空 true:非空 false:可空
     private boolean notNull;
+
+    //列原始定义
+    private String columnDefinition;
 }

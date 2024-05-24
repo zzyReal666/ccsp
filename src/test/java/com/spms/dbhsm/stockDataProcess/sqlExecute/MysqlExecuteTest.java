@@ -45,7 +45,7 @@ public class MysqlExecuteTest {
     public void addTempColumns() {
         List<AddColumnsDTO> addColumnsDTOS = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
-            AddColumnsDTO addColumnsDTO = new AddColumnsDTO("column" + i, "colunmComment" + i, i % 2 == 0);
+            AddColumnsDTO addColumnsDTO = new AddColumnsDTO("column" + i, "colunmComment" + i, i % 2 == 0, "");
             addColumnsDTOS.add(addColumnsDTO);
         }
         mysqlExecute.addTempColumn(connection, "t1", addColumnsDTOS);

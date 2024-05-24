@@ -13,7 +13,6 @@ import com.spms.dbhsm.stockDataProcess.domain.dto.TableDTO;
 import com.spms.dbhsm.stockDataProcess.service.StockDataOperateService;
 import com.spms.dbhsm.stockDataProcess.sqlExecute.SqlExecuteSPI;
 import com.spms.dbhsm.stockDataProcess.threadTask.InitZookeeperTask;
-import com.spms.dbhsm.stockDataProcess.threadTask.UpdateZookeeperTask;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -44,10 +43,10 @@ import java.util.stream.Collectors;
 public class StockDataOperateServiceImpl implements StockDataOperateService {
 
     // 暂停标志的映射，每个线程有自己的暂停标志
-    private final Map<String, AtomicBoolean> pausedMap = new ConcurrentHashMap<>();
+    private static final Map<String, AtomicBoolean> PAUSED_MAP = new ConcurrentHashMap<>();
 
     // 进度的映射，每个线程有自己的进度
-    private final Map<String, AtomicInteger> progressMap = new ConcurrentHashMap<>();
+    private static final Map<String, AtomicInteger> PROGRESS_MAP = new ConcurrentHashMap<>();
 
     //全局唯一标识，标志着是否是第一次调用该服务 dataBaseId:true
     private static final Map<Long, Boolean> FIRST_CALL = new ConcurrentHashMap<>();
@@ -99,7 +98,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
                 .map(columnDTO -> sqlExecute.getTempColumnSuffix() + columnDTO.getColumnName()).collect(Collectors.toList()));
 
         // 加密策略写入 zookeeper
-//        writeConfigToZookeeper(databaseDTO);
+        writeConfigToZookeeper(databaseDTO);
 
     }
 
@@ -107,19 +106,19 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
     //暂停
     @Override
     public void pause(String tableId) {
-        pausedMap.get(tableId).set(true);
+        PAUSED_MAP.get(tableId).set(true);
     }
 
     //继续
     @Override
     public void resume(String tableId) {
-        pausedMap.get(tableId).set(false);
+        PAUSED_MAP.get(tableId).set(false);
     }
 
     //查询执行进度
     @Override
     public int queryProgress(String tableId) {
-        return progressMap.get(tableId).get();
+        return PROGRESS_MAP.get(tableId).get();
     }
 
 
@@ -151,8 +150,8 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
 
     //初始化暂停标志和进度
     private void initPauseAndProcess(TableDTO tableDTO) {
-        pausedMap.put(String.valueOf(tableDTO.getId()), new AtomicBoolean(false));
-        progressMap.put(String.valueOf(tableDTO.getId()), new AtomicInteger(0));
+        PAUSED_MAP.put(String.valueOf(tableDTO.getId()), new AtomicBoolean(false));
+        PROGRESS_MAP.put(String.valueOf(tableDTO.getId()), new AtomicInteger(0));
     }
 
     //写入加密策略到zookeeper
@@ -164,10 +163,10 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
             initZookeeperTask.start();
             initZookeeperTask.join();
         }
-        //开一个线程 写加密策略到zk
-        Thread writeZkthread = new UpdateZookeeperTask(databaseDTO);
-        writeZkthread.start();
-        writeZkthread.join();
+//        //开一个线程 写加密策略到zk
+//        Thread writeZkthread = new UpdateZookeeperTask(databaseDTO);
+//        writeZkthread.start();
+//        writeZkthread.join();
 
     }
 
@@ -204,8 +203,8 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
             offsetQueue.add(offset);
             offset += limit;
         }
-        AtomicInteger progress = progressMap.get(String.valueOf(tableDTO.getId()));
-        AtomicBoolean paused = pausedMap.get(String.valueOf(tableDTO.getId()));
+        AtomicInteger progress = PROGRESS_MAP.get(String.valueOf(tableDTO.getId()));
+        AtomicBoolean paused = PAUSED_MAP.get(String.valueOf(tableDTO.getId()));
 
         for (int i = 0; i < threadNum; i++) {
             executor.execute(() -> {

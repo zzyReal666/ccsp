@@ -23,9 +23,9 @@ public class ColumnDTO {
     private String columnName;
 
     /**
-     * 列原始定义
+     * 列原始定义 比如Mysql type：varchar（50），
      */
-    private String columnDefinition;
+    private Map<String,String > columnDefinition;
 
 
     /**

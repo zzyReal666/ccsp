@@ -76,7 +76,6 @@ public class MysqlExecute implements SqlExecuteSPI {
             log.error("getPrimaryKey error", e);
             throw new RuntimeException(e);
         }
-
     }
 
     @Override
@@ -104,6 +103,7 @@ public class MysqlExecute implements SqlExecuteSPI {
         });
         //删除最后一个逗号
         sql.deleteCharAt(sql.length() - 1);
+        log.info("addTempColumn sql:{}", sql);
         try {
             Statement statement = conn.createStatement();
             statement.execute(sql.toString());
@@ -143,6 +143,7 @@ public class MysqlExecute implements SqlExecuteSPI {
                 .add("limit", limit)
                 .add("offset", offset)
                 .render();
+        log.info("selectColumn sql:{}", sql);
         Statement statement;
         try {
             List<Map<String, String>> maps = new ArrayList<>();
@@ -206,7 +207,7 @@ public class MysqlExecute implements SqlExecuteSPI {
                 String sql = new ST(UPDATE).add("table", table).add("set", set).add("where", where).render();
                 set.setLength(0);
                 where.setLength(0);
-                log.info("sql {}",sql);
+                log.info("batchUpdate sql {}",sql);
                 try {
                     statement.addBatch(sql);
                 } catch (SQLException e) {
@@ -254,6 +255,7 @@ public class MysqlExecute implements SqlExecuteSPI {
         });
         drop.deleteCharAt(drop.length() - 1);
         String sql = new ST(DROP_COLUMN).add("table", table).add("drop", drop).render();
+        log.info("dropColumn sql:{}", sql);
         try (Statement statement = conn.createStatement()) {
             statement.execute(sql);
         } catch (SQLException e) {
