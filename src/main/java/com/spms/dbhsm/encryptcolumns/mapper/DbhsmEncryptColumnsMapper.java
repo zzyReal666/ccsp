@@ -2,6 +2,7 @@ package com.spms.dbhsm.encryptcolumns.mapper;
 
 import com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -61,4 +62,15 @@ public interface DbhsmEncryptColumnsMapper
      * @return 结果
      */
     public int deleteDbhsmEncryptColumnsByIds(String[] ids);
+
+    /**
+     * 根据实例ID和列名称获取加密队列信息
+     *
+     * @param dbInstanceId 实例
+     * @param columns 列信息
+     * @return 结果
+     */
+    List<DbhsmEncryptColumns> selectDbhsmEncryptBydbInstanceColumnsList(String dbInstanceId,List<String> columns);
+
+    void deleteByEncryptColumnsOnTable(@Param("tableId") String tableId);
 }

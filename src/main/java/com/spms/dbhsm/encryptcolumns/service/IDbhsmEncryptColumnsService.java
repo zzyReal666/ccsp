@@ -51,7 +51,7 @@ public interface IDbhsmEncryptColumnsService
      * @param dbhsmEncryptColumns 数据库加密列
      * @return 结果
      */
-    public AjaxResult updateDbhsmEncryptColumns(UpEncryptColumnsRequest dbhsmEncryptColumns);
+    public int updateDbhsmEncryptColumns(DbhsmEncryptColumns dbhsmEncryptColumns);
 
     /**
      * 批量删除数据库加密列

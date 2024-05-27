@@ -19,6 +19,8 @@ public class DbhsmEncryptColumns extends TreeEntity {
      */
     private String id;
 
+    private String tableId;
+
     /**
      * 数据库实例ID
      */
@@ -61,7 +63,7 @@ public class DbhsmEncryptColumns extends TreeEntity {
     /**
      * 加密状态：1 未加密，2 已加密  3 已解密
      */
-    @Excel(name = "加密状态：1 未加密，2 已加密  3 已解密")
+    @Excel(name = "加密状态：0未开始加密1加密中2已加密3未开始解密4解密中")
     private Integer encryptionStatus;
 
     /**
@@ -99,9 +101,6 @@ public class DbhsmEncryptColumns extends TreeEntity {
      */
     private String secretKey;
 
-    private Integer batchCount;
-
-    private Integer threadCount;
 
     public void setId(String id) {
         this.id = id;
@@ -109,6 +108,14 @@ public class DbhsmEncryptColumns extends TreeEntity {
 
     public String getId() {
         return id;
+    }
+
+    public String getTableId() {
+        return tableId;
+    }
+
+    public void setTableId(String tableId) {
+        this.tableId = tableId;
     }
 
     public void setDbInstanceId(Long dbInstanceId) {
@@ -231,21 +238,6 @@ public class DbhsmEncryptColumns extends TreeEntity {
         this.secretKey = secretKey;
     }
 
-    public Integer getBatchCount() {
-        return batchCount;
-    }
-
-    public void setBatchCount(Integer batchCount) {
-        this.batchCount = batchCount;
-    }
-
-    public Integer getThreadCount() {
-        return threadCount;
-    }
-
-    public void setThreadCount(Integer threadCount) {
-        this.threadCount = threadCount;
-    }
 
     @Override
     public String toString() {
@@ -271,8 +263,6 @@ public class DbhsmEncryptColumns extends TreeEntity {
                 .append("updateBy", getUpdateBy())
                 .append("columnDefinitions", getColumnDefinitions())
                 .append("secretKey", getSecretKey())
-                .append("batchCount", getBatchCount())
-                .append("threadCount", getThreadCount())
                 .toString();
     }
 }

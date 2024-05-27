@@ -33,8 +33,7 @@ import java.util.List;
 @Api(tags = "数据库加密列")
 @RestController
 @RequestMapping("/encryptcolumns")
-public class DbhsmEncryptColumnsController extends BaseController
-{
+public class DbhsmEncryptColumnsController extends BaseController {
     @Autowired
     private IDbhsmEncryptColumnsService dbhsmEncryptColumnsService;
 
@@ -61,8 +60,7 @@ public class DbhsmEncryptColumnsController extends BaseController
     @RequiresPermissions("dbhsm:encryptcolumns:export")
     @Log(title = "数据库加密列", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
-    public void export(HttpServletResponse response, DbhsmEncryptColumnsDto dbhsmEncryptColumns)
-    {
+    public void export(HttpServletResponse response, DbhsmEncryptColumnsDto dbhsmEncryptColumns) {
         List<DbhsmEncryptColumns> list = null;
         try {
             list = dbhsmEncryptColumnsService.selectDbhsmEncryptColumnsList(dbhsmEncryptColumns);
@@ -78,8 +76,7 @@ public class DbhsmEncryptColumnsController extends BaseController
      */
     @RequiresPermissions("dbhsm:encryptcolumns:query")
     @GetMapping(value = "/{id}")
-    public AjaxResult getInfo(@PathVariable("id") String id)
-    {
+    public AjaxResult getInfo(@PathVariable("id") String id) {
         return AjaxResult.success(dbhsmEncryptColumnsService.selectDbhsmEncryptColumnsById(id));
     }
 
@@ -88,9 +85,8 @@ public class DbhsmEncryptColumnsController extends BaseController
      */
     @RequiresPermissions("dbhsm:encryptcolumns:query")
     @GetMapping(value = "/listDMAlgList")
-    public AjaxResult getDMAlg(DbhsmEncryptColumnsDto dbhsmEncryptColumns)
-    {
-        List<SysDictData> arrayList= new ArrayList<SysDictData>();
+    public AjaxResult getDMAlg(DbhsmEncryptColumnsDto dbhsmEncryptColumns) {
+        List<SysDictData> arrayList = new ArrayList<SysDictData>();
         try {
             arrayList = dbhsmEncryptColumnsService.selectDMAlg(dbhsmEncryptColumns);
         } catch (ZAYKException | SQLException e) {
@@ -107,8 +103,7 @@ public class DbhsmEncryptColumnsController extends BaseController
     @ApiOperation(value = "新增数据库加密列")
     @Log(title = "数据库加密列", businessType = BusinessType.INSERT)
     @PostMapping
-    public AjaxResult add(@RequestBody DbhsmEncryptColumnsAdd dbhsmEncryptColumns)
-    {
+    public AjaxResult add(@RequestBody DbhsmEncryptColumnsAdd dbhsmEncryptColumns) {
         try {
             return toAjax(dbhsmEncryptColumnsService.insertDbhsmEncryptColumns(dbhsmEncryptColumns));
         } catch (Exception e) {
@@ -116,10 +111,12 @@ public class DbhsmEncryptColumnsController extends BaseController
             return AjaxResult.error(e.getMessage());
         }
     }
+
     @GetMapping("/getEncColumnsTaskStatus")
     public String getTaskStatus() {
         return dbhsmEncryptColumnsService.getTaskStatus();
     }
+
     /**
      * 修改数据库加密列
      */
@@ -127,9 +124,9 @@ public class DbhsmEncryptColumnsController extends BaseController
     @RequiresPermissions("dbhsm:encryptcolumns:edit")
     @Log(title = "数据库加密列", businessType = BusinessType.UPDATE)
     @PutMapping
-    public AjaxResult edit(@RequestBody UpEncryptColumnsRequest dbhsmEncryptColumns)
-    {
-        return dbhsmEncryptColumnsService.updateDbhsmEncryptColumns(dbhsmEncryptColumns);
+    public AjaxResult edit(@RequestBody DbhsmEncryptColumns dbhsmEncryptColumns) {
+        int i = dbhsmEncryptColumnsService.updateDbhsmEncryptColumns(dbhsmEncryptColumns);
+        return AjaxResult.success(i);
     }
 
     /**
@@ -138,7 +135,7 @@ public class DbhsmEncryptColumnsController extends BaseController
 //    @RequiresPermissions("dbhsm:encryptcolumns:remove")
     @ApiOperation(value = "删除数据库加密列")
     @Log(title = "数据库加密列", businessType = BusinessType.DELETE)
-	@DeleteMapping("/{ids}")
+    @DeleteMapping("/{ids}")
     public AjaxResult remove(@PathVariable String[] ids) throws Exception {
         try {
             dbhsmEncryptColumnsService.deleteDbhsmEncryptColumnsByIds(ids);
@@ -158,4 +155,5 @@ public class DbhsmEncryptColumnsController extends BaseController
     {
         return dbhsmEncryptColumnsService.treeData();
     }
+
 }

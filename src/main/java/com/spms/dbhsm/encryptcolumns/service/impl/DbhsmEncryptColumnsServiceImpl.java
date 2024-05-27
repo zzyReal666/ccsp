@@ -10,7 +10,6 @@ import com.ccsp.common.core.utils.DateUtils;
 import com.ccsp.common.core.utils.SnowFlakeUtil;
 import com.ccsp.common.core.utils.StringUtils;
 import com.ccsp.common.core.utils.tree.EleTreeWrapper;
-import com.ccsp.common.core.web.domain.AjaxResult;
 import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.ccsp.common.security.utils.DictUtils;
 import com.ccsp.common.security.utils.SecurityUtils;
@@ -18,7 +17,6 @@ import com.ccsp.system.api.hsmSvsTsaApi.RemoteSecretKeyService;
 import com.ccsp.system.api.hsmSvsTsaApi.domain.DevBaseData;
 import com.ccsp.system.api.systemApi.RemoteConfigService;
 import com.ccsp.system.api.systemApi.domain.SysDictData;
-import com.spms.common.CommandUtil;
 import com.spms.common.DBIpUtil;
 import com.spms.common.HttpClientUtil;
 import com.spms.common.JSONDataUtil;
@@ -42,11 +40,11 @@ import com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsAdd;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsDto;
 import com.spms.dbhsm.encryptcolumns.mapper.DbhsmEncryptColumnsMapper;
+import com.spms.dbhsm.encryptcolumns.mapper.DbhsmEncryptTableMapper;
 import com.spms.dbhsm.encryptcolumns.service.IDbhsmEncryptColumnsService;
-import com.spms.dbhsm.encryptcolumns.vo.EncryptColumns;
-import com.spms.dbhsm.encryptcolumns.vo.UpEncryptColumnsRequest;
 import com.spms.dbhsm.secretKey.domain.DbhsmSecretKeyManage;
 import com.spms.dbhsm.secretKey.mapper.DbhsmSecretKeyManageMapper;
+import com.spms.dbhsm.taskQueue.mapper.DbhsmTaskQueueMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.util.encoders.Base64;
 import org.springframework.beans.BeanUtils;
@@ -89,6 +87,13 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
 
     @Autowired
     RemoteConfigService remoteConfigService;
+
+    @Autowired
+    DbhsmEncryptTableMapper dbhsmEncryptTableMapper;
+
+    @Autowired
+    DbhsmTaskQueueMapper dbhsmTaskQueueMapper;
+
 
     //@Value("${server.port:10013}")
     private static int dbhsmPort = 80;
@@ -236,6 +241,11 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         return 1;
     }
 
+    @Override
+    public int updateDbhsmEncryptColumns(DbhsmEncryptColumns dbhsmEncryptColumns) {
+        return dbhsmEncryptColumnsMapper.updateDbhsmEncryptColumns(dbhsmEncryptColumns);
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void stockDataEnc(DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd) throws Exception {
         // 使用DBA创建连接
@@ -343,7 +353,11 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 } else {
                     TransUtil.transFPEEncryptColumns(conn, dbhsmEncryptColumnsAdd);
                 }
-            } else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
+            }else if (DbConstants.DB_TYPE_KB.equalsIgnoreCase(instance.getDatabaseType())) {
+                //KingBase(SM4/FPE)触发器
+                TransUtil.transEncryptColumnsFunToKingBase(conn, dbhsmEncryptColumnsAdd);
+                TransUtil.transEncryptColumnsToKingBase(conn, dbhsmEncryptColumnsAdd);
+            }  else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
                 //创建 SqlServer 触发器
                 TransUtil.transEncryptColumnsToSqlServer(conn, dbhsmEncryptColumnsAdd);
             } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
@@ -436,69 +450,6 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
 
 
     /**
-     * 修改数据库加密列
-     *
-     * @param request 数据库加密列
-     * @return 结果
-     */
-    @Override
-    public AjaxResult updateDbhsmEncryptColumns(UpEncryptColumnsRequest request) {
-        /**
-         * 1.操作的数据库-表中的所有列未被加密     可以随意更改需要加密的列信息
-         * 2.操作的数据库-表中的所有列已有列被加密    被加密的列不能再次进行编辑，只能追加未被加密的列
-         * 3.操作的数据库-表中的所有列已有列被加密    只能追加
-         */
-        DbhsmEncryptColumns columns = new DbhsmEncryptColumns();
-        //根据数据库实例查询配置的加密列有哪些
-        String dbInstanceId = request.getDbInstanceId();
-        columns.setDbInstance(dbInstanceId);
-
-        //获取改实例在队列中的数据
-        List<DbhsmEncryptColumns> columnsList = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsList(columns);
-
-        //如果不存在，组装基本信息
-        if (CollectionUtils.isEmpty(columnsList)) {
-            DbhsmDbInstance dbhsmDbInstance = instanceMapper.selectDbhsmDbInstanceById(Long.valueOf(request.getDbInstanceId()));
-            BeanUtils.copyProperties(columns, request);
-            columns.setDbInstanceId(dbhsmDbInstance.getId());
-            String instance = CommandUtil.getInstance(dbhsmDbInstance);
-            columns.setDbInstance(instance);
-        }
-        List<EncryptColumns> list = request.getList();
-        List<String> cols = list.stream().map(EncryptColumns::getEncryptColumns).collect(Collectors.toList());
-        for (DbhsmEncryptColumns encryptColumns : columnsList) {
-            if (cols.contains(encryptColumns.getEncryptColumns())) {
-                //获取当前实例加密队列中的字段
-                if (!DbConstants.NOT_ENCRYPTED.equals(encryptColumns.getEncryptionStatus())) {
-                    //如果当前加密队列中的字段状态为加密中或者已加密
-                    //重复新增
-                    return AjaxResult.error("以下字段已经在加密队列存在，无法重复添加：" + encryptColumns.getEncryptColumns());
-                } else {
-                    //如果存在先删除
-                    int delCol = dbhsmEncryptColumnsMapper.deleteDbhsmEncryptColumnsById(encryptColumns.getId());
-                    log.info("删除已经存在的解密列信息：{}",delCol);
-                }
-            }
-        }
-
-        //新增数据
-        for (EncryptColumns encryptColumns : list) {
-            //赋值字段信息
-            BeanUtils.copyProperties(columns, encryptColumns);
-            columns.setBatchCount(request.getBatchCount());
-            columns.setEncryptionAlgorithm(encryptColumns.getEncryptType());
-            columns.setThreadCount(request.getThreadCount());
-            columns.setId(SnowFlakeUtil.getSnowflakeId());
-            columns.setCreateTime(DateUtils.getNowDate());
-            columns.setCreateBy(SecurityUtils.getUsername());
-            dbhsmEncryptColumnsMapper.insertDbhsmEncryptColumns(columns);
-        }
-
-
-        return AjaxResult.success();
-    }
-
-    /**
      * 批量删除数据库加密列
      *
      * @param ids 需要删除的数据库加密列主键
@@ -587,7 +538,15 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                     stockDecBeforeDel(encryptColumns, instance);
                     int ret = dbhsmEncryptColumnsMapper.deleteDbhsmEncryptColumnsByIds(ids);
                     return ret;
+                } else if (DbConstants.DB_TYPE_KB.equalsIgnoreCase(instance.getDatabaseType())) {
+                    //删除KingBase触发器
+
+                    String funName = encryptColumns.getDbUserName() + ".trfunc_" + DbConstants.algMappingStrOrFpe(encryptColumns.getEncryptionAlgorithm()) + "_" + encryptColumns.getDbUserName() + "_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
+                    sql = "DROP TRIGGER " + funName +" CASCADE; ";
+                    preparedStatement = connection.prepareStatement(sql);
+                    resultSet = preparedStatement.executeUpdate();
                 }
+
                 //执行删除视图
                 try {
                     encryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());

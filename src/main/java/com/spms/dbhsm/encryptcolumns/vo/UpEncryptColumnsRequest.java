@@ -1,5 +1,6 @@
 package com.spms.dbhsm.encryptcolumns.vo;
 
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 import java.util.List;
@@ -15,16 +16,20 @@ import java.util.List;
 @Data
 public class UpEncryptColumnsRequest {
 
+    @ApiModelProperty(name = "taskId",value = "任务队列id")
+    private Long taskId;
+
+    @ApiModelProperty(name = "dbInstanceId",value = "数据库实例ID")
     private String dbInstanceId;
 
-    private List<EncryptColumns> list;
-
+    @ApiModelProperty(name = "batchCount",value = "每批条数")
     private Integer batchCount;
 
+    @ApiModelProperty(name = "threadCount",value = "线程数")
     private Integer threadCount;
 
-    private String dbUserName;
+    @ApiModelProperty(name = "list", value = "加密列数据")
+    private List<EncryptColumns> list;
 
-    private String dbTable;
 
 }
