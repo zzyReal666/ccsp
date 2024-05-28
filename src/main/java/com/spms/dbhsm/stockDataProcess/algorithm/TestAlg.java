@@ -7,11 +7,11 @@ import java.util.Map;
  * @description
  * @since 2024/5/21 15:48
  */
-public class TestAlg implements AlgorithmSPI{
+public class TestAlg implements AlgorithmSPI {
     @Override
     public String encrypt(String data, String key, Map<String, String> props) {
 
-        return data + ":" + key + ":" + props;
+        return data + ":encrypt";
     }
 
     @Override

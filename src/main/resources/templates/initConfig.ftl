@@ -3,9 +3,9 @@ mode:
   repository:
     type: ${repositoryType}
     props:
-    namespace: ${namespace}
-    server-lists: ${serverLists}
-    operationTimeoutMilliseconds: ${operationTimeoutMilliseconds}
+      namespace: namespace_${namespace}
+      server-lists: ${serverLists}
+      operationTimeoutMilliseconds: ${operationTimeoutMilliseconds}
 
 dataSources:
   ds_0:

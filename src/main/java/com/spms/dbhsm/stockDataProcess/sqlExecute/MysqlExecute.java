@@ -48,18 +48,11 @@ public class MysqlExecute implements SqlExecuteSPI {
     //更新语句
     private static final String UPDATE = "UPDATE <table> SET <set> WHERE <where>";
 
-//    //重命名字段名字
-//    private static final String RENAME_COLUMN = "ALTER TABLE <table> CHANGE COLUMN <oldColumn> <newColumn> <type> <null> <default> <comment>";
-//
-//    //查询字段原始信息SELECT COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT, COLUMN_COMMENT
-//    private static final String SELECT_COLUMN_INFO = "SELECT COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT, COLUMN_COMMENT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '<schema>' AND TABLE_NAME = '<table>' AND COLUMN_NAME = '<column>'";
-
     //重命名字段 8.0版本以上 ALTER TABLE employees RENAME COLUMN last_name TO surname;
     private static final String RENAME_COLUMN = "ALTER TABLE <table> RENAME COLUMN <old> TO <new>";
 
     //删除字段
     private static final String DROP_COLUMN = "ALTER TABLE <table> <drop>";
-
 
 
     //获取主键字段名称
@@ -94,11 +87,25 @@ public class MysqlExecute implements SqlExecuteSPI {
     @Override
     public void addTempColumn(Connection conn, String table, List<AddColumnsDTO> addColumnsDtoList) {
         StringBuilder sql = new StringBuilder().append(new ST(ADD_COLUMN).add("table", table).render());
+
         addColumnsDtoList.forEach(addColumnsDTO -> {
-            String columnDefinition = new ST(ADD_COLUMN_LOOP).add("field", addColumnsDTO.getColumnName() + TEMP_COLUMN_SUFFIX).add("type", "text").add("null", addColumnsDTO.isNotNull() ? "NOT NULL" : "")
-                    //todo 默认值暂时不设置
-                    .add("default", "").add("comment", StringUtils.isBlank(addColumnsDTO.getComment()) ? "" : "COMMENT '" + addColumnsDTO.getComment() + "'").render();
-            sql.append(columnDefinition).append(",");
+            //列定义
+            Map<String, String> columnDefinition = addColumnsDTO.getColumnDefinition();
+            //加密 全部改成text
+            if (addColumnsDTO.isEncrypt()) {
+                String definitionSql = new ST(ADD_COLUMN_LOOP).add("field", addColumnsDTO.getColumnName() + TEMP_COLUMN_SUFFIX).add("type", "text").add("null", addColumnsDTO.isNotNull() ? "NOT NULL" : "")
+                        //todo 默认值暂时不设置
+                        .add("default", "").add("comment", StringUtils.isBlank(addColumnsDTO.getComment()) ? "" : "COMMENT '" + addColumnsDTO.getComment() + "'").render();
+                sql.append(definitionSql).append(",");
+            }
+            //解密 还原为原始字段
+            else {
+                String definitionSql = new ST(ADD_COLUMN_LOOP).add("field", addColumnsDTO.getColumnName() + TEMP_COLUMN_SUFFIX).add("type", columnDefinition.get("type")).add("null", "NO".equals(columnDefinition.get("null")) ? "NOT NULL" : "")
+                        //todo 默认值暂时不设置
+                        .add("default", columnDefinition).add("comment", StringUtils.isBlank(addColumnsDTO.getComment()) ? "" : "COMMENT '" + addColumnsDTO.getComment() + "'").render();
+                sql.append(definitionSql).append(",");
+            }
+
 
         });
         //删除最后一个逗号
@@ -136,13 +143,7 @@ public class MysqlExecute implements SqlExecuteSPI {
     @Override
     public List<Map<String, String>> selectColumn(Connection conn, String table, List<String> columns, int limit, int offset) {
         String columnStr = String.join(",", columns);
-        String sql = new ST(SELECT_COLUMN)
-                .add("columns", columnStr)
-                .add("id", columns.get(0))
-                .add("table", table)
-                .add("limit", limit)
-                .add("offset", offset)
-                .render();
+        String sql = new ST(SELECT_COLUMN).add("columns", columnStr).add("id", columns.get(0)).add("table", table).add("limit", limit).add("offset", offset).render();
         log.info("selectColumn sql:{}", sql);
         Statement statement;
         try {
@@ -207,7 +208,7 @@ public class MysqlExecute implements SqlExecuteSPI {
                 String sql = new ST(UPDATE).add("table", table).add("set", set).add("where", where).render();
                 set.setLength(0);
                 where.setLength(0);
-                log.info("batchUpdate sql {}",sql);
+                log.info("batchUpdate sql {}", sql);
                 try {
                     statement.addBatch(sql);
                 } catch (SQLException e) {
@@ -250,7 +251,7 @@ public class MysqlExecute implements SqlExecuteSPI {
     @Override
     public void dropColumn(Connection conn, String table, List<String> columns) {
         StringBuilder drop = new StringBuilder();
-        columns.forEach(col->{
+        columns.forEach(col -> {
             drop.append("DROP COLUMN ").append(col).append(",");
         });
         drop.deleteCharAt(drop.length() - 1);
