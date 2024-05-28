@@ -9,8 +9,11 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,6 +27,7 @@ import java.util.Map;
 @Getter
 @Setter
 @ToString
+@Slf4j
 public class InitZookeeperTask extends Thread {
 
     //数据库信息
@@ -32,8 +36,14 @@ public class InitZookeeperTask extends Thread {
     //模板引擎
     private static final TemplateEngine TEMPLATE_ENGINE = new FreeMarkerTemplateEngine();
 
+
+    //生成的配置文件、init-zookeeper jar start.sh 脚本的路径
+    private static final String ROOT_PATH = "/Users/zhangzhongyuan/config/ftl/";
+
+
     @Override
     public void run() {
+
 
         //生成<databaseId>.properties
         generateProperties();
@@ -56,20 +66,40 @@ public class InitZookeeperTask extends Thread {
                 }
             });
             //result 写入文件 /Users/zhangzhongyuan/config/ftl
-            FileUtil.writeUtf8String(TEMPLATE_ENGINE.process(), "/Users/zhangzhongyuan/config/ftl/" + databaseDTO.getId() + "/" + databaseDTO.getId() + ".properties");
+            FileUtil.writeUtf8String(TEMPLATE_ENGINE.process(), ROOT_PATH + databaseDTO.getId() + "/" + "application.properties");
         } catch (TemplateEngineException e) {
             throw new RuntimeException(e);
         }
     }
 
+    //执行脚本 启动 空项目 init zookeeper
     private void runInitZookeeper() {
-        //调用linux命令启动一个空的项目，使用生成的配置文件 用来初始化
         try {
-            Runtime.getRuntime().exec("sh /Users/zhangzhongyuan/config/ftl/start.sh " + databaseDTO.getId());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+
+            // 创建 ProcessBuilder 对象，并设置要执行的命令（包括脚本名称和参数）
+            ProcessBuilder processBuilder = new ProcessBuilder("/bin/bash", ROOT_PATH + databaseDTO.getId() + "run_init_zookeeper.sh", "mysql", ROOT_PATH + databaseDTO.getId() + "application.properties");
+
+            // 启动进程
+            Process process = processBuilder.start();
+
+            // 读取进程的输出流
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                log.info("init-zookeeper logs: {}", line);
+
+            }
+
+            // 等待进程执行完成
+            int exitCode = process.waitFor();
+
+            // 打印进程执行结果
+            log.info("init-zookeeper exit code: {}", exitCode);
+        } catch (IOException | InterruptedException ignore) {
+
         }
     }
+
 
     private void generateConfig() {
         //生成配置文件
@@ -79,7 +109,7 @@ public class InitZookeeperTask extends Thread {
             //数据模型
             TEMPLATE_ENGINE.setDataModel(getYamlDataModel());
             //result 写入文件 /Users/zhangzhongyuan/config/ftl
-            FileUtil.writeUtf8String(TEMPLATE_ENGINE.process(), "/Users/zhangzhongyuan/config/ftl/" + databaseDTO.getId() + "/" + databaseDTO.getId() + ".yaml");
+            FileUtil.writeUtf8String(TEMPLATE_ENGINE.process(), ROOT_PATH + databaseDTO.getId() + "/" + "config.yaml");
         } catch (TemplateEngineException e) {
             throw new RuntimeException(e);
         }

@@ -8,7 +8,7 @@ import org.apache.zookeeper.data.Stat;
 
 /**
  * @author zzypersonally@gmail.com
- * @description  zookeeper工具
+ * @description zookeeper工具
  * @since 2024/5/20 14:50
  */
 public class ZookeeperUtils {
@@ -21,7 +21,7 @@ public class ZookeeperUtils {
     private static int defaultRetryTime = 1000;
 
 
-    //region //================初始化================
+    //region //================初始化 close================
     public static void init(String url, int sessionTimeoutMs, int connectionTimeoutMs, int retryTime) {
         defaultUrl = StringUtil.isNullOrEmpty(url) ? defaultUrl : url;
         defaultSessionTimeoutMs = sessionTimeoutMs == 0 ? defaultSessionTimeoutMs : sessionTimeoutMs;
@@ -31,8 +31,9 @@ public class ZookeeperUtils {
         client.start();
     }
 
+
     public static void init(String url) {
-        init(url, 0, 0, 0);
+        init(url, 5000, 5000, 3);
     }
 
     public static void init(String url, int sessionTimeoutMs) {
@@ -43,6 +44,15 @@ public class ZookeeperUtils {
         init(url, sessionTimeoutMs, connectionTimeoutMs, 0);
     }
 
+    //close
+    public static void close() {
+        if (client != null) {
+            client.close();
+        }
+    }
+
+    //endregion
+
 
     /**
      * 更新 节点
@@ -52,7 +62,9 @@ public class ZookeeperUtils {
      * @param url      zookeeper地址
      */
     public static void updateNode(String data, String nodePath, String url) {
-        init(url);
+        if (client == null) {
+            init(url);
+        }
         //不存在则创建节点并且添加数据 存在则直接添加数据
         try {
             Stat stat = client.checkExists().forPath(nodePath);
@@ -62,10 +74,6 @@ public class ZookeeperUtils {
                 client.setData().forPath(nodePath, data.getBytes());
             }
         } catch (Exception ignore) {
-        } finally {
-            if (client != null) {
-                client.close();
-            }
         }
     }
 
@@ -82,16 +90,14 @@ public class ZookeeperUtils {
      */
     public static void deleteNode(String nodePath, String url) {
         try {
-            init(url);
+            if (client == null) {
+                init(url);
+            }
             Stat stat = client.checkExists().forPath(nodePath);
             if (stat != null) {
                 client.delete().deletingChildrenIfNeeded().forPath(nodePath);
             }
         } catch (Exception ignored) {
-        } finally {
-            if (client != null) {
-                client.close();
-            }
         }
     }
 
@@ -99,15 +105,13 @@ public class ZookeeperUtils {
     //是否存在该节点
     public static boolean existsNode(String nodePath, String url) {
         try {
-            init(url);
+            if (client == null) {
+                init(url);
+            }
             Stat stat = client.checkExists().forPath(nodePath);
             return stat != null;
         } catch (Exception e) {
             throw new RuntimeException("zookeeper existsNode error", e);
-        } finally {
-            if (client != null) {
-                client.close();
-            }
         }
     }
 }

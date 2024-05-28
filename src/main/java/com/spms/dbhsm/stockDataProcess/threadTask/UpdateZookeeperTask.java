@@ -38,15 +38,15 @@ public class UpdateZookeeperTask extends Thread {
             //添加加密规则
             addEncryptRules(col);
         });
-
+        ZookeeperUtils.close();
     }
 
     private void addEncryptRules(ColumnDTO col) {
         //基础路径
-        String path = PathEnum.RULE.getValue().replace("${namespace}", databaseDTO.getId().toString()).replace("${tableName}", databaseDTO.getTableDTOList().get(0).getTableName());
+        String path = PathEnum.RULE.getValue().replace("${namespace}", databaseDTO.getDatabaseIp() + ":" + databaseDTO.getDatabasePort()).replace("${tableName}", databaseDTO.getTableDTOList().get(0).getTableName());
 
         //新增活跃版本号 active_version:0
-        ZookeeperUtils.updateNode("0", path + PathEnum.VERSION.getValue());
+        ZookeeperUtils.updateNode("0", path + PathEnum.ACTIVE_VERSION.getValue());
 
         //新增加密规则  versions/0  目录下
         TemplateEngine templateEngine = new FreeMarkerTemplateEngine();
@@ -63,19 +63,27 @@ public class UpdateZookeeperTask extends Thread {
             databaseDTO.getTableDTOList().get(0).getColumnDTOList().forEach(column -> {
                 Map<String, Object> columnMap = new HashMap<>();
                 columnMap.put("name", column.getColumnName());
-                if ((boolean) column.getAssistedQueryProps().get("enable")) {
-                    Map<String, Object> assistedQuery = new HashMap<>();
-                    assistedQuery.put("encryptorName", column.getAssistedQueryProps().get("encryptor"));
-                    assistedQuery.put("name", column.getAssistedQueryProps().get("columnName"));
-                    columnMap.put("assistedQuery", assistedQuery);
-                }
-                if ((boolean) column.getLikeQueryProps().get("enable")) {
-                    Map<String, Object> likeQuery = new HashMap<>();
-                    likeQuery.put("encryptorName", column.getLikeQueryProps().get("alg"));
-                    likeQuery.put("name", column.getLikeQueryProps().get("columnName"));
-                    columnMap.put("likeQuery", likeQuery);
-                }
-                columnMap.put("name", column.getColumnName());
+
+                //加密
+                Map<String, Object> cipher = new HashMap<>();
+                cipher.put("encryptorName", column.getColumnName()+"_encryptor");
+                cipher.put("name", column.getColumnName());
+                columnMap.put("cipher", cipher);
+
+//                //todo 模糊查询和辅助查询
+//                if (column.getAssistedQueryProps() != null) {
+//                    Map<String, Object> assistedQuery = new HashMap<>();
+//                    assistedQuery.put("encryptorName", column.getAssistedQueryProps().get("encryptor"));
+//                    assistedQuery.put("name", column.getAssistedQueryProps().get("columnName"));
+//                    columnMap.put("assistedQuery", assistedQuery);
+//                }
+//                if (column.getLikeQueryProps() != null) {
+//                    Map<String, Object> likeQuery = new HashMap<>();
+//                    likeQuery.put("encryptorName", column.getLikeQueryProps().get("alg"));
+//                    likeQuery.put("name", column.getLikeQueryProps().get("columnName"));
+//                    columnMap.put("likeQuery", likeQuery);
+//                }
+
                 columns.add(columnMap);
             });
             dataModel.put("columns", columns);
@@ -93,10 +101,10 @@ public class UpdateZookeeperTask extends Thread {
 
     private void addEncryptor(ColumnDTO col) {
         //基础路径
-        String path = PathEnum.ENCRYPTOR.getValue().replace("${namespace}", databaseDTO.getId().toString()).replace("${encryptorName}", col.getColumnName() + "_encryptor");
+        String path = PathEnum.ENCRYPTOR.getValue().replace("${namespace}", databaseDTO.getDatabaseIp() + ":" + databaseDTO.getDatabasePort()).replace("${encryptorName}", col.getColumnName() + "_encryptor");
 
         //新增活跃版本号
-        ZookeeperUtils.updateNode("0", path + PathEnum.VERSION.getValue());
+        ZookeeperUtils.updateNode("0", path + PathEnum.ACTIVE_VERSION.getValue());
 
         //新增加密器  versions/0  目录下
         TemplateEngine templateEngine = new FreeMarkerTemplateEngine();
@@ -124,7 +132,7 @@ public class UpdateZookeeperTask extends Thread {
             templateEngine.setDataModel(dataModel);
 
             // 写入zk
-            ZookeeperUtils.updateNode(templateEngine.process(), path+PathEnum.VERSION);
+            ZookeeperUtils.updateNode(templateEngine.process(), path + PathEnum.VERSION.getValue());
         } catch (Exception ignore) {
         }
     }

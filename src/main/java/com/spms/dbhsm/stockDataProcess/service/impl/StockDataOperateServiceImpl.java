@@ -12,7 +12,7 @@ import com.spms.dbhsm.stockDataProcess.domain.dto.DatabaseDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.TableDTO;
 import com.spms.dbhsm.stockDataProcess.service.StockDataOperateService;
 import com.spms.dbhsm.stockDataProcess.sqlExecute.SqlExecuteSPI;
-import com.spms.dbhsm.stockDataProcess.threadTask.InitZookeeperTask;
+import com.spms.dbhsm.stockDataProcess.threadTask.UpdateZookeeperTask;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -84,7 +84,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         }
 
         // 新增临时字段
-        addTempColumns(tableDTO, sqlExecute, dbaConn);
+        addTempColumns(tableDTO, sqlExecute, dbaConn,operateType);
 
         //分块 加/解密
         blockOperate(operateType, sqlExecute, dbaConn, databaseDTO, primaryKey, 0);
@@ -123,9 +123,9 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
 
 
     //新增临时字段
-    private void addTempColumns(TableDTO tableDTO, SqlExecuteSPI sqlExecute, Connection dbaConn) {
+    private void addTempColumns(TableDTO tableDTO, SqlExecuteSPI sqlExecute, Connection dbaConn, boolean operateType) {
         ArrayList<AddColumnsDTO> addColumns = new ArrayList<>();
-        tableDTO.getColumnDTOList().forEach(columnDTO -> addColumns.add(convertToDTO(columnDTO)));
+        tableDTO.getColumnDTOList().forEach(columnDTO -> addColumns.add(convertToDTO(columnDTO,operateType)));
         sqlExecute.addTempColumn(dbaConn, tableDTO.getTableName(), addColumns);
     }
 
@@ -156,17 +156,17 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
 
     //写入加密策略到zookeeper
     private void writeConfigToZookeeper(DatabaseDTO databaseDTO) throws InterruptedException {
-        //如果当前是第一次走该服务，初始化zk配置中心的数据 todo 这部分是否放在数据库管理部分更为合理？
-        if (FIRST_CALL.get(databaseDTO.getId()) == null) {
-            FIRST_CALL.put(databaseDTO.getId(), true);
-            InitZookeeperTask initZookeeperTask = new InitZookeeperTask(databaseDTO);
-            initZookeeperTask.start();
-            initZookeeperTask.join();
-        }
-//        //开一个线程 写加密策略到zk
-//        Thread writeZkthread = new UpdateZookeeperTask(databaseDTO);
-//        writeZkthread.start();
-//        writeZkthread.join();
+//        //如果当前是第一次走该服务，初始化zk配置中心的数据 todo 这部分是否放在数据库管理部分更为合理？
+//        if (FIRST_CALL.get(databaseDTO.getId()) == null) {
+//            FIRST_CALL.put(databaseDTO.getId(), true);
+//            InitZookeeperTask initZookeeperTask = new InitZookeeperTask(databaseDTO);
+//            initZookeeperTask.start();
+//            initZookeeperTask.join();
+//        }
+        //开一个线程 写加密策略到zk
+        Thread writeZkthread = new UpdateZookeeperTask(databaseDTO);
+        writeZkthread.start();
+        writeZkthread.join();
 
     }
 
@@ -306,11 +306,13 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
 
     //region//======>工具方法
     //DTO转换
-    private AddColumnsDTO convertToDTO(ColumnDTO columnDTO) {
+    private AddColumnsDTO convertToDTO(ColumnDTO columnDTO, boolean operateType) {
         AddColumnsDTO addColumnsDTO = new AddColumnsDTO();
         addColumnsDTO.setColumnName(columnDTO.getColumnName());
         addColumnsDTO.setComment(columnDTO.getComment());
         addColumnsDTO.setNotNull(columnDTO.isNotNull());
+        addColumnsDTO.setColumnDefinition(columnDTO.getColumnDefinition());
+        addColumnsDTO.setEncrypt(operateType);
         return addColumnsDTO;
     }
 

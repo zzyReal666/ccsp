@@ -20,7 +20,7 @@ public class StockDataOperateServiceImplTest {
     @Test
     public void stockDataOperate() throws Exception {
         DatabaseDTO databaseDTO = getParams();
-        initEnvironment(databaseDTO);
+//        initEnvironment(databaseDTO);
         StockDataOperateServiceImpl service = new StockDataOperateServiceImpl();
         service.stockDataOperate(databaseDTO, true);
     }
@@ -68,29 +68,38 @@ public class StockDataOperateServiceImplTest {
         name.setEncryptKeyIndex("1");
 
         //age
-        ColumnDTO age = new ColumnDTO();
-        age.setId(2L);
-        age.setColumnName("age");
-        age.setComment("年龄");
-        age.setNotNull(false);
-        age.setEncryptAlgorithm("TestAlg");
-        age.setEncryptKeyIndex("1");
+//        ColumnDTO age = new ColumnDTO();
+//        age.setId(2L);
+//        age.setColumnName("age");
+//        age.setComment("年龄");
+//        age.setNotNull(false);
+//        age.setEncryptAlgorithm("TestAlg");
+//        age.setEncryptKeyIndex("1");
 
-        //address
-        ColumnDTO address = new ColumnDTO();
-        address.setId(3L);
-        address.setColumnName("address");
-        address.setComment("地址");
-        address.setNotNull(false);
-        address.setEncryptAlgorithm("TestAlg");
-        address.setEncryptKeyIndex("1");
+//        //address
+//        ColumnDTO address = new ColumnDTO();
+//        address.setId(3L);
+//        address.setColumnName("address");
+//        address.setComment("地址");
+//        address.setNotNull(false);
+//        address.setEncryptAlgorithm("TestAlg");
+//        address.setEncryptKeyIndex("1");
 
-        List<ColumnDTO> columns = Arrays.asList(name, age, address);
+        //phone
+        ColumnDTO phone = new ColumnDTO();
+        phone.setId(3L);
+        phone.setColumnName("phone");
+        phone.setComment("电话");
+        phone.setNotNull(false);
+        phone.setEncryptAlgorithm("TestAlg");
+        phone.setEncryptKeyIndex("1");
+
+        List<ColumnDTO> columns = Arrays.asList(name, phone);
 
         TableDTO tableDTO = new TableDTO();
         tableDTO.setId(1L);
         tableDTO.setBatchSize(10);
-        tableDTO.setTableName("testEnc");
+        tableDTO.setTableName("student");
         tableDTO.setThreadNum(10);
         tableDTO.setColumnDTOList(columns);
 
