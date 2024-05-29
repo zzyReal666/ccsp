@@ -117,9 +117,9 @@ public class DbhsmTaskQueueController extends BaseController {
 
     @GetMapping("/taskQueueNoEncList")
     @ApiOperation(value = "获取加密列详情未加密的列")
-    public AjaxResult2<List<EncryptColumns>> taskQueueNoEncList(@RequestParam(value = "taskId") Long taskId,
+    public AjaxResult2<List<EncryptColumns>> taskQueueNoEncList(@RequestParam(value = "tableId") String tableId,
                                                                 @RequestParam(value = "taskMode") String taskMode) {
-        return dbhsmTaskQueueService.taskQueueNoEncList(taskId, taskMode);
+        return dbhsmTaskQueueService.taskQueueNoEncList(tableId, taskMode);
     }
 
     @PostMapping(value = "/upOnDownTask")

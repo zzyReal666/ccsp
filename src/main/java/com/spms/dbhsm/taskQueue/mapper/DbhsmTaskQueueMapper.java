@@ -83,7 +83,7 @@ public interface DbhsmTaskQueueMapper {
 
     List<TaskQueueListResponse> querByEncryptColumnsList(TaskQueueListRequest request);
 
-    List<DbhsmEncryptColumns> selectDbhsmEncryptColumnsDetails(@Param("taskId") Long taskId, @Param("taskMode") String taskMode);
+    List<DbhsmEncryptColumns> selectDbhsmEncryptColumnsDetails(@Param("tableId") String tableId, @Param("taskMode") String taskMode);
 
     void deleteRecords(@Param("taskId")  Long taskId);
 

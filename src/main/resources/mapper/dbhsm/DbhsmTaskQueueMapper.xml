@@ -140,7 +140,7 @@
         tab.table_name as tableName,
         <if test="taskMode == 'enc'.toString()">
             GROUP_CONCAT(case when encryption_status = 2 then encrypt_columns end) as finishedColumns,
-            GROUP_CONCAT(case when encryption_status = 0 then encrypt_columns end) as unfinishedColumns,
+            GROUP_CONCAT(case when encryption_status in (0,1) then encrypt_columns end) as unfinishedColumns,
         </if>
         task.enc_status as encStatus,
         task.dec_status as decStatus,
@@ -192,7 +192,7 @@
         ins.id = tab.instance_id
         left join dbhsm_task_queue task on
         task.table_id = tab.table_id
-        where task.task_id = #{taskId}
+        where col.table_id = #{tableId}
         <if test="taskMode == 'enc'.toString()">
             and task.enc_status is not null
         </if>

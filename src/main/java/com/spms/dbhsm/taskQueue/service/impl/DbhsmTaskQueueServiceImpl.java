@@ -269,6 +269,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
 
 
     @Override
+    @Transactional
     public AjaxResult insertDecColumnsOnEnc(TaskDecColumnsOnEncRequest request) {
         /**
          * 解密队列添加到加密队列
@@ -284,6 +285,11 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         DbhsmEncryptColumns dbhsmEncryptColumn = new DbhsmEncryptColumns();
         dbhsmEncryptColumn.setTableId(encryptTable.getTableId());
         dbhsmEncryptColumn.setEncryptionStatus(3);
+        if (null == dbhsmTaskQueue.getDecStatus()) {
+            //加密队列加到解密队列
+            dbhsmEncryptColumn.setEncryptionStatus(2);
+        }
+
         //查询表中的解密列
         List<DbhsmEncryptColumns> columnsList = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsList(dbhsmEncryptColumn);
 
@@ -298,8 +304,10 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                 if (encryptColumns.getEncryptColumns().equals(dbhsmEncryptColumns.getEncryptColumns())) {
                     BeanUtils.copyProperties(encryptColumns, dbhsmEncryptColumns);
                     //修改未未开始加密
-                    dbhsmEncryptColumns.setEncryptionStatus(0);
-                    System.out.println(JSON.toJSONString(dbhsmEncryptColumns, SerializerFeature.PrettyFormat));
+                    dbhsmEncryptColumns.setEncryptionStatus(2);
+                    if (null == dbhsmTaskQueue.getDecStatus()) {
+                        dbhsmEncryptColumn.setEncryptionStatus(3);
+                    }
                     dbhsmEncryptColumnsMapper.updateDbhsmEncryptColumns(dbhsmEncryptColumns);
                 }
             }
@@ -330,14 +338,21 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        boolean isTask = false;
         String snowflakeId = request.getTableId();
         //加密逻辑
         if (DbConstants.ENC_MODE.equals(request.getQueueMode())) {
-            snowflakeId = SnowFlakeUtil.getSnowflakeId();
-            dbhsmEncryptTable.setTableId(snowflakeId);
-            dbhsmEncryptTable.setCreateTime(DateUtils.getNowDate());
-            dbhsmEncryptTable.setCreateBy(SecurityUtils.getUsername());
-            dbhsmEncryptTableMapper.insertRecord(dbhsmEncryptTable);
+            DbhsmEncryptTable encryptTable = dbhsmEncryptTableMapper.queryTableRecord(request.getInstanceId(), request.getTableName());
+            if (null == encryptTable) {
+                snowflakeId = SnowFlakeUtil.getSnowflakeId();
+                dbhsmEncryptTable.setTableId(snowflakeId);
+                dbhsmEncryptTable.setCreateTime(DateUtils.getNowDate());
+                dbhsmEncryptTable.setCreateBy(SecurityUtils.getUsername());
+                dbhsmEncryptTableMapper.insertRecord(dbhsmEncryptTable);
+            } else {
+                snowflakeId = encryptTable.getTableId();
+                isTask = true;
+            }
         }
 
         String instance = CommandUtil.getInstance(dbhsmDbInstance);
@@ -366,11 +381,22 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             }
         }
 
+
+        if (isTask){
+            List<DbhsmEncryptColumns> columnsList = dbhsmEncryptColumnsMapper.selectDbhsmEncryptByTableId(snowflakeId);
+            columnsList = columnsList.stream().filter(db -> 3 > db.getEncryptionStatus()).collect(Collectors.toList());
+            if (CollectionUtils.isEmpty(columnsList)){
+                //如果为空删除该列
+            }
+            return AjaxResult.success();
+        }
+
         //添加任务表
         DbhsmTaskQueue dbhsmTaskQueue = new DbhsmTaskQueue();
         dbhsmTaskQueue.setTableId(snowflakeId);
         dbhsmTaskQueue.setCreateTime(DateUtils.getNowDate());
         dbhsmTaskQueue.setCreateBy(SecurityUtils.getUsername());
+
         if (DbConstants.DEC_MODE.equals(request.getQueueMode())) {
             //解密
             dbhsmTaskQueue.setDecStatus(DbConstants.DEC_FLAG);
@@ -592,7 +618,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
     }
 
     @Override
-    public AjaxResult2<List<EncryptColumns>> taskQueueNoEncList(Long id, String taskMode) {
+    public AjaxResult2<List<EncryptColumns>> taskQueueNoEncList(String id, String taskMode) {
         List<DbhsmEncryptColumns> encryptColumns = dbhsmTaskQueueMapper.selectDbhsmEncryptColumnsDetails(id, taskMode);
         if (CollectionUtils.isEmpty(encryptColumns)) {
             return AjaxResult2.success(new ArrayList<>());

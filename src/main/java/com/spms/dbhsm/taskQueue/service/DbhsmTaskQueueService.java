@@ -29,7 +29,7 @@ public interface DbhsmTaskQueueService {
 
     AjaxResult queryEncryptionProgress(Long taskId) ;
 
-    AjaxResult2<List<EncryptColumns>> taskQueueNoEncList(Long id, String taskMode);
+    AjaxResult2<List<EncryptColumns>> taskQueueNoEncList(String id, String taskMode);
 
     AjaxResult deleteEncryptColumns(Long taskId);
 
