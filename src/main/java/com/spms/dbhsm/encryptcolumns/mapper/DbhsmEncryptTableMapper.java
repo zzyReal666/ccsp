@@ -78,4 +78,11 @@ public interface DbhsmEncryptTableMapper {
 
     void deleteRecords(@Param("tableId") String tableId);
 
+    /*
+     * @description 根据实例ID和表名称查询加密表信息
+     * @author wzh [zhwang2012@yeah.net]
+     * @date 16:22 2024/5/28
+     */
+    DbhsmEncryptTable queryTableRecord(@Param("dbInstanceId") Long dbInstanceId,@Param("tableName") String tableName);
+
 }

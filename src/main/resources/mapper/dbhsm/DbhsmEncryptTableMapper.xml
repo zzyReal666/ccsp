@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.spms.dbhsm.encryptcolumns.mapper.DbhsmEncryptTableMapper">
+	<!-- <resultMap type="com.spms.mapper.entities.DbhsmEncryptTable" id="HsmEncryptTableDO" extends="com.spms.mapper.mappers.immutable.${meta.immapperInterfaceClassName}.DbhsmEncryptTable">
+
+	</resultMap>  -->
+	<resultMap type="com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptTable" id="EncryptTable">
+		<result property="tableId" column="table_id" />
+		<result property="instanceId" column="instance_id" />
+		<result property="tableDdl" column="table_ddl" />
+		<result property="tableName" column="table_name" />
+		<result property="tableStatus" column="table_status" />
+		<result property="threadCount" column="thread_count" />
+		<result property="batchCount" column="batch_count" />
+		<result property="createTime" column="create_time" />
+		<result property="createBy" column="create_by" />
+		<result property="updateTime" column="update_time" />
+		<result property="updateBy" column="update_by" />
+			</resultMap>
+
+	<select id="queryByEntities" resultMap="EncryptTable" parameterType="com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptTable">
+        select * from dbhsm_encrypt_table
+        <where>
+            <if test="tableId!=null and tableId!=''">and table_id=#{tableId}</if>
+            <if test="instanceId!=null and instanceId!=''">and instance_id=#{instanceId}</if>
+            <if test="tableDdl!=null and tableDdl!=''">and table_ddl=#{tableDdl}</if>
+            <if test="tableName!=null and tableName!=''">and table_name=#{tableName}</if>
+            <if test="tableStatus!=null and tableStatus!=''">and table_status=#{tableStatus}</if>
+            <if test="threadCount!=null and threadCount!=''">and thread_count=#{threadCount}</if>
+            <if test="batchCount!=null and batchCount!=''">and batch_count=#{batchCount}</if>
+            <if test="createTime!=null and createTime!=''">and create_time=#{createTime}</if>
+            <if test="createBy!=null and createBy!=''">and create_by=#{createBy}</if>
+            <if test="updateTime!=null and updateTime!=''">and update_time=#{updateTime}</if>
+            <if test="updateBy!=null and updateBy!=''">and update_by=#{updateBy}</if>
+        </where>
+    </select>
+
+	<select id="findByPrimaryKey" resultMap="EncryptTable">
+			select
+			* from dbhsm_encrypt_table
+			where
+		    table_id=#{tableId}
+	</select>
+
+	<update id="updateRecord" parameterType="com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptTable">
+		update dbhsm_encrypt_table
+		<set>
+         table_id=#{tableId}
+		<if test="instanceId!=null">,instance_id = #{instanceId}</if>
+		<if test="tableDdl!=null">,table_ddl = #{tableDdl}</if>
+		<if test="tableName!=null">,table_name = #{tableName}</if>
+		<if test="tableStatus!=null">,table_status = #{tableStatus}</if>
+		<if test="threadCount!=null">,thread_count = #{threadCount}</if>
+		<if test="batchCount!=null">,batch_count = #{batchCount}</if>
+		<if test="createTime!=null">,create_time = #{createTime}</if>
+		<if test="createBy!=null">,create_by = #{createBy}</if>
+		<if test="updateTime!=null">,update_time = #{updateTime}</if>
+		<if test="updateBy!=null">,update_by = #{updateBy}</if>
+		</set>
+		where
+       	 table_id=#{tableId}
+	</update>
+
+	<insert id="insertRecord" parameterType="com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptTable" useGeneratedKeys="true" keyProperty="tableId" >
+		insert into dbhsm_encrypt_table ( table_id
+										, instance_id
+										, table_ddl
+										, table_name
+										, table_status
+										, thread_count
+										, batch_count
+										, create_time
+										, create_by
+										, update_time
+										, update_by)
+		values ( #{tableId}
+			   , #{instanceId}
+			   , #{tableDdl}
+			   , #{tableName}
+			   , #{tableStatus}
+			   , #{threadCount}
+			   , #{batchCount}
+			   , #{createTime}
+			   , #{createBy}
+			   , #{updateTime}
+			   , #{updateBy})
+	</insert>
+
+
+
+	<update id="updateRecords" parameterType="hashmap">
+        update dbhsm_encrypt_table
+        <set>
+            table_id=#{tableId}
+            <if test="instanceId!=null">,instance_id = #{instanceId}</if>
+            <if test="tableDdl!=null">,table_ddl = #{tableDdl}</if>
+            <if test="tableName!=null">,table_name = #{tableName}</if>
+            <if test="tableStatus!=null">,table_status = #{tableStatus}</if>
+            <if test="threadCount!=null">,thread_count = #{threadCount}</if>
+            <if test="batchCount!=null">,batch_count = #{batchCount}</if>
+            <if test="createTime!=null">,create_time = #{createTime}</if>
+            <if test="createBy!=null">,create_by = #{createBy}</if>
+            <if test="updateTime!=null">,update_time = #{updateTime}</if>
+            <if test="updateBy!=null">,update_by = #{updateBy}</if>
+        </set>
+        <where>
+            <if test="tableId!=null and tableId!=''">and table_id=#{tableId}</if>
+            <if test="instanceId!=null and instanceId!=''">and instance_id=#{instanceId}</if>
+            <if test="tableDdl!=null and tableDdl!=''">and table_ddl=#{tableDdl}</if>
+            <if test="tableName!=null and tableName!=''">and table_name=#{tableName}</if>
+            <if test="tableStatus!=null and tableStatus!=''">and table_status=#{tableStatus}</if>
+            <if test="threadCount!=null and threadCount!=''">and thread_count=#{threadCount}</if>
+            <if test="batchCount!=null and batchCount!=''">and batch_count=#{batchCount}</if>
+            <if test="createTime!=null and createTime!=''">and create_time=#{createTime}</if>
+            <if test="createBy!=null and createBy!=''">and create_by=#{createBy}</if>
+            <if test="updateTime!=null and updateTime!=''">and update_time=#{updateTime}</if>
+            <if test="updateBy!=null and updateBy!=''">and update_by=#{updateBy}</if>
+        </where>
+    </update>
+
+	<insert id="insertBatch" parameterType="java.util.ArrayList">
+		insert  into dbhsm_encrypt_table (					table_id
+								,instance_id
+								,table_ddl
+								,table_name
+								,table_status
+								,thread_count
+								,batch_count
+								,create_time
+								,create_by
+								,update_time
+								,update_by
+							)
+		values
+		<foreach collection="list" index="index" item="i" separator=",">
+		(		#{i.tableId}
+					,#{i.instanceId}
+					,#{i.tableDdl}
+					,#{i.tableName}
+					,#{i.tableStatus}
+					,#{i.threadCount}
+					,#{i.batchCount}
+					,#{i.createTime}
+					,#{i.createBy}
+					,#{i.updateTime}
+					,#{i.updateBy}
+			)
+		</foreach>
+	</insert>
+	<!-- //**************************以下方法为开发者补充*********************************/ -->
+
+
+	<delete id="deleteRecords" parameterType="java.lang.String">
+		delete from dbhsm_encrypt_table where table_id=#{tableId}
+	</delete>
+
+	<select id="queryTableRecord" resultMap="EncryptTable">
+		select * from dbhsm_encrypt_table where instance_id =#{dbInstanceId} and table_name=#{tableName}
+	</select>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</mapper>

@@ -2,6 +2,7 @@ package com.spms.dbhsm.dbInstance.service;
 
 import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.web.domain.AjaxResult;
+import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.spms.common.SelectOption;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import com.spms.dbhsm.dbInstance.domain.VO.InstanceServerNameVO;
@@ -79,4 +80,6 @@ public interface IDbhsmDbInstanceService
 
     public int getPwdPolicyToDM(Long id);
     public int getPwdMinLenToDM(Long id);
+
+    AjaxResult2<Boolean> connectionTest(Long id);
 }

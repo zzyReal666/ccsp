@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.spms.dbhsm.taskQueue.mapper.DbhsmTaskQueueMapper">
+    <!-- <resultMap type="com.spms.mapper.entities.DbhsmTaskQueue" id="HsmTaskQueueDO" extends="com.spms.mapper.mappers.immutable.${meta.immapperInterfaceClassName}.DbhsmTaskQueue">
+
+    </resultMap>  -->
+    <resultMap type="com.spms.dbhsm.taskQueue.domain.DbhsmTaskQueue" id="TaskQueue">
+        <result property="taskId" column="task_id"/>
+        <result property="tableId" column="table_id"/>
+        <result property="encStatus" column="enc_status"/>
+        <result property="decStatus" column="dec_status"/>
+        <result property="createTime" column="create_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="updateBy" column="update_by"/>
+    </resultMap>
+
+
+    <select id="queryByEntities" resultMap="TaskQueue" parameterType="com.spms.dbhsm.taskQueue.domain.DbhsmTaskQueue">
+        select * from dbhsm_task_queue
+        <where>
+            <if test="taskId!=null and taskId!=''">and task_id=#{taskId}</if>
+            <if test="tableId!=null and tableId!=''">and table_id = #{tableId}</if>
+            <if test="encStatus!=null and encStatus!=''">and enc_status=#{encStatus}</if>
+            <if test="decStatus!=null and decStatus!=''">and dec_status=#{decStatus}</if>
+            <if test="createTime!=null and createTime!=''">and create_time=#{createTime}</if>
+            <if test="createBy!=null and createBy!=''">and create_by=#{createBy}</if>
+            <if test="updateTime!=null and updateTime!=''">and update_time=#{updateTime}</if>
+            <if test="updateBy!=null and updateBy!=''">and update_by=#{updateBy}</if>
+        </where>
+    </select>
+
+    <select id="findByPrimaryKey" resultMap="TaskQueue">
+        select *
+        from dbhsm_task_queue
+        where task_id = #{taskId}
+    </select>
+
+    <update id="updateRecord" parameterType="com.spms.dbhsm.taskQueue.domain.DbhsmTaskQueue">
+        update dbhsm_task_queue
+        <set>
+            task_id=#{taskId}
+            <if test="tableId!=null">,table_id = #{tableId}</if>
+            <if test="encStatus!=null">,enc_status = #{encStatus}</if>
+            <if test="decStatus!=null">,dec_status = #{decStatus}</if>
+            <if test="createTime!=null">,create_time = #{createTime}</if>
+            <if test="createBy!=null">,create_by = #{createBy}</if>
+            <if test="updateTime!=null">,update_time = #{updateTime}</if>
+            <if test="updateBy!=null">,update_by = #{updateBy}</if>
+        </set>
+        where
+        task_id=#{taskId}
+    </update>
+
+    <insert id="insertRecord" parameterType="com.spms.dbhsm.taskQueue.domain.DbhsmTaskQueue" useGeneratedKeys="true"
+            keyProperty="taskId">
+        insert into dbhsm_task_queue ( task_id
+                                     , table_id
+                                     , enc_status
+                                     , dec_status
+                                     , create_time
+                                     , create_by
+                                     , update_time
+                                     , update_by)
+        values ( #{taskId}
+               , #{tableId}
+               , #{encStatus}
+               , #{decStatus}
+               , #{createTime}
+               , #{createBy}
+               , #{updateTime}
+               , #{updateBy})
+    </insert>
+
+    <update id="updateRecords" parameterType="hashmap">
+        update dbhsm_task_queue
+        <set>
+            task_id=#{taskId}
+            <if test="tableId!=null">,table_id = #{tableId}</if>
+            <if test="encStatus!=null">,enc_status = #{encStatus}</if>
+            <if test="decStatus!=null">,dec_status = #{decStatus}</if>
+            <if test="createTime!=null">,create_time = #{createTime}</if>
+            <if test="createBy!=null">,create_by = #{createBy}</if>
+            <if test="updateTime!=null">,update_time = #{updateTime}</if>
+            <if test="updateBy!=null">,update_by = #{updateBy}</if>
+        </set>
+        <where>
+            <if test="taskId!=null and taskId!=''">and task_id=#{taskId}</if>
+            <if test="tableId!=null and tableId!=''">and table_id=#{tableId}</if>
+            <if test="encStatus!=null and encStatus!=''">and enc_status=#{encStatus}</if>
+            <if test="decStatus!=null and decStatus!=''">and dec_status=#{decStatus}</if>
+            <if test="createTime!=null and createTime!=''">and create_time=#{createTime}</if>
+            <if test="createBy!=null and createBy!=''">and create_by=#{createBy}</if>
+            <if test="updateTime!=null and updateTime!=''">and update_time=#{updateTime}</if>
+            <if test="updateBy!=null and updateBy!=''">and update_by=#{updateBy}</if>
+        </where>
+    </update>
+
+    <insert id="insertBatch" parameterType="java.util.ArrayList">
+        insert into dbhsm_task_queue ( task_id
+        ,table_id
+        ,enc_status
+        ,dec_status
+        ,create_time
+        ,create_by
+        ,update_time
+        ,update_by
+        )
+        values
+        <foreach collection="list" index="index" item="i" separator=",">
+            ( #{i.taskId}
+            ,#{tableId}
+            ,#{i.encStatus}
+            ,#{i.decStatus}
+            ,#{i.createTime}
+            ,#{i.createBy}
+            ,#{i.updateTime}
+            ,#{i.updateBy}
+            )
+        </foreach>
+    </insert>
+    <!-- //**************************以下方法为开发者补充*********************************/ -->
+
+
+    <select id="querByEncryptColumnsList" resultType="com.spms.dbhsm.taskQueue.vo.TaskQueueListResponse"
+            parameterType="com.spms.dbhsm.taskQueue.vo.TaskQueueListRequest">
+        select
+        ins.id as dbInstanceId,
+        task.task_id as taskId,
+        ins.database_capital_name as databaseCapitalName,
+        ins.database_dba as databaseDba,
+        ins.database_type as databaseType,
+        ins.database_server_name as databaseServerName,
+        ins.database_edition as databaseEdition,
+        ins.database_ip as databaseIp,
+        ins.database_port as databasePort,
+        tab.table_id as tableId,
+        tab.table_name as tableName,
+        <if test="taskMode == 'enc'.toString()">
+            GROUP_CONCAT(case when encryption_status = 2 then encrypt_columns end) as finishedColumns,
+            GROUP_CONCAT(case when encryption_status = 0 then encrypt_columns end) as unfinishedColumns,
+        </if>
+        task.enc_status as encStatus,
+        task.dec_status as decStatus,
+        tab.table_status as tableStatus,
+        tab.thread_count as threadCount,
+        tab.batch_count as batchCount
+        <if test="taskMode == 'dec'.toString()">
+            ,GROUP_CONCAT(col.encrypt_columns)  as unfinishedColumns
+        </if>
+        from dbhsm_encrypt_columns col
+        left join dbhsm_encrypt_table tab on tab.table_id = col.table_id
+        left join dbhsm_db_instance ins on ins.id = tab.instance_id
+        left join dbhsm_task_queue task on task.table_id = tab.table_id
+        <where>
+            <if test="taskMode == 'enc'.toString()">
+                and task.enc_status is not null
+                <if test="status!=null and status!=''">and task.enc_status=#{status}</if>
+            </if>
+            <if test="taskMode == 'dec'.toString()">
+                and task.dec_status is not null
+                <if test="status!=null and status!=''">and task.dec_status=#{status}</if>
+                and col.encryption_status = 3
+            </if>
+            <if test="databaseCapitalName!=null and databaseCapitalName!=''">and
+                ins.database_capital_name=#{databaseCapitalName}
+            </if>
+            <if test="databaseServerName!=null and databaseServerName!=''">and
+                ins.database_server_name=#{databaseServerName}
+            </if>
+            <if test="tableName!=null and tableName!=''">and tab.table_name=#{tableName}</if>
+        </where>
+        group by task.task_id
+    </select>
+
+    <select id="selectDbhsmEncryptColumnsDetails" resultMap="com.spms.dbhsm.encryptcolumns.mapper.DbhsmEncryptColumnsMapper.DbhsmEncryptColumnsResult">
+        select task.task_id,
+        col.encrypt_columns,
+        col.encryption_status,
+        col.encryption_algorithm,
+        col.ethernet_port,
+        col.columns_type,
+        col.secret_key_id,
+        col.db_table,
+        col.db_instance_id
+        from dbhsm_encrypt_columns col
+        left join dbhsm_encrypt_table tab on
+        tab.table_id = col.table_id
+        left join dbhsm_db_instance ins on
+        ins.id = tab.instance_id
+        left join dbhsm_task_queue task on
+        task.table_id = tab.table_id
+        where task.task_id = #{taskId}
+        <if test="taskMode == 'enc'.toString()">
+            and task.enc_status is not null
+        </if>
+        <if test="taskMode == 'dec'.toString()">
+            and task.dec_status is not null
+        </if>
+    </select>
+
+    <delete id="deleteRecords" parameterType="java.lang.Long">
+        delete from dbhsm_task_queue where task_id = #{taskId}
+    </delete>
+
+</mapper>
