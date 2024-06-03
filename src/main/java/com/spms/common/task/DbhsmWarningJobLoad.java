@@ -296,7 +296,7 @@ public class DbhsmWarningJobLoad {
                             continue;
                         }
                         //告警数据新增
-                        dbhsmWarningInfo.setResult("连接信息：" + instanceInfo + "，经校验：[" + resultMsg + "]字段数据被篡改");
+                        dbhsmWarningInfo.setResult("连接信息：" + instanceInfo + "，表信息：" + table + "，经校验：[" + resultMsg + "]字段数据被篡改");
                         dbhsmWarningInfo.setStatus(1L);
                         dbhsmWarningInfo.setOldVerificationValue(result);
                         dbhsmWarningInfo.setNewVerificationValue(verification);

@@ -118,6 +118,9 @@ public class DbConstants {
     public static final String DB_TYPE_DB2_DESC = "DB2";
     public static final String DB_TYPE_CLICKHOUSE = "6";
     public static final String DB_TYPE_CLICKHOUSE_DESC = "ClickHouse";
+
+    public static final String DB_TYPE_KING_BASE = "KingBase";
+    public static final String DB_TYPE_KB = "6";
     public static final String DB_COLUMN_NAME = "columnName";
 
     /**
@@ -126,6 +129,8 @@ public class DbConstants {
     public static final Integer NOT_ENCRYPTED = 1;
     public static final Integer ENCRYPTED = 2;
     public static final Integer ENCRYPTING = 3;
+
+    public static final Integer DECRYPTING = 4;
     /**
      * 是否唯一返回码
      */
@@ -198,6 +203,15 @@ public class DbConstants {
     public static final String DB_SQL_SQLSERVER_TABLE_QUERY = "select name from sysobjects where xtype='U'";
 
     public static final String STRATEGY_URI = "prod-api/dbhsm/api/datahsm/v1/strategy/get";
+
+    public static final String ENC_MODE = "enc";
+
+    public static final String DEC_MODE = "dec";
+
+    public static final String DOWN = "down";
+    public static final String UP = "up";
+    public static final String CONTINUE = "continue";
+
 
     /**
      * 是否建立加密规则 1：是 0：否

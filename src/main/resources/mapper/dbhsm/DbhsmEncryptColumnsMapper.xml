@@ -6,6 +6,7 @@
 
     <resultMap type="com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns" id="DbhsmEncryptColumnsResult">
         <result property="id" column="id"/>
+        <result property="tableId" column="table_id"/>
         <result property="dbInstanceId" column="db_instance_id"/>
         <result property="dbInstance" column="db_instance"/>
         <result property="dbUserName" column="db_user_name"/>
@@ -19,8 +20,6 @@
         <result property="encryptionOffset" column="encryption_offset"/>
         <result property="encryptionLength" column="encryption_length"/>
         <result property="secretKeyId" column="secret_key_id"/>
-        <result property="batchCount" column="batch_count"/>
-        <result property="threadCount" column="thread_count"/>
         <result property="secretKeyId" column="secret_key_id"/>
         <result property="createTime" column="create_time"/>
         <result property="createBy" column="create_by"/>
@@ -31,6 +30,7 @@
 
     <sql id="selectDbhsmEncryptColumnsVo">
         select id,
+               table_id,
                db_instance_id,
                db_instance,
                db_user_name,
@@ -44,8 +44,6 @@
                encryption_offset,
                encryption_length,
                secret_key_id,
-               batch_count,
-               thread_count,
                create_time,
                create_by,
                update_time,
@@ -58,6 +56,7 @@
             resultMap="DbhsmEncryptColumnsResult">
         <include refid="selectDbhsmEncryptColumnsVo"/>
         <where>
+            <if test="tableId != null  and tableId != ''">and table_id = #{tableId}</if>
             <if test="dbInstanceId != null  and dbInstanceId != ''">and db_instance_id = #{dbInstanceId}</if>
             <if test="dbInstance != null  and dbInstance != ''">and db_instance = #{dbInstance}</if>
             <if test="dbUserName != null  and dbUserName != ''">and db_user_name = #{dbUserName}</if>
@@ -65,7 +64,7 @@
             <if test="ethernetPort != null  and ethernetPort != ''">and ethernet_port = #{ethernetPort}</if>
             <if test="encryptColumns != null  and encryptColumns != ''">and encrypt_columns = #{encryptColumns}</if>
             <if test="columnsType != null  and columnsType != ''">and columns_type = #{columnsType}</if>
-            <if test="encryptionStatus != null  and encryptionStatus != ''">and encryption_status =
+            <if test="encryptionStatus != null ">and encryption_status =
                 #{encryptionStatus}
             </if>
             <if test="encryptionAlgorithm != null  and encryptionAlgorithm != ''">and encryption_algorithm =
@@ -91,6 +90,7 @@
         insert into dbhsm_encrypt_columns
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="id != null">id,</if>
+            <if test="tableId != null">table_id,</if>
             <if test="dbInstanceId != null">db_instance_id,</if>
             <if test="dbInstance != null">db_instance,</if>
             <if test="dbUserName != null">db_user_name,</if>
@@ -104,8 +104,6 @@
             <if test="encryptionOffset != null">encryption_offset,</if>
             <if test="encryptionLength != null">encryption_length,</if>
             <if test="secretKeyId != null">secret_key_id,</if>
-            <if test="batchCount != null">batch_count,</if>
-            <if test="threadCount != null">thread_count,</if>
             <if test="createTime != null">create_time,</if>
             <if test="createBy != null">create_by,</if>
             <if test="updateTime != null">update_time,</if>
@@ -114,6 +112,7 @@
         </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="id != null">#{id},</if>
+            <if test="tableId != null">#{tableId},</if>
             <if test="dbInstanceId != null">#{dbInstanceId},</if>
             <if test="dbInstance != null">#{dbInstance},</if>
             <if test="dbUserName != null">#{dbUserName},</if>
@@ -127,8 +126,6 @@
             <if test="encryptionOffset != null">#{encryptionOffset},</if>
             <if test="encryptionLength != null">#{encryptionLength},</if>
             <if test="secretKeyId != null">#{secretKeyId},</if>
-            <if test="batchCount != null">#{batchCount},</if>
-            <if test="threadCount != null">#{threadCount},</if>
             <if test="createTime != null">#{createTime},</if>
             <if test="createBy != null">#{createBy},</if>
             <if test="updateTime != null">#{updateTime},</if>
@@ -153,8 +150,6 @@
             <if test="encryptionOffset != null">encryption_offset = #{encryptionOffset},</if>
             <if test="encryptionLength != null">encryption_length = #{encryptionLength},</if>
             <if test="secretKeyId != null">secret_key_id = #{secretKeyId},</if>
-            <if test="batchCount != null">batch_count = #{batchCount},</if>
-            <if test="threadCount != null">thread_count = #{threadCount},</if>
             <if test="createTime != null">create_time = #{createTime},</if>
             <if test="createBy != null">create_by = #{createBy},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
@@ -162,6 +157,31 @@
             <if test="columnDefinitions != null">column_definitions = #{columnDefinitions},</if>
         </trim>
         where id = #{id}
+    </update>
+
+    <update id="updateDbhsmEncryptColumnsByTableIdAndFeild" parameterType="com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns">
+        update dbhsm_encrypt_columns
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="dbInstanceId != null">db_instance_id = #{dbInstanceId},</if>
+            <if test="dbInstance != null">db_instance = #{dbInstance},</if>
+            <if test="dbUserName != null">db_user_name = #{dbUserName},</if>
+            <if test="dbTable != null">db_table = #{dbTable},</if>
+            <if test="ethernetPort != null">ethernet_port = #{ethernetPort},</if>
+            <if test="encryptColumns != null">encrypt_columns = #{encryptColumns},</if>
+            <if test="columnsType != null">columns_type = #{columnsType},</if>
+            <if test="encryptionStatus != null">encryption_status = #{encryptionStatus},</if>
+            <if test="encryptionAlgorithm != null">encryption_algorithm = #{encryptionAlgorithm},</if>
+            <if test="establishRules != null">establish_rules = #{establishRules},</if>
+            <if test="encryptionOffset != null">encryption_offset = #{encryptionOffset},</if>
+            <if test="encryptionLength != null">encryption_length = #{encryptionLength},</if>
+            <if test="secretKeyId != null">secret_key_id = #{secretKeyId},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="columnDefinitions != null">column_definitions = #{columnDefinitions},</if>
+        </trim>
+        where encrypt_columns = #{encryptColumns} and table_id = #{tableId}
     </update>
 
     <delete id="deleteDbhsmEncryptColumnsById" parameterType="String">
@@ -176,4 +196,15 @@
             #{id}
         </foreach>
     </delete>
+
+
+    <select id="selectDbhsmEncryptByTableId" resultMap="DbhsmEncryptColumnsResult" >
+        <include refid="selectDbhsmEncryptColumnsVo"/>
+        where table_id=#{tableId}
+    </select>
+
+    <delete id="deleteByEncryptColumnsOnTable" parameterType="java.lang.String">
+        delete from dbhsm_encrypt_columns where table_id=#{tableId}
+    </delete>
+
 </mapper>

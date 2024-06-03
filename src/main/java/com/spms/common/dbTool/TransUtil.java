@@ -30,7 +30,7 @@ public class TransUtil {
         transSql.append("ON " + encryptColumns.getDbUserName() + "." + encryptColumns.getDbTable() + " -- utest 是用户名，test01 是表格名称\n");
         transSql.append("    FOR EACH ROW\n");
         transSql.append("BEGIN\n");
-        transSql.append("    if (:NEW."+ encryptColumns.getEncryptColumns()+" is not NULL) then -- COLUMN1是需要加密处理的列名称\n");
+        transSql.append("    if (:NEW." + encryptColumns.getEncryptColumns() + " is not NULL) then -- COLUMN1是需要加密处理的列名称\n");
         transSql.append("    c_oci_trans_string_encrypt_p(--c_oci_trans_string_encrypt_p 是储过程名称\n");
         transSql.append("    '" + encryptColumns.getId() + "',--策略唯一标识\n");
         transSql.append("    'http://" + encryptColumns.getIpAndPort() + "/prod-api/dbhsm/api/datahsm/v1/strategy/get', --'http://192.168.6.31:8080/TestCurl/PullPolicy',策略下载地址\n");
@@ -58,6 +58,96 @@ public class TransUtil {
 
     }
 
+    public static void transEncryptColumnsFunToKingBase(Connection conn, DbhsmEncryptColumnsAdd encryptColumns) throws Exception {
+        Statement statement = null;
+        log.info("定义KingBase触发器start");
+
+        String alg = encryptColumns.getEncryptionAlgorithm();
+        String funName$ = encryptColumns.getDbUserName() + ".tr_za_" + DbConstants.algMappingStrOrFpe(alg) + "_" + encryptColumns.getDbUserName() + "_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
+        String funName = encryptColumns.getDbUserName() + ".trfunc_za_" + DbConstants.algMappingStrOrFpe(alg) + "_" + encryptColumns.getDbUserName() + "_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
+        StringBuffer transSql = new StringBuffer("create or replace function \n");
+        transSql.append(funName + "\n");
+        transSql.append("    returns trigger as $" + funName$ + "$\n");
+        transSql.append("BEGIN\n");
+        transSql.append("    NEW." + encryptColumns.getEncryptColumns() + ":= " + encryptColumns.getDbUserName() + ".kbext_func_" + DbConstants.algMappingStrOrFpe(alg) + "_encrypt(\n");
+        transSql.append("    '" + encryptColumns.getId() + "',--策略唯一标识\n");
+        transSql.append("    'http://" + encryptColumns.getIpAndPort() + "/api/datahsm/v1/strategy/get', --'http://192.168.7.106:8001/api/datahsm/v1/strategy/get',策略下载地址\n");
+        transSql.append("    CAST(inet_client_addr() as text),--IP\n");
+        transSql.append("    CAST(current_catalog as text),--实例名\n");
+        transSql.append("    CAST(current_catalog as text),--库名\n");
+        transSql.append("    '" + encryptColumns.getDbTable() + "',--表名\n");
+        transSql.append("    '" + encryptColumns.getEncryptColumns() + "',--列名\n");
+        transSql.append("    CAST(user as text),--用户名\n");
+
+        if (DbConstants.SGD_SM4.equals(encryptColumns.getEncryptionAlgorithm())) {
+            transSql.append("    NEW." + encryptColumns.getEncryptColumns().toUpperCase() + ",0,0:);\n");
+        } else {
+            if (DbConstants.ESTABLISH_RULES_YES.equals(encryptColumns.getEstablishRules())) {
+                transSql.append("NEW." + encryptColumns.getEncryptColumns() + "," + //加密列
+                        (encryptColumns.getEncryptionOffset() - 1) + "," + //偏移量
+                        (encryptColumns.getEncryptionLength() - (encryptColumns.getEncryptionOffset() - 1)) + "," +//加密长度
+                        encryptColumns.getEncryptionAlgorithm() + ");\n");
+            } else {
+                transSql.append("NEW." + encryptColumns.getEncryptColumns() + ",0,0," + encryptColumns.getEncryptionAlgorithm() + ");\n");
+            }
+        }
+
+        transSql.append("    return NEW;\n");
+        transSql.append("end; $" + funName$ + "$\n");
+        transSql.append("language 'plsql';\n");
+        try {
+            log.info("定义KingBase触发器{}", transSql);
+            statement = conn.createStatement();
+            statement.execute(transSql.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new Exception(e.getMessage());
+        } finally {
+            if (statement != null) {
+                statement.close();
+            }
+        }
+    }
+
+    public static void transEncryptColumnsToKingBase(Connection conn, DbhsmEncryptColumnsAdd encryptColumns) throws Exception {
+        /**
+         * create trigger schema.tr_za_string_schema_tablename_clmname  --触发器名称
+         * before insert on "schema"."tablename"
+         * for each row
+         * execute procedure schema.trfunc_za_string_schema_tablename_clmname(); --触发器函数
+         */
+        Statement statement = null;
+        String funName = encryptColumns.getDbUserName() + ".trfunc_za_" + DbConstants.algMapping(encryptColumns.getEncryptionAlgorithm()) + "_" + encryptColumns.getDbUserName() + "_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
+        String transName =encryptColumns.getDbUserName() + ".tr_za_" +  DbConstants.algMapping(encryptColumns.getEncryptionAlgorithm()) + "_" + encryptColumns.getDbUserName() + "_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
+        String userSchema = "\"" + encryptColumns.getDbUserName() + "\"";
+        try {
+            // 1、创建触发器，设置所触发的条件和执行的函数
+            log.info("创建PostgreSql触发器start");
+
+            StringBuffer transSql = new StringBuffer("create trigger " + transName);
+            transSql.append(System.lineSeparator());
+            transSql.append("before insert on " + userSchema + ".\"" + encryptColumns.getDbTable() + "\"");
+            transSql.append(System.lineSeparator());
+            transSql.append("for each row");
+            transSql.append(System.lineSeparator());
+            transSql.append("execute procedure ");
+            transSql.append(System.lineSeparator());
+            transSql.append(funName + "();");
+
+            log.info("创建KingBase触发器:{}", transSql);
+            statement = conn.createStatement();
+            statement.execute(transSql.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new Exception(e.getMessage());
+        } finally {
+            if (statement != null) {
+                statement.close();
+            }
+        }
+
+    }
+
     public static void transFPEEncryptColumns(Connection conn, DbhsmEncryptColumnsAdd encryptColumns) throws Exception {
         log.info("创建Oracle触发器fpestart");
         //获取网口ip
@@ -66,7 +156,7 @@ public class TransUtil {
         transSql.append("ON " + encryptColumns.getDbUserName() + "." + encryptColumns.getDbTable() + " -- utest 是用户名，test01 是表格名称\n");
         transSql.append("    FOR EACH ROW\n");
         transSql.append("BEGIN\n");
-        transSql.append("    if (:NEW."+ encryptColumns.getEncryptColumns()+" is not NULL) then -- COLUMN1是需要加密处理的列名称\n");
+        transSql.append("    if (:NEW." + encryptColumns.getEncryptColumns() + " is not NULL) then -- COLUMN1是需要加密处理的列名称\n");
         transSql.append("    c_oci_trans_fpe_encrypt_p(--c_oci_trans_string_encrypt_p 是储过程名称\n");
         transSql.append("    '" + encryptColumns.getId() + "',--策略唯一标识\n");
         transSql.append("    'http://" + encryptColumns.getIpAndPort() + "/prod-api/dbhsm/api/datahsm/v1/strategy/get', --'http://192.168.6.31:8080/TestCurl/PullPolicy',策略下载地址\n");
@@ -76,7 +166,7 @@ public class TransUtil {
         transSql.append("    '" + encryptColumns.getDbTable() + "',--表名\n");
         transSql.append("    '" + encryptColumns.getEncryptColumns() + "',--列名，以列名 name 为例\n");
         transSql.append("    USER(),--用户名\n");
-        transSql.append("    :NEW." + encryptColumns.getEncryptColumns().toUpperCase() + "," + (ObjectUtils.isEmpty(encryptColumns.getEncryptionOffset()) ? 0 : encryptColumns.getEncryptionOffset() - 1) + "," + (ObjectUtils.isEmpty(encryptColumns.getEncryptionLength()) ? 0 : encryptColumns.getEncryptionLength()-(encryptColumns.getEncryptionOffset() - 1)) + ", :NEW." + encryptColumns.getEncryptColumns().toUpperCase() + ",--变换的列，此处为变换 name 列6,8分别为偏移量和加密长度\n");
+        transSql.append("    :NEW." + encryptColumns.getEncryptColumns().toUpperCase() + "," + (ObjectUtils.isEmpty(encryptColumns.getEncryptionOffset()) ? 0 : encryptColumns.getEncryptionOffset() - 1) + "," + (ObjectUtils.isEmpty(encryptColumns.getEncryptionLength()) ? 0 : encryptColumns.getEncryptionLength() - (encryptColumns.getEncryptionOffset() - 1)) + ", :NEW." + encryptColumns.getEncryptColumns().toUpperCase() + ",--变换的列，此处为变换 name 列6,8分别为偏移量和加密长度\n");
         transSql.append("    " + encryptColumns.getEncryptionAlgorithm() + ");\n");
         transSql.append("end if;\n");
         transSql.append("END;\n");
@@ -117,17 +207,17 @@ public class TransUtil {
          * GO
          * --Object:  Trigger [dbo].[tr_Table_1_name]    Script Date: 2023/2/14 13:41:38
          *SET ANSI_NULLS OFF-- 保持关闭，否则触发器无法判断null
-                * GO
-                * SET QUOTED_IDENTIFIER ON
+         * GO
+         * SET QUOTED_IDENTIFIER ON
          *GO
-                * CREATE OR ALTER TRIGGER [dbo].[tr_tablename_column_sm4_encrypt]--自定义名称 dbo架构名 sm4/fpe算法名 encrypt/
-        decrypt 加/解密
-                * ON dbtest.dbo.Table1-- 触发器生效的表
-                * AFTER INSERT-- 插入时触发
-                * AS
-                * declare c cursor for select[name] from inserted --name 加密列
-                * declare
-                * @policy_id NVARCHAR(50), @policy_url NVARCHAR(200), @user_ipaddr NVARCHAR(50),
+         * CREATE OR ALTER TRIGGER [dbo].[tr_tablename_column_sm4_encrypt]--自定义名称 dbo架构名 sm4/fpe算法名 encrypt/
+         decrypt 加/解密
+         * ON dbtest.dbo.Table1-- 触发器生效的表
+         * AFTER INSERT-- 插入时触发
+         * AS
+         * declare c cursor for select[name] from inserted --name 加密列
+         * declare
+         * @policy_id NVARCHAR(50), @policy_url NVARCHAR(200), @user_ipaddr NVARCHAR(50),
          *@db_instance_name NVARCHAR(50), @db_name NVARCHAR(50), @db_table_name NVARCHAR(50),
          *@db_column_name NVARCHAR(50), @db_user_name NVARCHAR(50),
          *@rawstring nvarchar(50),@rawstringlen int,
@@ -137,19 +227,19 @@ public class TransUtil {
          *fetch next from c into @rawstring
          *IF(UPDATE([name]))AND( @rawstring <>null) ##防止影响其他列的修改,name为加密列，rawstring为插入的数据
          *BEGIN
-                * SET NOCOUNT ON;
+         * SET NOCOUNT ON;
          *set @policy_id ='433880302541213696'
-                * set @policy_url ='http://192.168.7.133:10013/prod-api/dbhsm/api/datahsm/v1/strategy/get'
-                * select @user_ipaddr =client_net_address FROM sys.dm_exec_connections WHERE session_id = @ @SPID
+         * set @policy_url ='http://192.168.7.133:10013/prod-api/dbhsm/api/datahsm/v1/strategy/get'
+         * select @user_ipaddr =client_net_address FROM sys.dm_exec_connections WHERE session_id = @ @SPID
         --客户端ip
-                * set @db_instance_name =CAST(@ @ServerName as char)--实例名
-                * set @db_name =db_name()-- 数据库名
-                * set @db_table_name ='table1'-- 加密表
-                * set @db_column_name ='name'-- 加密列
-                * set @db_user_name =suser_name()
-                * set @rawstringlen =LEN( @rawstring)/2
-                * set @offset =0
-                * set @length =@rawstringlen
+         * set @db_instance_name =CAST(@ @ServerName as char)--实例名
+         * set @db_name =db_name()-- 数据库名
+         * set @db_table_name ='table1'-- 加密表
+         * set @db_column_name ='name'-- 加密列
+         * set @db_user_name =suser_name()
+         * set @rawstringlen =LEN( @rawstring)/2
+         * set @offset =0
+         * set @length =@rawstringlen
          *set @encryptlen =@rawstringlen
          *
          *set @encryptdata =dbtest.dbo.func_string_encrypt_ex( @policy_id,@policy_url,@user_ipaddr,
@@ -157,18 +247,18 @@ public class TransUtil {
          *@rawstring,@rawstringlen,@offset,@length,@encryptlen)  --数据库.架构.加密函数（）
          *
          *update[dbo].[Table1]set name = @encryptdata where[name] =
-        @rawstring --[dbo].[Table_1] 触发器生效的表, name 加密列, name 加密列
-         *END
-                * CLOSE c
-                * DEALLOCATE c
+         @rawstring --[dbo].[Table_1] 触发器生效的表, name 加密列, name 加密列
+          *END
+          * CLOSE c
+          * DEALLOCATE c
          */
         StringBuffer transSql = new StringBuffer();
         String alg = zaDatabaseEncryptColumns.getEncryptionAlgorithm();
         // 替换成表名和字段名
-        transSql.append("CREATE OR ALTER  TRIGGER "+ schemaName + ".tr_" + zaDatabaseEncryptColumns.getDbTable() + "_" + zaDatabaseEncryptColumns.getEncryptColumns()+"_" + DbConstants.algMapping(alg) + "_encrypt");
+        transSql.append("CREATE OR ALTER  TRIGGER " + schemaName + ".tr_" + zaDatabaseEncryptColumns.getDbTable() + "_" + zaDatabaseEncryptColumns.getEncryptColumns() + "_" + DbConstants.algMapping(alg) + "_encrypt");
         transSql.append(System.getProperty("line.separator"));
 
-        transSql.append("   ON " + zaDatabaseEncryptColumns.getDatabaseServerName()+ "." +schemaName + "." + zaDatabaseEncryptColumns.getDbTable() + "");
+        transSql.append("   ON " + zaDatabaseEncryptColumns.getDatabaseServerName() + "." + schemaName + "." + zaDatabaseEncryptColumns.getDbTable() + "");
         transSql.append(System.getProperty("line.separator"));
 
         transSql.append("   AFTER INSERT");
@@ -196,7 +286,7 @@ public class TransUtil {
         transSql.append("   @offset int,@length int,");
         transSql.append(System.getProperty("line.separator"));
 
-        transSql.append("   @encryptdata nvarchar(max),@encryptlen int"+(DbConstants.SGD_SM4.equals(alg)?"":",@radix int"));
+        transSql.append("   @encryptdata nvarchar(max),@encryptlen int" + (DbConstants.SGD_SM4.equals(alg) ? "" : ",@radix int"));
         transSql.append(System.getProperty("line.separator"));
 
         transSql.append(" open c");
@@ -215,7 +305,7 @@ public class TransUtil {
         transSql.append(" SET NOCOUNT ON;");
         transSql.append(System.getProperty("line.separator"));
 
-        transSql.append(" set  @policy_id ='"+ zaDatabaseEncryptColumns.getId() + "'");
+        transSql.append(" set  @policy_id ='" + zaDatabaseEncryptColumns.getId() + "'");
         transSql.append(System.getProperty("line.separator"));
 
         transSql.append(" set @policy_url ='http://" + zaDatabaseEncryptColumns.getIpAndPort() + "/prod-api/dbhsm/api/datahsm/v1/strategy/get'");
@@ -230,10 +320,10 @@ public class TransUtil {
         transSql.append("set @db_name =db_name()");
         transSql.append(System.getProperty("line.separator"));
 
-        transSql.append("set @db_table_name ='"+zaDatabaseEncryptColumns.getDbTable() +"'");
+        transSql.append("set @db_table_name ='" + zaDatabaseEncryptColumns.getDbTable() + "'");
         transSql.append(System.getProperty("line.separator"));
 
-        transSql.append("set @db_column_name ='"+zaDatabaseEncryptColumns.getEncryptColumns() +"'");
+        transSql.append("set @db_column_name ='" + zaDatabaseEncryptColumns.getEncryptColumns() + "'");
         transSql.append(System.getProperty("line.separator"));
 
         transSql.append("set @db_user_name =suser_name()");
@@ -243,10 +333,10 @@ public class TransUtil {
         transSql.append(System.getProperty("line.separator"));
 
         if (!DbConstants.SGD_SM4.equals(alg) && DbConstants.ESTABLISH_RULES_YES.equals(zaDatabaseEncryptColumns.getEstablishRules())) {
-            transSql.append(" set @offset = "+(zaDatabaseEncryptColumns.getEncryptionOffset()-1));
+            transSql.append(" set @offset = " + (zaDatabaseEncryptColumns.getEncryptionOffset() - 1));
             transSql.append(System.getProperty("line.separator"));
 
-            transSql.append(" set @length = "+(zaDatabaseEncryptColumns.getEncryptionLength()-(zaDatabaseEncryptColumns.getEncryptionOffset()-1)));
+            transSql.append(" set @length = " + (zaDatabaseEncryptColumns.getEncryptionLength() - (zaDatabaseEncryptColumns.getEncryptionOffset() - 1)));
             transSql.append(System.getProperty("line.separator"));
         } else {
             transSql.append(" set @offset = 0");
@@ -261,13 +351,13 @@ public class TransUtil {
         if (!DbConstants.SGD_SM4.equals(alg)) {
             transSql.append(" set @radix =" + Integer.parseInt(alg));
         }
-        transSql.append(" set @encryptdata = " + zaDatabaseEncryptColumns.getDatabaseServerName()+ "." +schemaName + ".func_"+DbConstants.algMappingStrOrFpe(alg)+"_encrypt_ex( @policy_id,@policy_url,@user_ipaddr,");
+        transSql.append(" set @encryptdata = " + zaDatabaseEncryptColumns.getDatabaseServerName() + "." + schemaName + ".func_" + DbConstants.algMappingStrOrFpe(alg) + "_encrypt_ex( @policy_id,@policy_url,@user_ipaddr,");
         transSql.append(System.getProperty("line.separator"));
 
         transSql.append("@db_instance_name,@db_name,@db_table_name,@db_column_name,@db_user_name,");
         transSql.append(System.getProperty("line.separator"));
 
-        transSql.append("@rawstring,@rawstringlen,@offset,@length,@encryptlen"+(DbConstants.SGD_SM4.equals(alg)?"":", @radix")+")");
+        transSql.append("@rawstring,@rawstringlen,@offset,@length,@encryptlen" + (DbConstants.SGD_SM4.equals(alg) ? "" : ", @radix") + ")");
         transSql.append(System.getProperty("line.separator"));
 
         transSql.append(" update " + schemaName + "." + zaDatabaseEncryptColumns.getDbTable() + " set " + zaDatabaseEncryptColumns.getEncryptColumns() + " = @encryptdata where " + zaDatabaseEncryptColumns.getEncryptColumns() + " = @rawstring");
@@ -336,16 +426,16 @@ public class TransUtil {
             offset = encryptColumns.getEncryptionOffset();
             length = encryptColumns.getEncryptionLength();
         }
-        String funName = DbConstants.SGD_SM4.equals(algorithm)?"StringEncrypt(":"FpeStringEncrypt(";
+        String funName = DbConstants.SGD_SM4.equals(algorithm) ? "StringEncrypt(" : "FpeStringEncrypt(";
         log.info("创建Mysql触发器start");
         //获取网口ip
         StringBuffer transSql = new StringBuffer("CREATE TRIGGER tri_za_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns() + " before insert");
         transSql.append(System.getProperty("line.separator"));
-        transSql.append("on " + encryptColumns.getDatabaseServerName() + "." + encryptColumns.getDbTable() );
+        transSql.append("on " + encryptColumns.getDatabaseServerName() + "." + encryptColumns.getDbTable());
         transSql.append(System.getProperty("line.separator"));
         transSql.append("for each row");
         transSql.append(System.getProperty("line.separator"));
-        transSql.append("set NEW." + encryptColumns.getEncryptColumns() + " = "+funName );
+        transSql.append("set NEW." + encryptColumns.getEncryptColumns() + " = " + funName);
         transSql.append(System.getProperty("line.separator"));
         transSql.append("'" + encryptColumns.getId() + "',");
         transSql.append(System.getProperty("line.separator"));
@@ -369,10 +459,10 @@ public class TransUtil {
         } else {
             if (DbConstants.ESTABLISH_RULES_YES.equals(encryptColumns.getEstablishRules())) {
                 transSql.append("NEW." + encryptColumns.getEncryptColumns() + "," + //加密列
-                        (encryptColumns.getEncryptionOffset() -1 ) + "," + //偏移量
-                        (encryptColumns.getEncryptionLength()-(encryptColumns.getEncryptionOffset() -1 )) +","+algorithm+");\n");
+                        (encryptColumns.getEncryptionOffset() - 1) + "," + //偏移量
+                        (encryptColumns.getEncryptionLength() - (encryptColumns.getEncryptionOffset() - 1)) + "," + algorithm + ");\n");
             } else {
-                transSql.append("NEW." + encryptColumns.getEncryptColumns() + "," + "0,0,"+algorithm+"); \n");
+                transSql.append("NEW." + encryptColumns.getEncryptColumns() + "," + "0,0," + algorithm + "); \n");
             }
         }
         transSql.append(System.getProperty("line.separator"));
@@ -400,7 +490,7 @@ public class TransUtil {
      * @param conn
      * @param
      */
-    public static void transEncryptFunToPostgreSql(Connection conn, DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd, DbhsmDbUser user ) throws Exception {
+    public static void transEncryptFunToPostgreSql(Connection conn, DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd, DbhsmDbUser user) throws Exception {
         /**
          create or replace function testuser1.tr_sm4_username_tablename_name()
          returns trigger as
@@ -431,11 +521,11 @@ public class TransUtil {
 
          */
         Statement statement = null;
-        String  alg = dbhsmEncryptColumnsAdd.getEncryptionAlgorithm();
+        String alg = dbhsmEncryptColumnsAdd.getEncryptionAlgorithm();
         //String userSchema = "'"+user.getDbSchema()+"'";
         String userSchema = user.getDbSchema();
-        String funName = "\""+userSchema + "\".tr_" + DbConstants.algMapping(alg) + "_" + user.getUserName() + "_" + dbhsmEncryptColumnsAdd.getDbTable()+ "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
-        String funName$ = "tr_" + user.getUserName() + "_"  + userSchema + "_"  + dbhsmEncryptColumnsAdd.getDbTable() + "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
+        String funName = "\"" + userSchema + "\".tr_" + DbConstants.algMapping(alg) + "_" + user.getUserName() + "_" + dbhsmEncryptColumnsAdd.getDbTable() + "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
+        String funName$ = "tr_" + user.getUserName() + "_" + userSchema + "_" + dbhsmEncryptColumnsAdd.getDbTable() + "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
         try {
             // 1、定义触发器函数
             log.info("创建PostgreSql触发器函数start");
@@ -448,10 +538,10 @@ public class TransUtil {
             transFun.append(System.getProperty("line.separator"));
             transFun.append("begin");
             transFun.append(System.getProperty("line.separator"));
-            transFun.append("NEW." + dbhsmEncryptColumnsAdd.getEncryptColumns() + " := \""+ userSchema +"\".pgext_func_"+DbConstants.algMappingStrOrFpe(alg)+"_encrypt(");
+            transFun.append("NEW." + dbhsmEncryptColumnsAdd.getEncryptColumns() + " := \"" + userSchema + "\".pgext_func_" + DbConstants.algMappingStrOrFpe(alg) + "_encrypt(");
             transFun.append("'" + dbhsmEncryptColumnsAdd.getId() + "',");
             transFun.append(System.getProperty("line.separator"));
-            transFun.append("'http://" + dbhsmEncryptColumnsAdd.getIpAndPort()+ "/prod-api/dbhsm/api/datahsm/v1/strategy/get',");
+            transFun.append("'http://" + dbhsmEncryptColumnsAdd.getIpAndPort() + "/prod-api/dbhsm/api/datahsm/v1/strategy/get',");
             transFun.append(System.getProperty("line.separator"));
             transFun.append("CAST(inet_client_addr() as text),");
             transFun.append(System.getProperty("line.separator"));
@@ -471,11 +561,11 @@ public class TransUtil {
             } else {
                 if (DbConstants.ESTABLISH_RULES_YES.equals(dbhsmEncryptColumnsAdd.getEstablishRules())) {
                     transFun.append("NEW." + dbhsmEncryptColumnsAdd.getEncryptColumns() + "," + //加密列
-                            (dbhsmEncryptColumnsAdd.getEncryptionOffset() -1 ) + "," + //偏移量
-                            (dbhsmEncryptColumnsAdd.getEncryptionLength()-(dbhsmEncryptColumnsAdd.getEncryptionOffset() -1 )) +"," +//加密长度
+                            (dbhsmEncryptColumnsAdd.getEncryptionOffset() - 1) + "," + //偏移量
+                            (dbhsmEncryptColumnsAdd.getEncryptionLength() - (dbhsmEncryptColumnsAdd.getEncryptionOffset() - 1)) + "," +//加密长度
                             dbhsmEncryptColumnsAdd.getEncryptionAlgorithm() + ");\n");
                 } else {
-                    transFun.append("NEW." + dbhsmEncryptColumnsAdd.getEncryptColumns() + ",0,0,"+ dbhsmEncryptColumnsAdd.getEncryptionAlgorithm() +");\n");
+                    transFun.append("NEW." + dbhsmEncryptColumnsAdd.getEncryptColumns() + ",0,0," + dbhsmEncryptColumnsAdd.getEncryptionAlgorithm() + ");\n");
                 }
             }
             transFun.append(System.getProperty("line.separator"));
@@ -518,9 +608,9 @@ public class TransUtil {
          * execute procedure tr_func_string_encrypt(); --触发器函数
          */
         Statement statement = null;
-        String funName = "tr_" + DbConstants.algMapping(dbhsmEncryptColumnsAdd.getEncryptionAlgorithm()) + "_" + user.getUserName() + "_" + dbhsmEncryptColumnsAdd.getDbTable()+ "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
-        String transName = "tr_" + DbConstants.algMapping(dbhsmEncryptColumnsAdd.getEncryptionAlgorithm()) + "_" + dbhsmEncryptColumnsAdd.getDbTable()+ "_" + dbhsmEncryptColumnsAdd.getEncryptColumns() ;
-        String userSchema = "\""+user.getDbSchema()+"\"";
+        String funName = "tr_" + DbConstants.algMapping(dbhsmEncryptColumnsAdd.getEncryptionAlgorithm()) + "_" + user.getUserName() + "_" + dbhsmEncryptColumnsAdd.getDbTable() + "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
+        String transName = "tr_" + DbConstants.algMapping(dbhsmEncryptColumnsAdd.getEncryptionAlgorithm()) + "_" + dbhsmEncryptColumnsAdd.getDbTable() + "_" + dbhsmEncryptColumnsAdd.getEncryptColumns();
+        String userSchema = "\"" + user.getDbSchema() + "\"";
         try {
             // 1、创建触发器，设置所触发的条件和执行的函数
             log.info("创建PostgreSql触发器start");

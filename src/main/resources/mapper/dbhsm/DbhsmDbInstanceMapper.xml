@@ -6,6 +6,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
     <resultMap type="com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance" id="DbhsmDbInstanceResult">
         <result property="id"    column="id"    />
+        <result property="databaseCapitalName"    column="database_capital_name"    />
         <result property="databaseType"    column="database_type"    />
         <result property="databaseIp"    column="database_ip"    />
         <result property="databasePort"    column="database_port"    />
@@ -13,6 +14,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="databaseExampleType"    column="database_example_type"    />
         <result property="databaseDba"    column="database_dba"    />
         <result property="databaseDbaPassword"    column="database_dba_password"    />
+        <result property="serverUser"    column="server_user"    />
+        <result property="serverPassword"    column="server_password"    />
         <result property="passwordServiceIp"    column="password_service_ip"    />
         <result property="passwordServicePort"    column="password_service_port"    />
         <result property="createTime"    column="create_time"    />
@@ -28,7 +31,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="databaseType"    column="database_type"    />
     </resultMap>
     <sql id="selectDbhsmDbInstanceVo">
-        select id, database_type, database_ip, database_port, database_server_name, database_example_type, database_dba, database_dba_password, password_service_ip, password_service_port, create_time, update_time, secret_service, database_edition, user_create_mode,enc_libapi_path from dbhsm_db_instance
+        select id,database_capital_name, database_type, database_ip, database_port, database_server_name, database_example_type, database_dba, database_dba_password, password_service_ip, password_service_port, create_time, update_time, secret_service, database_edition, user_create_mode,enc_libapi_path from dbhsm_db_instance
     </sql>
 
     <select id="selectDbhsmDbInstanceList" parameterType="com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance" resultMap="DbhsmDbInstanceResult">
@@ -61,7 +64,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         from dbhsm_db_instance
     </select>
     <select id="selectDbhsmDbInstanceByUserId" parameterType="Long" resultMap="DbhsmDbInstanceResult">
-        select id, database_type, database_ip, database_port, database_server_name, database_example_type, database_dba, database_dba_password, password_service_ip, password_service_port, create_time, update_time, secret_service, database_edition, user_create_mode,enc_libapi_path
+        select id, database_capital_name,database_type, database_ip, database_port, database_server_name, database_example_type, database_dba, database_dba_password, password_service_ip, password_service_port, create_time, update_time, secret_service, database_edition, user_create_mode,enc_libapi_path
         from dbhsm_db_instance i
         left join dbhsm_user_db_instance ui
         on i.id = ui.instance_id
@@ -71,6 +74,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <insert id="insertDbhsmDbInstance" parameterType="com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance" useGeneratedKeys="true" keyProperty="id">
         insert into dbhsm_db_instance
         <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="databaseCapitalName != null">database_capital_name,</if>
             <if test="databaseType != null">database_type,</if>
             <if test="databaseIp != null">database_ip,</if>
             <if test="databasePort != null">database_port,</if>
@@ -78,6 +82,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="databaseExampleType != null">database_example_type,</if>
             <if test="databaseDba != null">database_dba,</if>
             <if test="databaseDbaPassword != null">database_dba_password,</if>
+            <if test="serverUser != null">server_user,</if>
+            <if test="serverPassword != null">server_password,</if>
             <if test="passwordServiceIp != null">password_service_ip,</if>
             <if test="passwordServicePort != null">password_service_port,</if>
             <if test="createTime != null">create_time,</if>
@@ -88,6 +94,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="encLibapiPath != null">enc_libapi_path,</if>
          </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="databaseCapitalName != null">#{databaseCapitalName},</if>
             <if test="databaseType != null">#{databaseType},</if>
             <if test="databaseIp != null">#{databaseIp},</if>
             <if test="databasePort != null">#{databasePort},</if>
@@ -95,6 +102,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="databaseExampleType != null">#{databaseExampleType},</if>
             <if test="databaseDba != null">#{databaseDba},</if>
             <if test="databaseDbaPassword != null">#{databaseDbaPassword},</if>
+            <if test="serverUser != null">#{serverUser},</if>
+            <if test="serverPassword != null">#{serverPassword},</if>
             <if test="passwordServiceIp != null">#{passwordServiceIp},</if>
             <if test="passwordServicePort != null">#{passwordServicePort},</if>
             <if test="createTime != null">#{createTime},</if>
@@ -109,12 +118,15 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <update id="updateDbhsmDbInstance" parameterType="com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance">
         update dbhsm_db_instance
         <trim prefix="SET" suffixOverrides=",">
+            <if test="databaseCapitalName != null">database_capital_name = #{databaseCapitalName},</if>
             <if test="databaseType != null">database_type = #{databaseType},</if>
             <if test="databaseIp != null">database_ip = #{databaseIp},</if>
             <if test="databasePort != null">database_port = #{databasePort},</if>
             <if test="databaseServerName != null">database_server_name = #{databaseServerName},</if>
             <if test="databaseExampleType != null">database_example_type = #{databaseExampleType},</if>
             <if test="databaseDba != null">database_dba = #{databaseDba},</if>
+            <if test="serverUser != null">server_user =#{serverUser},</if>
+            <if test="serverPassword != null">server_password =#{serverPassword},</if>
             <if test="databaseDbaPassword != null">database_dba_password = #{databaseDbaPassword},</if>
             <if test="passwordServiceIp != null">password_service_ip = #{passwordServiceIp},</if>
             <if test="passwordServicePort != null">password_service_port = #{passwordServicePort},</if>

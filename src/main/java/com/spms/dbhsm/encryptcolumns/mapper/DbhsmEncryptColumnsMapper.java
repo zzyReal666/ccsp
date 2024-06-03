@@ -47,6 +47,8 @@ public interface DbhsmEncryptColumnsMapper
      */
     public int updateDbhsmEncryptColumns(DbhsmEncryptColumns dbhsmEncryptColumns);
 
+    public int updateDbhsmEncryptColumnsByTableIdAndFeild(DbhsmEncryptColumns dbhsmEncryptColumns);
+
     /**
      * 删除数据库加密列
      * 
@@ -66,11 +68,10 @@ public interface DbhsmEncryptColumnsMapper
     /**
      * 根据实例ID和列名称获取加密队列信息
      *
-     * @param dbInstanceId 实例
-     * @param columns 列信息
+     * @param tableId 表ID
      * @return 结果
      */
-    List<DbhsmEncryptColumns> selectDbhsmEncryptBydbInstanceColumnsList(String dbInstanceId,List<String> columns);
+    List<DbhsmEncryptColumns> selectDbhsmEncryptByTableId(@Param("tableId") String tableId);
 
     void deleteByEncryptColumnsOnTable(@Param("tableId") String tableId);
 }

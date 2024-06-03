@@ -13,6 +13,7 @@ import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import com.spms.dbhsm.dbInstance.domain.VO.InstanceServerNameVO;
 import com.spms.dbhsm.dbInstance.service.IDbhsmDbInstanceService;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,8 +32,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/dbInstance")
-public class DbhsmDbInstanceController extends BaseController
-{
+public class DbhsmDbInstanceController extends BaseController {
     @Autowired
     private IDbhsmDbInstanceService dbhsmDbInstanceService;
 
@@ -41,38 +41,37 @@ public class DbhsmDbInstanceController extends BaseController
      */
     @RequiresPermissions("dbhsm:dbInstance:list")
     @GetMapping("/list")
-    public AjaxResult2<TableDataInfo2<DbhsmDbInstance>> list(DbhsmDbInstance dbhsmDbInstance)
-    {
+    public AjaxResult2<TableDataInfo2<DbhsmDbInstance>> list(DbhsmDbInstance dbhsmDbInstance) {
         startPage();
         List<DbhsmDbInstance> list = dbhsmDbInstanceService.selectDbhsmDbInstanceList(dbhsmDbInstance);
         return getDataList(list);
     }
+
     /**
      * 查询数据库实例列表
      */
     @RequiresPermissions("dbhsm:dbInstance:list")
     @GetMapping("/getDbInfo")
-    public AjaxResult getDbInfo(Long id)
-    {
+    public AjaxResult getDbInfo(Long id) {
         AjaxResult ajax = new AjaxResult();
         DbhsmDbInstance instance = dbhsmDbInstanceService.selectDbhsmDbInstanceById(id);
         DbInstanceGetConnDTO instanceGetConnDTO = new DbInstanceGetConnDTO();
-        BeanUtils.copyProperties(instance,instanceGetConnDTO);
-        ajax.put("instance",instanceGetConnDTO);
-        ajax.put("dbTableSpace",dbhsmDbInstanceService.getDbTablespace(id));
+        BeanUtils.copyProperties(instance, instanceGetConnDTO);
+        ajax.put("instance", instanceGetConnDTO);
+        ajax.put("dbTableSpace", dbhsmDbInstanceService.getDbTablespace(id));
         //获取PostgreSQL 架构（schema)
-        ajax.put("dbPGSchema",dbhsmDbInstanceService.getDbSchema(id));
-        ajax.put("pwdPolicyToDM",dbhsmDbInstanceService.getPwdPolicyToDM(id));
+        ajax.put("dbPGSchema", dbhsmDbInstanceService.getDbSchema(id));
+        ajax.put("pwdPolicyToDM", dbhsmDbInstanceService.getPwdPolicyToDM(id));
         return ajax;
     }
+
     /**
      * 查询数据库实例列表用户侧边栏使用
      */
     @RequiresPermissions("dbhsm:dbInstance:list")
     @GetMapping("/listDbInstanceSelect")
-    public AjaxResult2 listDbInstanceSelect(InstanceServerNameVO instanceServerNameVO)
-    {
-       return AjaxResult2.success(dbhsmDbInstanceService.listDbInstanceSelect(instanceServerNameVO));
+    public AjaxResult2 listDbInstanceSelect(InstanceServerNameVO instanceServerNameVO) {
+        return AjaxResult2.success(dbhsmDbInstanceService.listDbInstanceSelect(instanceServerNameVO));
     }
 
     /**
@@ -81,8 +80,7 @@ public class DbhsmDbInstanceController extends BaseController
     @RequiresPermissions("dbhsm:dbInstance:export")
     @Log(title = "数据库实例", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
-    public void export(HttpServletResponse response, DbhsmDbInstance dbhsmDbInstance)
-    {
+    public void export(HttpServletResponse response, DbhsmDbInstance dbhsmDbInstance) {
         List<DbhsmDbInstance> list = dbhsmDbInstanceService.selectDbhsmDbInstanceList(dbhsmDbInstance);
         ExcelUtil<DbhsmDbInstance> util = new ExcelUtil<DbhsmDbInstance>(DbhsmDbInstance.class);
         util.exportExcel(response, list, "数据库实例数据");
@@ -93,8 +91,7 @@ public class DbhsmDbInstanceController extends BaseController
      */
     @RequiresPermissions("dbhsm:dbInstance:query")
     @GetMapping(value = "/{id}")
-    public AjaxResult getInfo(@PathVariable("id") Long id)
-    {
+    public AjaxResult getInfo(@PathVariable("id") Long id) {
         return AjaxResult.success(dbhsmDbInstanceService.selectDbhsmDbInstanceById(id));
     }
 
@@ -104,13 +101,12 @@ public class DbhsmDbInstanceController extends BaseController
     @RequiresPermissions("dbhsm:dbInstance:add")
     @Log(title = "数据库实例", businessType = BusinessType.INSERT)
     @PostMapping
-    public AjaxResult2 add(@RequestBody DbhsmDbInstance dbhsmDbInstance)
-    {
+    public AjaxResult2 add(@RequestBody DbhsmDbInstance dbhsmDbInstance) {
         try {
             dbhsmDbInstanceService.insertDbhsmDbInstance(dbhsmDbInstance);
-        }catch (ZAYKException | SQLException e){
-            log.info("新增数据库实例失败！"+e.getMessage());
-            return AjaxResult2.error("新增数据库实例失败！"+e.getMessage());
+        } catch (ZAYKException | SQLException e) {
+            log.info("新增数据库实例失败！" + e.getMessage());
+            return AjaxResult2.error("新增数据库实例失败！" + e.getMessage());
         }
         return AjaxResult2.success();
     }
@@ -121,13 +117,12 @@ public class DbhsmDbInstanceController extends BaseController
     @RequiresPermissions("dbhsm:dbInstance:edit")
     @Log(title = "数据库实例", businessType = BusinessType.UPDATE)
     @PutMapping
-    public AjaxResult edit(@RequestBody DbhsmDbInstance dbhsmDbInstance)
-    {
+    public AjaxResult edit(@RequestBody DbhsmDbInstance dbhsmDbInstance) {
         try {
             dbhsmDbInstanceService.updateDbhsmDbInstance(dbhsmDbInstance);
         } catch (Exception e) {
-            log.info("修改数据库实例失败！"+e.getMessage());
-            return AjaxResult.error("修改数据库实例失败！"+e.getMessage());
+            log.info("修改数据库实例失败！" + e.getMessage());
+            return AjaxResult.error("修改数据库实例失败！" + e.getMessage());
         }
         return AjaxResult.success();
     }
@@ -137,9 +132,20 @@ public class DbhsmDbInstanceController extends BaseController
      */
     @RequiresPermissions("dbhsm:dbInstance:remove")
     @Log(title = "数据库实例", businessType = BusinessType.DELETE)
-	@DeleteMapping("/{ids}")
-    public AjaxResult remove(@PathVariable Long[] ids)
-    {
+    @DeleteMapping("/{ids}")
+    public AjaxResult remove(@PathVariable Long[] ids) {
         return dbhsmDbInstanceService.deleteDbhsmDbInstanceByIds(ids);
+    }
+
+    @ApiOperation(value = "测试连接")
+    @GetMapping("/connectionTest")
+    public AjaxResult2<Boolean> connectionTest(Long id) {
+        return dbhsmDbInstanceService.connectionTest(id);
+    }
+
+    @ApiOperation(value = "测试加密")
+    @GetMapping("/connectionEncrypt")
+    public AjaxResult2<Boolean> connectionEncrypt(Long id) {
+        return AjaxResult2.success(true);
     }
 }

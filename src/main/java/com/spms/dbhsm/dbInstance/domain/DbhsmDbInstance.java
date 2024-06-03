@@ -18,6 +18,9 @@ public class DbhsmDbInstance extends BaseEntity
     /** 主键 */
     private Long id;
 
+    @Excel(name = "资产名称")
+    private String databaseCapitalName;
+
     /** 数据库类型 */
     @Excel(name = "数据库类型")
     private String databaseType;
@@ -45,6 +48,12 @@ public class DbhsmDbInstance extends BaseEntity
     /** 数据库DBA密码 */
     @Excel(name = "数据库DBA密码")
     private String databaseDbaPassword;
+
+    @Excel(name = "业务账号")
+    private String serverUser;
+
+    @Excel(name = "业务密码")
+    private String serverPassword;
 
     /** 密码服务IP */
     @Excel(name = "密码服务IP")
@@ -92,6 +101,15 @@ public class DbhsmDbInstance extends BaseEntity
     {
         return id;
     }
+
+    public String getDatabaseCapitalName() {
+        return databaseCapitalName;
+    }
+
+    public void setDatabaseCapitalName(String databaseCapitalName) {
+        this.databaseCapitalName = databaseCapitalName;
+    }
+
     public void setDatabaseType(String databaseType)
     {
         this.databaseType = databaseType;
@@ -158,6 +176,22 @@ public class DbhsmDbInstance extends BaseEntity
     public void setPasswordServiceIp(String passwordServiceIp)
     {
         this.passwordServiceIp = passwordServiceIp;
+    }
+
+    public String getServerUser() {
+        return serverUser;
+    }
+
+    public void setServerUser(String serverUser) {
+        this.serverUser = serverUser;
+    }
+
+    public String getServerPassword() {
+        return serverPassword;
+    }
+
+    public void setServerPassword(String serverPassword) {
+        this.serverPassword = serverPassword;
     }
 
     public String getPasswordServiceIp()

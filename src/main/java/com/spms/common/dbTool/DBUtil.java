@@ -138,6 +138,7 @@ public final class DBUtil {
                         Map<String,String> colMap =new HashMap<>();
                         colMap.put(DbConstants.DB_COLUMN_NAME, resultSet.getString("Field"));
                         colMap.put("columnType", resultSet.getString("Type"));
+                        colMap.put("Key", resultSet.getString("Key"));
                         colList.add(colMap);
                     }
                     resultSet.close();
@@ -173,6 +174,16 @@ public final class DBUtil {
                 }
             }else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(dbType)){
                 ps = conn.prepareStatement("select * from " + tableName + " limit 1");
+                rs = ps.executeQuery();
+                rsmd = rs.getMetaData();
+                for (int i = 1; i <= rsmd.getColumnCount(); i++) {
+                    Map<String,String> colMap =new HashMap<>();
+                    colMap.put(DbConstants.DB_COLUMN_NAME, rsmd.getColumnName(i));
+                    colMap.put("columnType", rsmd.getColumnTypeName(i));
+                    colList.add(colMap);
+                }
+            }else if (DbConstants.DB_TYPE_KB.equalsIgnoreCase(dbType)){
+                ps = conn.prepareStatement("SELECT column_name,data_type  FROM USER_TABLES WHERE " +tableName);
                 rs = ps.executeQuery();
                 rsmd = rs.getMetaData();
                 for (int i = 1; i <= rsmd.getColumnCount(); i++) {
