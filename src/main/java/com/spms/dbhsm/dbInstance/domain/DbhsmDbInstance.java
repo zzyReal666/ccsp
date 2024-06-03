@@ -92,6 +92,8 @@ public class DbhsmDbInstance extends BaseEntity
     @Excel(name = "用户创建模式：0：创建CDB容器中的公共用户 1：创建无容器数据库用户")
     private Integer userCreateMode;
 
+
+
     public void setId(Long id)
     {
         this.id = id;
