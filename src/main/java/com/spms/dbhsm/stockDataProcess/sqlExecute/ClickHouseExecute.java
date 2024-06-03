@@ -192,8 +192,8 @@ public class ClickHouseExecute implements SqlExecuteSPI {
             insertColumns.append(col).append(",");
             if (data.containsKey(col)) {
                 selectColumns.append("CASE ");
-                data.get(col).forEach(plain_cipher_map -> {
-                    selectColumns.append("WHEN ").append(col).append(" = '").append(plain_cipher_map.get("plain")).append("' THEN '").append(plain_cipher_map.get("cipher")).append("' ");
+                data.get(col).forEach(plainCipherMap -> {
+                    selectColumns.append("WHEN ").append(col).append(" = '").append(plainCipherMap.get("plain")).append("' THEN '").append(plainCipherMap.get("cipher")).append("' ");
                 });
                 selectColumns.append("END AS ").append(col).append(",");
             } else {
@@ -203,23 +203,17 @@ public class ClickHouseExecute implements SqlExecuteSPI {
         selectColumns.deleteCharAt(selectColumns.length() - 1);
         insertColumns.deleteCharAt(insertColumns.length() - 1);
 
-        String sql = new ST(INSERT)
-                .add("table", table)
-                .add("suffix", TEMP_COLUMN_SUFFIX)
-                .add("insertColumns", insertColumns)
-                .add("id", id)
-                .add("selectColumns", selectColumns)
-                .add("limit", limit)
-                .add("offset", offset).render();
+        String sql = new ST(INSERT).add("table", table).add("suffix", TEMP_COLUMN_SUFFIX).add("insertColumns", insertColumns).add("id", id).add("selectColumns", selectColumns).add("limit", limit).add("offset", offset).render();
         log.info("columnBatchUpdate sql:{}", sql);
         return sql;
     }
 
     private static List<String> getAllColumnNames(Connection conn, String table) throws SQLException {
         //数据库实例
-        String currentDatabase = conn.getCatalog();
+        String currentDatabase = conn.getSchema() == null ? conn.getCatalog() : conn.getSchema();
         //查询全部字段
         String sql = new ST(SELECT_ALL_COLUMN_NAMES).add("databaseName", currentDatabase).add("tableName", table).render();
+        log.info("getAllColumnNames sql:{}", sql);
         try (Statement statement = conn.createStatement()) {
             ResultSet resultSet = statement.executeQuery(sql);
             List<String> columnList = new ArrayList<>();
@@ -237,13 +231,14 @@ public class ClickHouseExecute implements SqlExecuteSPI {
     @Override
     public void renameColumn(Connection conn, String schema, String table, String oldColumn, String newColumn) {
         //旧表切换为 前缀+表名
-        oldRenameToNew(conn, table);
+        renameColumn(conn, table, TEMP_COLUMN_SUFFIX + table);
         //临时表 表名+后缀 切换为 原表名
-        newRenameToOld(conn, table);
+        renameColumn(conn, table + TEMP_COLUMN_SUFFIX, table);
     }
 
-    private void newRenameToOld(Connection conn, String table) {
-        String sql = new ST(RENAME_TABLE).add("old", table + TEMP_COLUMN_SUFFIX).add("new", table).render();
+    private void renameColumn(Connection conn, String oldName, String newName) {
+        String sql = new ST(RENAME_TABLE).add("old", oldName).add("new", newName).render();
+        log.info("renameColumn sql:{}", sql);
         try (Statement statement = conn.createStatement()) {
             statement.execute(sql);
         } catch (Exception e) {
@@ -252,21 +247,12 @@ public class ClickHouseExecute implements SqlExecuteSPI {
         }
     }
 
-    private static void oldRenameToNew(Connection conn, String table) {
-        String sql = new ST(RENAME_TABLE).add("old", table).add("new", TEMP_COLUMN_SUFFIX + table).render();
-        try (Statement statement = conn.createStatement()) {
-            statement.execute(sql);
-        } catch (Exception e) {
-            log.error("renameColumn error sql:{}", sql, e);
-            throw new RuntimeException(e);
-        }
-    }
 
     //对于ClickHouse 是删除原来的表
     @Override
     public void dropColumn(Connection conn, String table, List<String> columns) {
         //删除旧表
-        String sql = new ST(DROP).add("table", table).render();
+        String sql = new ST(DROP).add("table", TEMP_COLUMN_SUFFIX+table).render();
         try (Statement statement = conn.createStatement()) {
             statement.execute(sql);
         } catch (Exception e) {

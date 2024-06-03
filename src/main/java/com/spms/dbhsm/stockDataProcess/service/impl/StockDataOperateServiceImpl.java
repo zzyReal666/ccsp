@@ -12,6 +12,7 @@ import com.spms.dbhsm.stockDataProcess.domain.dto.ColumnDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.DatabaseDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.TableDTO;
 import com.spms.dbhsm.stockDataProcess.service.StockDataOperateService;
+import com.spms.dbhsm.stockDataProcess.sqlExecute.ClickHouseExecute;
 import com.spms.dbhsm.stockDataProcess.sqlExecute.SqlExecuteSPI;
 import com.spms.dbhsm.stockDataProcess.threadTask.UpdateZookeeperTask;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * @author zzypersonally@gmail.com
@@ -91,13 +93,13 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         PROGRESS_MAP.put(String.valueOf(tableDTO.getId()), new AtomicInteger(100));
 
         //交换字段名字
-//        exchangeColumnName(databaseDTO, tableDTO, sqlExecute, dbaConn);
+        exchangeColumnName(databaseDTO, tableDTO, sqlExecute, dbaConn);
 
         //删除旧字段 注意，此时旧字段经过名字交换已经变为 前缀+字段名 todo 后续改成原字段存留一段时间，手动执行删除
-//        sqlExecute.dropColumn(dbaConn, tableDTO.getTableName(), tableDTO.getColumnDTOList().stream().map(columnDTO -> sqlExecute.getTempColumnSuffix() + columnDTO.getColumnName()).collect(Collectors.toList()));
+        sqlExecute.dropColumn(dbaConn, tableDTO.getTableName(), tableDTO.getColumnDTOList().stream().map(columnDTO -> sqlExecute.getTempColumnSuffix() + columnDTO.getColumnName()).collect(Collectors.toList()));
 
         // 加密策略写入 zookeeper
-//        writeConfigToZookeeper(databaseDTO);
+        writeConfigToZookeeper(databaseDTO);
 
     }
 
@@ -130,12 +132,16 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
 
     //交换字段名字
     private static void exchangeColumnName(DatabaseDTO databaseDTO, TableDTO tableDTO, SqlExecuteSPI sqlExecute, Connection dbaConn) {
-        tableDTO.getColumnDTOList().forEach(columnDTO -> {
-            //原始字段更名为前缀+字段名字
-            sqlExecute.renameColumn(dbaConn, databaseDTO.getDatabaseName(), tableDTO.getTableName(), columnDTO.getColumnName(), sqlExecute.getTempColumnSuffix() + columnDTO.getColumnName());
-            //临时字段（cipher）由字段名+后缀更改为字段名
-            sqlExecute.renameColumn(dbaConn, databaseDTO.getDatabaseName(), tableDTO.getTableName(), columnDTO.getColumnName() + sqlExecute.getTempColumnSuffix(), columnDTO.getColumnName());
-        });
+        if (sqlExecute instanceof ClickHouseExecute) {
+            sqlExecute.renameColumn(dbaConn, databaseDTO.getDatabaseName(), tableDTO.getTableName(), null, null);
+        } else {
+            tableDTO.getColumnDTOList().forEach(columnDTO -> {
+                //原始字段更名为前缀+字段名字
+                sqlExecute.renameColumn(dbaConn, databaseDTO.getDatabaseName(), tableDTO.getTableName(), columnDTO.getColumnName(), sqlExecute.getTempColumnSuffix() + columnDTO.getColumnName());
+                //临时字段（cipher）由字段名+后缀更改为字段名
+                sqlExecute.renameColumn(dbaConn, databaseDTO.getDatabaseName(), tableDTO.getTableName(), columnDTO.getColumnName() + sqlExecute.getTempColumnSuffix(), columnDTO.getColumnName());
+            });
+        }
     }
 
     //获取sql执行器
@@ -338,9 +344,10 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         DbInstanceGetConnDTO dbInstanceGetConnDTO = DatabaseToDbInstanceGetConnDTOAdapter.adapter(databaseDTO, connType);
         DbConnectionPoolFactory factory = new DbConnectionPoolFactory();
         Connection connection = factory.getConnection(dbInstanceGetConnDTO);
-        connection.setCatalog(databaseDTO.getDatabaseName());
+        connection.setSchema(databaseDTO.getDatabaseName());
+        log.info("获取连接成功,schema:{}", connection.getSchema());
         return connection;
-     }
+    }
     //endregion
 
 }
