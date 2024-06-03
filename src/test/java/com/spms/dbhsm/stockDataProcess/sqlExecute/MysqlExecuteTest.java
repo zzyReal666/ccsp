@@ -21,14 +21,14 @@ import java.util.Optional;
 @Slf4j
 public class MysqlExecuteTest {
 
-    SqlExecuteSPI mysqlExecute;
+    SqlExecuteSPI executeSPI;
     Connection connection;
 
     @Before
     public void getExecute() throws SQLException {
         Optional<SqlExecuteSPI> registeredService = TypedSPIRegistry.findRegisteredService(SqlExecuteSPI.class, DatabaseTypeEnum.MySQL.name());
         assert registeredService.isPresent();
-        mysqlExecute = registeredService.get();
+        executeSPI = registeredService.get();
 
         //JDBC 获取连接
         connection = DriverManager.getConnection("jdbc:mysql://192.168.7.113:13306/encrypt", "root", "123456");
@@ -37,7 +37,7 @@ public class MysqlExecuteTest {
 
     @Test
     public void getPK() throws SQLException {
-        String primaryKey = mysqlExecute.getPrimaryKey(connection, "encrypt", "t1");
+        String primaryKey = executeSPI.getPrimaryKey(connection, "encrypt", "t1");
         assert primaryKey.equals("id");
     }
 
@@ -48,13 +48,13 @@ public class MysqlExecuteTest {
             AddColumnsDTO addColumnsDTO = new AddColumnsDTO(true,"column" + i, "colunmComment" + i, i % 2 == 0, new HashMap<>());
             addColumnsDTOS.add(addColumnsDTO);
         }
-        mysqlExecute.addTempColumn(connection, "t1", addColumnsDTOS);
+        executeSPI.addTempColumn(connection, "t1", addColumnsDTOS);
         //todo 数据库查看是否添加成功
     }
 
     @Test
     public void count() {
-        int count = mysqlExecute.count(connection, "t1");
+        int count = executeSPI.count(connection, "t1");
         log.info("count:{}", count);
     }
 
@@ -65,7 +65,7 @@ public class MysqlExecuteTest {
         list.add("name");
         list.add("age");
         list.add("email");
-        mysqlExecute.selectColumn(connection, "t1",list , 2, 0)
+        executeSPI.selectColumn(connection, "t1",list , 2, 0)
                 .forEach(map -> log.info("map:{}", map));
     }
 
@@ -81,12 +81,12 @@ public class MysqlExecuteTest {
             }
             list.add(map);
         }
-        mysqlExecute.batchUpdate(connection, "t1", list);
+        executeSPI.batchUpdate(connection, "t1", list, 0, 0);
     }
 
     @Test
     public void rename() {
-        mysqlExecute.renameColumn(connection, "encrypt", "t1", "b", "a");
+        executeSPI.renameColumn(connection, "encrypt", "t1", "b", "a");
     }
 
     @Test
@@ -97,6 +97,6 @@ public class MysqlExecuteTest {
         list.add("column2_temp$zAyK_dbEnc_Mysql_");
         list.add("column3_temp$zAyK_dbEnc_Mysql_");
         list.add("column4_temp$zAyK_dbEnc_Mysql_");
-        mysqlExecute.dropColumn(connection, "t1", list);
+        executeSPI.dropColumn(connection, "t1", list);
     }
 }

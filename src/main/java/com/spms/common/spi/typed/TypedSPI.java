@@ -10,9 +10,7 @@ import java.util.Collections;
  */
 public interface TypedSPI {
 
-    default String getType() {
-        return "";
-    }
+    String getType();
 
     default Collection<String> getTypeAliases() {
         return Collections.emptyList();

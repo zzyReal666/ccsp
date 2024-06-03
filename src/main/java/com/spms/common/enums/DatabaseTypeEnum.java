@@ -10,5 +10,6 @@ public enum DatabaseTypeEnum {
     SQLServer,
     MySQL,
     PostgresSQL,
+    ClickHouse
     ;
 }

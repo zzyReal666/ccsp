@@ -19,10 +19,110 @@ public class StockDataOperateServiceImplTest {
 
     @Test
     public void stockDataOperate() throws Exception {
-        DatabaseDTO databaseDTO = getParams();
-//        initEnvironment(databaseDTO);
+//        mysqlTest();
+        clickHouseTest();
+    }
+
+    @Test
+    public void pause() {
+    }
+
+    @Test
+    public void resume() {
+    }
+
+    @Test
+    public void queryProgress() {
+    }
+
+    private static void clickHouseTest() throws ZAYKException, SQLException, InterruptedException {
         StockDataOperateServiceImpl service = new StockDataOperateServiceImpl();
-        service.stockDataOperate(databaseDTO, true);
+        DatabaseDTO dto = getCLickHouseDTO();
+        service.stockDataOperate(dto, true);
+    }
+
+    private static DatabaseDTO getCLickHouseDTO() {
+        //准备加密函数的入参
+        ColumnDTO name = new ColumnDTO();
+        name.setId(1L);
+        name.setColumnName("name");
+        name.setComment("名字");
+        name.setNotNull(true);
+        name.setEncryptAlgorithm("TestAlg");
+        name.setEncryptKeyIndex("1");
+
+        ColumnDTO phone = new ColumnDTO();
+        phone.setId(2L);
+        phone.setColumnName("phone");
+        phone.setComment("手机号");
+        phone.setNotNull(true);
+        phone.setEncryptAlgorithm("TestAlg");
+        phone.setEncryptKeyIndex("1");
+
+        ColumnDTO address = new ColumnDTO();
+        address.setId(3L);
+        address.setColumnName("address");
+        address.setComment("地址");
+        address.setNotNull(true);
+        address.setEncryptAlgorithm("TestAlg");
+        address.setEncryptKeyIndex("1");
+
+        List<ColumnDTO> columns = Arrays.asList(name, phone,address);
+
+
+        TableDTO tableDTO = new TableDTO();
+        tableDTO.setId(1L);
+        tableDTO.setBatchSize(10);
+        tableDTO.setTableName("student");
+        tableDTO.setThreadNum(10);
+        tableDTO.setColumnDTOList(columns);
+
+        List<TableDTO> tables = Collections.singletonList(tableDTO);
+
+        DatabaseDTO dto = new DatabaseDTO();
+        dto.setId(123456L);
+        dto.setDatabaseDba("default");
+        dto.setDatabaseIp("192.168.7.113");
+        dto.setDatabasePort("18123");
+        dto.setDatabaseDbaPassword("123456");
+        dto.setConnectUrl("jdbc:clickhouse://192.168.7.113:18123/demo_ds_0");
+        dto.setDatabaseType("ClickHouse");
+        dto.setDatabaseVersion("22.02");
+        dto.setDatabaseName("demo_ds_0");
+        dto.setInstanceType("SID");
+        dto.setServiceUser("default");
+        dto.setServicePassword("123456");
+        dto.setTableDTOList(tables);
+        return dto;
+    }
+
+    private static void mysqlTest() throws ZAYKException, SQLException, InterruptedException {
+        DatabaseDTO databaseDTO = getMysqlDTO();
+        StockDataOperateServiceImpl service = new StockDataOperateServiceImpl();
+        //开一个线程
+        Thread operate = new Thread(() -> {
+            try {
+                service.stockDataOperate(databaseDTO, true);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+        operate.start();
+        Thread process = new Thread(() -> {
+            try {
+                while (true) {
+                    int i = service.queryProgress(String.valueOf(1));
+                    System.out.println("当前执行进度 百分之：" + i);
+                    Thread.sleep(100);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+        process.setDaemon(true);
+        process.start();
+
+        operate.join();
     }
 
     private void initEnvironment(DatabaseDTO databaseDTO) throws Exception {
@@ -58,7 +158,7 @@ public class StockDataOperateServiceImplTest {
         conn.setAutoCommit(true);
     }
 
-    private static DatabaseDTO getParams() throws ZAYKException, SQLException, InterruptedException {
+    private static DatabaseDTO getMysqlDTO() throws ZAYKException, SQLException, InterruptedException {
         ColumnDTO name = new ColumnDTO();
         name.setId(1L);
         name.setColumnName("name");
@@ -125,15 +225,4 @@ public class StockDataOperateServiceImplTest {
         return dto;
     }
 
-    @Test
-    public void pause() {
-    }
-
-    @Test
-    public void resume() {
-    }
-
-    @Test
-    public void queryProgress() {
-    }
 }

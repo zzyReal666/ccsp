@@ -19,8 +19,7 @@ import java.util.Enumeration;
 import java.util.Hashtable;
 
 /**
- * @author
- * Funciton:该类是连接池的管理类
+ * @author Funciton:该类是连接池的管理类
  */
 public class DbConnectionPoolFactory {
     private static final Log log = LogFactory.getLog(DbConnectionPool.class);
@@ -100,12 +99,12 @@ public class DbConnectionPoolFactory {
     /**
      * 获取数据库连接
      *
-     * @param  instance 从池中获取不同数据库连接使用
+     * @param instance 从池中获取不同数据库连接使用
      * @return
      */
     public Connection getConnection(DbhsmDbInstance instance) throws ZAYKException, SQLException {
         DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
-        BeanUtils.copyProperties(instance,connDTO);
+        BeanUtils.copyProperties(instance, connDTO);
         Connection connection = getConnection(connDTO);
         connection.setAutoCommit(false);
         return connection;
@@ -120,10 +119,12 @@ public class DbConnectionPoolFactory {
         dbInstancekey = getDbInstancePoolKeyDTO(dbInstancekey, databaseType);
         BeanUtils.copyProperties(instanceGetConnDTO, dbInstancekey);
         if (!DbConnectionPoolFactory.getInstance().IsBePool(dbInstancekey)) {
-            buildDataSourcePool(instanceGetConnDTO,dbInstancekey);
+            buildDataSourcePool(instanceGetConnDTO, dbInstancekey);
         }
         Connection connection = DbConnectionPoolFactory.getInstance().getDbConnectionPool(dbInstancekey).getConnection();
-        connection.setAutoCommit(false);
+        if (!databaseType.equals(DbConstants.DB_TYPE_CLICKHOUSE)) {
+            connection.setAutoCommit(false);
+        }
         return connection;
     }
 
@@ -138,15 +139,17 @@ public class DbConnectionPoolFactory {
             dbInstancekey = new DbPostgreSQLInstancePoolKeyDTO();
         } else if (databaseType.equals(DbConstants.DB_TYPE_DM)) {
             dbInstancekey = new DbDMInstancePoolKeyDTO();
+        } else if (databaseType.equals(DbConstants.DB_TYPE_CLICKHOUSE)) {
+            dbInstancekey = new DbClickHouseInstancePoolKeyDTO();
         } else {
             log.info("Error:未实现的数据库类型");
-            throw  new ZAYKException("未实现的数据库类型");
+            throw new ZAYKException("未实现的数据库类型");
         }
         return dbInstancekey;
     }
 
 
-    public static String buildDataSourcePool(DbInstanceGetConnDTO instanceGetConnDTO,DbInstancePoolKeyDTO instanceKey) throws ZAYKException, SQLException {
+    public static String buildDataSourcePool(DbInstanceGetConnDTO instanceGetConnDTO, DbInstancePoolKeyDTO instanceKey) throws ZAYKException, SQLException {
         //判断各个数据不为空
         checkGetConnIsEmpty(instanceGetConnDTO);
         DbConnectionPoolFactory factory = DbConnectionPoolFactory.getInstance();
@@ -167,6 +170,7 @@ public class DbConnectionPoolFactory {
         }
 
     }
+
     public static String buildDataSourcePool(DbInstanceGetConnDTO instanceGetConnDTO) throws ZAYKException {
         DbInstancePoolKeyDTO instanceKey = new DbInstancePoolKeyDTO();
         if (ObjectUtils.isEmpty(instanceGetConnDTO)) {
@@ -181,12 +185,12 @@ public class DbConnectionPoolFactory {
             instanceKey = new DbMySQLInstancePoolKeyDTO();
         } else if (databaseType.equals(DbConstants.DB_TYPE_POSTGRESQL)) {
             instanceKey = new DbPostgreSQLInstancePoolKeyDTO();
-        }else if (databaseType.equals(DbConstants.DB_TYPE_DM)) {
+        } else if (databaseType.equals(DbConstants.DB_TYPE_DM)) {
             instanceKey = new DbDMInstancePoolKeyDTO();
-        }else {
+        } else {
             throw new ZAYKException("不支持的数据库类型：" + databaseType);
         }
-        BeanUtils.copyProperties(instanceGetConnDTO,instanceKey);
+        BeanUtils.copyProperties(instanceGetConnDTO, instanceKey);
         checkGetConnIsEmpty(instanceGetConnDTO);
         DbConnectionPoolFactory factory = DbConnectionPoolFactory.getInstance();
         if (factory.IsBePool(instanceKey)) {
@@ -211,7 +215,7 @@ public class DbConnectionPoolFactory {
         //判断各个数据不为空
         if (StringUtils.isBlank(instanceGetConnDTO.getDatabaseIp()) || StringUtils.isBlank(instanceGetConnDTO.getDatabasePort())
                 || StringUtils.isBlank(instanceGetConnDTO.getDatabaseDba()) || StringUtils.isBlank(instanceGetConnDTO.getDatabaseDbaPassword())
-                || StringUtils.isBlank(instanceGetConnDTO.getDatabaseType()) || (StringUtils.isBlank(instanceGetConnDTO.getDatabaseExampleType())  && DbConstants.DB_TYPE_ORACLE.equals(instanceGetConnDTO.getDatabaseType()))
+                || StringUtils.isBlank(instanceGetConnDTO.getDatabaseType()) || (StringUtils.isBlank(instanceGetConnDTO.getDatabaseExampleType()) && DbConstants.DB_TYPE_ORACLE.equals(instanceGetConnDTO.getDatabaseType()))
                 || StringUtils.isBlank(instanceGetConnDTO.getDatabaseServerName())) {
             log.info("Error：Database configuration in the support library is incomplete");
             throw new ZAYKException("数据库配置不完整，请检查数据库配置");
@@ -221,7 +225,7 @@ public class DbConnectionPoolFactory {
     /**
      * DbhsmDbInstance 转DbInstancePoolKeyDTO
      *
-     * @param  instance 从池中获取不同数据库连接使用
+     * @param instance 从池中获取不同数据库连接使用
      * @return
      */
     public static DbInstancePoolKeyDTO instanceConventKey(DbhsmDbInstance instance) throws ZAYKException {
@@ -235,7 +239,9 @@ public class DbConnectionPoolFactory {
         return instanceKey;
     }
 
-    /**遍历连接池*/
+    /**
+     * 遍历连接池
+     */
     public static void queryPool() {
         if (CollectionUtils.isEmpty(hashtable)) {
             log.info("Warning：The database connection pool is empty");

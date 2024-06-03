@@ -3,7 +3,6 @@ package com.spms.dbhsm.stockDataProcess.sqlExecute;
 import com.ccsp.common.core.utils.StringUtils;
 import com.spms.common.enums.DatabaseTypeEnum;
 import com.spms.dbhsm.stockDataProcess.domain.dto.AddColumnsDTO;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.stringtemplate.v4.ST;
 
@@ -30,7 +29,6 @@ public class MysqlExecute implements SqlExecuteSPI {
     private static final String GET_PRIMARY_KEY_SQL = "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '<schema>' AND TABLE_NAME = '<table>' AND COLUMN_KEY = 'PRI'";
 
     //临时字段后缀
-    @Getter
     private static final String TEMP_COLUMN_SUFFIX = "_temp$zAyK_dbEnc_Mysql_";
 
     //添加字段主句
@@ -59,9 +57,7 @@ public class MysqlExecute implements SqlExecuteSPI {
     @Override
     public String getPrimaryKey(Connection conn, String schema, String table) {
         String sql = new ST(GET_PRIMARY_KEY_SQL).add("schema", schema).add("table", table).render();
-        Statement statement;
-        try {
-            statement = conn.createStatement();
+        try (Statement statement = conn.createStatement()) {
             ResultSet resultSet = statement.executeQuery(sql);
             resultSet.next();
             return resultSet.getString(1);
@@ -102,17 +98,14 @@ public class MysqlExecute implements SqlExecuteSPI {
             else {
                 String definitionSql = new ST(ADD_COLUMN_LOOP).add("field", addColumnsDTO.getColumnName() + TEMP_COLUMN_SUFFIX).add("type", columnDefinition.get("type")).add("null", "NO".equals(columnDefinition.get("null")) ? "NOT NULL" : "")
                         //todo 默认值暂时不设置
-                        .add("default", columnDefinition).add("comment", StringUtils.isBlank(addColumnsDTO.getComment()) ? "" : "COMMENT '" + addColumnsDTO.getComment() + "'").render();
+                        .add("default", columnDefinition.get("default") == null ? "" : columnDefinition.get("default")).add("comment", columnDefinition.get("comment") == null ? "" : "COMMENT '" + addColumnsDTO.getComment() + "'").render();
                 sql.append(definitionSql).append(",");
             }
-
-
         });
         //删除最后一个逗号
         sql.deleteCharAt(sql.length() - 1);
         log.info("addTempColumn sql:{}", sql);
-        try {
-            Statement statement = conn.createStatement();
+        try (Statement statement = conn.createStatement()) {
             statement.execute(sql.toString());
         } catch (SQLException e) {
             log.error("addTempColumn error", e);
@@ -126,9 +119,7 @@ public class MysqlExecute implements SqlExecuteSPI {
     @Override
     public int count(Connection conn, String table) {
         String sql = new ST(COUNT_DATA).add("table", table).render();
-        Statement statement;
-        try {
-            statement = conn.createStatement();
+        try (Statement statement = conn.createStatement()) {
             ResultSet resultSet = statement.executeQuery(sql);
             resultSet.next();
             return resultSet.getInt(1);
@@ -145,18 +136,13 @@ public class MysqlExecute implements SqlExecuteSPI {
         String columnStr = String.join(",", columns);
         String sql = new ST(SELECT_COLUMN).add("columns", columnStr).add("id", columns.get(0)).add("table", table).add("limit", limit).add("offset", offset).render();
         log.info("selectColumn sql:{}", sql);
-        Statement statement;
-        try {
+        try (Statement statement = conn.createStatement()) {
             List<Map<String, String>> maps = new ArrayList<>();
-
             //结果集
-            statement = conn.createStatement();
             ResultSet resultSet = statement.executeQuery(sql);
-
             //metadata
             ResultSetMetaData metaData = resultSet.getMetaData();
             int columnCount = metaData.getColumnCount();
-
             //遍历结果集，查询出的数据放在map中，map放在list中，
             while (resultSet.next()) {
                 Map<String, String> map = new LinkedHashMap<>();
@@ -181,7 +167,7 @@ public class MysqlExecute implements SqlExecuteSPI {
      * @param data  要更新的数据 必须是有序map
      */
     @Override
-    public void batchUpdate(Connection conn, String table, List<Map<String, String>> data) {
+    public void batchUpdate(Connection conn, String table, List<Map<String, String>> data,int limit,int offset) {
         StringBuilder set = new StringBuilder();
         StringBuilder where = new StringBuilder();
         //开启批量

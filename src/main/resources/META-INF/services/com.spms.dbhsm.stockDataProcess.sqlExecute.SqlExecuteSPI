@@ -1,1 +1,3 @@
 com.spms.dbhsm.stockDataProcess.sqlExecute.MysqlExecute
+com.spms.dbhsm.stockDataProcess.sqlExecute.OracleExecute
+com.spms.dbhsm.stockDataProcess.sqlExecute.ClickHouseExecute

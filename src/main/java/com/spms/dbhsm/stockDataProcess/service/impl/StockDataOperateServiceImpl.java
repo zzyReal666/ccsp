@@ -1,6 +1,7 @@
 package com.spms.dbhsm.stockDataProcess.service.impl;
 
 import com.ccsp.common.core.exception.ZAYKException;
+import com.spms.common.enums.DatabaseTypeEnum;
 import com.spms.common.pool.hikariPool.DbConnectionPoolFactory;
 import com.spms.common.spi.typed.TypedSPIRegistry;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -31,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 /**
  * @author zzypersonally@gmail.com
@@ -42,14 +43,11 @@ import java.util.stream.Collectors;
 @Service
 public class StockDataOperateServiceImpl implements StockDataOperateService {
 
-    // 暂停标志的映射，每个线程有自己的暂停标志
+    // 暂停标志的映射，每个表有自己的暂停标志
     private static final Map<String, AtomicBoolean> PAUSED_MAP = new ConcurrentHashMap<>();
 
-    // 进度的映射，每个线程有自己的进度
+    // 进度的映射，每个表有自己的进度
     private static final Map<String, AtomicInteger> PROGRESS_MAP = new ConcurrentHashMap<>();
-
-    //全局唯一标识，标志着是否是第一次调用该服务 dataBaseId:true
-    private static final Map<Long, Boolean> FIRST_CALL = new ConcurrentHashMap<>();
 
     //暂停｜失败 记录位置 tableId:offset
     private static final Map<Long, Integer> STOP_POSITION = new ConcurrentHashMap<>();
@@ -84,21 +82,22 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         }
 
         // 新增临时字段
-        addTempColumns(tableDTO, sqlExecute, dbaConn,operateType);
+        addTempColumns(tableDTO, sqlExecute, dbaConn, operateType);
 
         //分块 加/解密
         blockOperate(operateType, sqlExecute, dbaConn, databaseDTO, primaryKey, 0);
 
+        //设置进度 注意，执行到这里肯定已经完成，强制设置进度为100
+        PROGRESS_MAP.put(String.valueOf(tableDTO.getId()), new AtomicInteger(100));
+
         //交换字段名字
-        exchangeColumnName(databaseDTO, tableDTO, sqlExecute, dbaConn);
+//        exchangeColumnName(databaseDTO, tableDTO, sqlExecute, dbaConn);
 
         //删除旧字段 注意，此时旧字段经过名字交换已经变为 前缀+字段名 todo 后续改成原字段存留一段时间，手动执行删除
-
-        sqlExecute.dropColumn(dbaConn, tableDTO.getTableName(), tableDTO.getColumnDTOList().stream()
-                .map(columnDTO -> sqlExecute.getTempColumnSuffix() + columnDTO.getColumnName()).collect(Collectors.toList()));
+//        sqlExecute.dropColumn(dbaConn, tableDTO.getTableName(), tableDTO.getColumnDTOList().stream().map(columnDTO -> sqlExecute.getTempColumnSuffix() + columnDTO.getColumnName()).collect(Collectors.toList()));
 
         // 加密策略写入 zookeeper
-        writeConfigToZookeeper(databaseDTO);
+//        writeConfigToZookeeper(databaseDTO);
 
     }
 
@@ -125,7 +124,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
     //新增临时字段
     private void addTempColumns(TableDTO tableDTO, SqlExecuteSPI sqlExecute, Connection dbaConn, boolean operateType) {
         ArrayList<AddColumnsDTO> addColumns = new ArrayList<>();
-        tableDTO.getColumnDTOList().forEach(columnDTO -> addColumns.add(convertToDTO(columnDTO,operateType)));
+        tableDTO.getColumnDTOList().forEach(columnDTO -> addColumns.add(convertToDTO(columnDTO, operateType)));
         sqlExecute.addTempColumn(dbaConn, tableDTO.getTableName(), addColumns);
     }
 
@@ -156,13 +155,6 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
 
     //写入加密策略到zookeeper
     private void writeConfigToZookeeper(DatabaseDTO databaseDTO) throws InterruptedException {
-//        //如果当前是第一次走该服务，初始化zk配置中心的数据 todo 这部分是否放在数据库管理部分更为合理？
-//        if (FIRST_CALL.get(databaseDTO.getId()) == null) {
-//            FIRST_CALL.put(databaseDTO.getId(), true);
-//            InitZookeeperTask initZookeeperTask = new InitZookeeperTask(databaseDTO);
-//            initZookeeperTask.start();
-//            initZookeeperTask.join();
-//        }
         //开一个线程 写加密策略到zk
         Thread writeZkthread = new UpdateZookeeperTask(databaseDTO);
         writeZkthread.start();
@@ -221,6 +213,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
                         process(operateType, primaryKey, tableDTO, sqlExecute, connection, limit, currentOffset);
                         int processed = currentOffset + limit;
                         progress.set((int) (((double) processed / count) * 100));
+                        PROGRESS_MAP.put(String.valueOf(tableDTO.getId()), progress);
                         // 检查暂停标志
                         if (paused.get()) {
                             STOP_POSITION.put(tableDTO.getId(), currentOffset);
@@ -230,7 +223,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
                     }
                 } catch (Exception e) {
                     //打印错误
-                    log.error("加密/解密失败，当前线程:{}", Thread.currentThread().getId(), e);
+                    log.error("加密/解密失败，当前线程:{}", Thread.currentThread().getName(), e);
                     throw new RuntimeException(e);
                 }
             });
@@ -238,8 +231,8 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         //关闭线程池
         executor.shutdown();
         try {
-            // 等待所有任务完成，最多等待1小时
-            if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
+            // 等待所有任务完成，最多等待5小时
+            if (!executor.awaitTermination(5, TimeUnit.HOURS)) {
                 executor.shutdownNow();
             }
         } catch (InterruptedException e) {
@@ -266,17 +259,41 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
             columns.add(primaryKey);
             tableDTO.getColumnDTOList().forEach(columnDTO -> columns.add(columnDTO.getColumnName()));
             List<Map<String, String>> data = sqlExecute.selectColumn(conn, tableDTO.getTableName(), columns, limit, finalOffset);
-            //加密/解密
-            data.forEach(map -> {
-                map.forEach((key, value) -> {
-                    if (key.equals(primaryKey)) {
-                        return;
-                    }
-                    map.put(key, encryptOrDecrypt(key, value, tableDTO, operateType));
+
+            //clickHouse做特殊处理
+            if (sqlExecute.getType().equals(DatabaseTypeEnum.ClickHouse.name())) {
+                Map<String, List<Map<String, String>>> dataIncludeCipher = new HashMap<>();
+                data.forEach(map -> {
+                    map.forEach((fieldName, plain) -> {
+                        Map<String, String> valueMap = new HashMap<>();
+                        if (fieldName.equals(primaryKey)) {
+                            valueMap.put("plain", plain);
+                        } else {
+                            valueMap.put("plain", plain);
+                            valueMap.put("cipher", encryptOrDecrypt(fieldName, plain, tableDTO, operateType));
+                        }
+                        // 将加密后的数据直接放入 transformedData
+                        dataIncludeCipher.putIfAbsent(fieldName, new ArrayList<>());
+                        dataIncludeCipher.get(fieldName).add(valueMap);
+                    });
                 });
-            });
-            //更新数据
-            sqlExecute.batchUpdate(conn, tableDTO.getTableName(), data);
+                // 更新数据
+                sqlExecute.columnBatchUpdate(conn, tableDTO.getTableName(), primaryKey, dataIncludeCipher, limit, finalOffset);
+            }
+            //行式数据库
+            else {
+                //加密/解密
+                data.forEach(map -> {
+                    map.forEach((fieldName, plain) -> {
+                        if (fieldName.equals(primaryKey)) {
+                            return;
+                        }
+                        map.put(fieldName, encryptOrDecrypt(fieldName, plain, tableDTO, operateType));
+                    });
+                });
+                //更新数据
+                sqlExecute.batchUpdate(conn, tableDTO.getTableName(), data, limit, finalOffset);
+            }
         } catch (Exception e) {
             log.error("加密/解密失败", e);
             throw new RuntimeException();
@@ -320,8 +337,10 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
     private static Connection getConnection(DatabaseDTO databaseDTO, DatabaseToDbInstanceGetConnDTOAdapter.AdapterType connType) throws ZAYKException, SQLException {
         DbInstanceGetConnDTO dbInstanceGetConnDTO = DatabaseToDbInstanceGetConnDTOAdapter.adapter(databaseDTO, connType);
         DbConnectionPoolFactory factory = new DbConnectionPoolFactory();
-        return factory.getConnection(dbInstanceGetConnDTO);
-    }
+        Connection connection = factory.getConnection(dbInstanceGetConnDTO);
+        connection.setCatalog(databaseDTO.getDatabaseName());
+        return connection;
+     }
     //endregion
 
 }
