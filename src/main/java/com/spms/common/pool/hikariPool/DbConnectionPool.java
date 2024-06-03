@@ -12,16 +12,17 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+
 /**
- *  增加新的数据库后需要增加的内容：
- *  1设置JdbcUrl
- *  2创建数据库连接池key类继承DbInstancePoolKeyDTO
- *  3 更改DbConnectionPoolFactory.getDbInstancePoolKeyDTO()方法，添加数据库类型
- *  4 DbConstants类增加数据库常量类型和
- *  5 web:web界面增加数据库字典类型 实例界面添加新增的字典，更改getDbEditionsDic()方法
- *  6 增加版本号字典值
- *  7 pom文件添加数据库驱动依赖
- * */
+ * 增加新的数据库后需要增加的内容：
+ * 1设置JdbcUrl
+ * 2创建数据库连接池key类继承DbInstancePoolKeyDTO
+ * 3 更改DbConnectionPoolFactory.getDbInstancePoolKeyDTO()方法，添加数据库类型
+ * 4 DbConstants类增加数据库常量类型和
+ * 5 web:web界面增加数据库字典类型 实例界面添加新增的字典，更改getDbEditionsDic()方法
+ * 6 增加版本号字典值
+ * 7 pom文件添加数据库驱动依赖
+ */
 @Slf4j
 public class DbConnectionPool {
     private static DataSource dataSource;
@@ -60,6 +61,10 @@ public class DbConnectionPool {
                 //config.addDataSourceProperty("sslFilesPath", "E:\\dmdbms\\client_ssl\\SYSDBA");
                 //config.addDataSourceProperty("sslKeystorePass", "abc123");
                 break;
+            case DbConstants.DB_TYPE_CLICKHOUSE:
+                config.setJdbcUrl("jdbc:clickhouse://" + databaseIp + ":" + databasePort + "/" + databaseServerName);
+                config.setDriverClassName("com.clickhouse.jdbc.ClickHouseDriver");
+                break;
             default:
                 throw new IllegalArgumentException("Unsupported database type: " + databaseType);
         }
@@ -79,7 +84,7 @@ public class DbConnectionPool {
         } catch (Exception e) {
             e.printStackTrace();
             log.info("Could not create HikariCP data source");
-            throw new RuntimeException("与数据库"+databaseServerName+"创建连接失败！请检查网络是否正常及DBA用户名密码是否正确。", e);
+            throw new RuntimeException("与数据库" + databaseServerName + "创建连接失败！请检查网络是否正常及DBA用户名密码是否正确。", e);
         }
     }
 

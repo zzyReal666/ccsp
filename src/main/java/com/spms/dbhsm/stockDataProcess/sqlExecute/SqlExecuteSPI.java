@@ -23,7 +23,7 @@ public interface SqlExecuteSPI extends TypedSPI {
 
 
     /**
-     * 获取临时表的前｜后缀
+     * 获取临时表、临时字段的前｜后缀 注意，每个数据库对表名、字段的字符限制不同，需要根据实际测试情况确定
      */
     String getTempColumnSuffix();
 
@@ -36,7 +36,7 @@ public interface SqlExecuteSPI extends TypedSPI {
     /**
      * 数据总条数
      */
-    int count(Connection conn, String table) ;
+    int count(Connection conn, String table);
 
 
     /**
@@ -46,14 +46,21 @@ public interface SqlExecuteSPI extends TypedSPI {
 
 
     /**
-     * 批量更新
+     * 批量更新 实际上是插入数据到新的字段
      */
-    void batchUpdate(Connection conn, String table, List<Map<String, String>> data);
+    void batchUpdate(Connection conn, String table, List<Map<String, String>> data, int limit, int offset);
+
+    /**
+     * 列式的批量更新
+     */
+    default void columnBatchUpdate(Object... args) throws SQLException {
+
+    }
 
     /**
      * 字段重新命名
      */
-    void renameColumn(Connection conn, String schema,String table, String oldColumn, String newColumn);
+    void renameColumn(Connection conn, String schema, String table, String oldColumn, String newColumn);
 
 
     /**
