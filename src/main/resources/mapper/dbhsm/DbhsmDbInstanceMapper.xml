@@ -31,7 +31,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="databaseType"    column="database_type"    />
     </resultMap>
     <sql id="selectDbhsmDbInstanceVo">
-        select id,database_capital_name, database_type, database_ip, database_port, database_server_name, database_example_type, database_dba, database_dba_password, password_service_ip, password_service_port, create_time, update_time, secret_service, database_edition, user_create_mode,enc_libapi_path from dbhsm_db_instance
+        select id,database_capital_name, database_type, database_ip, database_port, database_server_name, database_example_type, database_dba, database_dba_password, password_service_ip, password_service_port, create_time, update_time, secret_service, database_edition, user_create_mode,enc_libapi_path,server_user,server_password from dbhsm_db_instance
     </sql>
 
     <select id="selectDbhsmDbInstanceList" parameterType="com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance" resultMap="DbhsmDbInstanceResult">

@@ -267,7 +267,6 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         return sql;
     }
 
-
     @Override
     @Transactional
     public AjaxResult insertDecColumnsOnEnc(TaskDecColumnsOnEncRequest request) {
@@ -280,45 +279,36 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         //更新数据
         encryptTable.setThreadCount(request.getThreadCount());
         encryptTable.setBatchCount(request.getBatchCount());
+
         dbhsmEncryptTableMapper.updateRecord(encryptTable);
 
         DbhsmEncryptColumns dbhsmEncryptColumn = new DbhsmEncryptColumns();
         dbhsmEncryptColumn.setTableId(encryptTable.getTableId());
-        dbhsmEncryptColumn.setEncryptionStatus(3);
-        if (null == dbhsmTaskQueue.getDecStatus()) {
-            //加密队列加到解密队列
-            dbhsmEncryptColumn.setEncryptionStatus(2);
-        }
+        dbhsmEncryptColumn.setDbInstanceId(encryptTable.getInstanceId());
 
-        //查询表中的解密列
+        //查询表中的已加密列
         List<DbhsmEncryptColumns> columnsList = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsList(dbhsmEncryptColumn);
 
-        //return
-        if (CollectionUtils.isEmpty(columnsList)) {
-            return AjaxResult.error("表中的字段无法添加至加密队列");
-        }
-
         //组装update数据
-        for (DbhsmEncryptColumns dbhsmEncryptColumns : columnsList) {
-            for (EncryptColumns encryptColumns : request.getEncryptedLists()) {
-                if (encryptColumns.getEncryptColumns().equals(dbhsmEncryptColumns.getEncryptColumns())) {
-                    BeanUtils.copyProperties(encryptColumns, dbhsmEncryptColumns);
-                    //修改未未开始加密
-                    dbhsmEncryptColumns.setEncryptionStatus(2);
-                    if (null == dbhsmTaskQueue.getDecStatus()) {
-                        dbhsmEncryptColumn.setEncryptionStatus(3);
-                    }
-                    dbhsmEncryptColumnsMapper.updateDbhsmEncryptColumns(dbhsmEncryptColumns);
-                }
-            }
+        for (EncryptColumns encryptColumns : request.getEncryptedLists()) {
+            DbhsmEncryptColumns dbhsmEncryptColumns = new DbhsmEncryptColumns();
+            BeanUtils.copyProperties(encryptColumns, dbhsmEncryptColumns);
+            //修改未未开始加密
+            dbhsmEncryptColumn.setEncryptionStatus(3);
+            dbhsmEncryptColumnsMapper.updateDbhsmEncryptColumns(dbhsmEncryptColumns);
+
         }
 
-        //如果数据一样
+        DbhsmTaskQueue taskQueue = new DbhsmTaskQueue();
+        BeanUtils.copyProperties(dbhsmTaskQueue, taskQueue);
+
+        //如果数据一样,说明加密队列中所有加密字段都添加至解密队列中，此时更改加密队列状态为空
         if (columnsList.size() == request.getEncryptedLists().size()) {
-            //删除数据
-            dbhsmTaskQueueMapper.deleteRecords(request.getTaskId());
+            taskQueue.setEncStatus(4);
         }
 
+        taskQueue.setDecStatus(0);
+        dbhsmTaskQueueMapper.updateRecord(taskQueue);
         return AjaxResult.success();
     }
 
@@ -382,10 +372,10 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         }
 
 
-        if (isTask){
+        if (isTask) {
             List<DbhsmEncryptColumns> columnsList = dbhsmEncryptColumnsMapper.selectDbhsmEncryptByTableId(snowflakeId);
             columnsList = columnsList.stream().filter(db -> 3 > db.getEncryptionStatus()).collect(Collectors.toList());
-            if (CollectionUtils.isEmpty(columnsList)){
+            if (CollectionUtils.isEmpty(columnsList)) {
                 //如果为空删除该列
             }
             return AjaxResult.success();

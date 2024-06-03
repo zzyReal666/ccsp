@@ -162,7 +162,7 @@
             <if test="taskMode == 'dec'.toString()">
                 and task.dec_status is not null
                 <if test="status!=null and status!=''">and task.dec_status=#{status}</if>
-                and col.encryption_status = 3
+
             </if>
             <if test="databaseCapitalName!=null and databaseCapitalName!=''">and
                 ins.database_capital_name=#{databaseCapitalName}
