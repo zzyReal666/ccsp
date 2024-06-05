@@ -51,14 +51,6 @@ public class StockDataOperateServiceImplTest {
         name.setEncryptAlgorithm("TestAlg");
         name.setEncryptKeyIndex("1");
 
-        ColumnDTO phone = new ColumnDTO();
-        phone.setId(2L);
-        phone.setColumnName("phone");
-        phone.setComment("手机号");
-        phone.setNotNull(true);
-        phone.setEncryptAlgorithm("TestAlg");
-        phone.setEncryptKeyIndex("1");
-
         ColumnDTO address = new ColumnDTO();
         address.setId(3L);
         address.setColumnName("address");
@@ -67,7 +59,7 @@ public class StockDataOperateServiceImplTest {
         address.setEncryptAlgorithm("TestAlg");
         address.setEncryptKeyIndex("1");
 
-        List<ColumnDTO> columns = Arrays.asList(name, phone,address);
+        List<ColumnDTO> columns = Arrays.asList(name,address);
 
 
         TableDTO tableDTO = new TableDTO();

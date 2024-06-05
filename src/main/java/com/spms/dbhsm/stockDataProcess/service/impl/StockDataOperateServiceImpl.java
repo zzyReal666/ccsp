@@ -119,7 +119,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
     //查询执行进度
     @Override
     public int queryProgress(String tableId) {
-        return PROGRESS_MAP.get(tableId).get();
+        return PROGRESS_MAP.get(tableId) == null ? 0 : PROGRESS_MAP.get(tableId).get();
     }
 
 
