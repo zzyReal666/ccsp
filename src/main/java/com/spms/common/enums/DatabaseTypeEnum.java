@@ -15,8 +15,8 @@ public enum DatabaseTypeEnum {
     PostgresSQL("3", "PostgresSQL"),
     ClickHouse("6", "ClickHouse");
 
-    private String code;
-    private String name;
+    private final String code;
+    private final String name;
 
     DatabaseTypeEnum(String code, String name) {
         this.code = code;
@@ -25,14 +25,11 @@ public enum DatabaseTypeEnum {
 
     public static String getNameByCode(String code) {
         DatabaseTypeEnum[] var1 = values();
-
         for (DatabaseTypeEnum e : var1) {
             if (code.equals(e.getCode())) {
                 return e.getName();
             }
         }
-
         return null;
     }
-
 }
