@@ -148,7 +148,7 @@
         tab.thread_count as threadCount,
         tab.batch_count as batchCount
         <if test="taskMode == 'dec'.toString()">
-            ,GROUP_CONCAT(col.encrypt_columns)  as unfinishedColumns
+            ,GROUP_CONCAT(case when encryption_status in (3,4) then encrypt_columns end)  as unfinishedColumns
         </if>
         from dbhsm_encrypt_columns col
         left join dbhsm_encrypt_table tab on tab.table_id = col.table_id
@@ -204,5 +204,15 @@
     <delete id="deleteRecords" parameterType="java.lang.Long">
         delete from dbhsm_task_queue where task_id = #{taskId}
     </delete>
+
+    <select id="queryTableTask" resultMap="TaskQueue">
+        select * from dbhsm_task_queue where table_id =#{tableId}
+        <if test="taskMode == 'enc'.toString()">
+            and enc_status is not null
+        </if>
+        <if test="taskMode == 'dec'.toString()">
+            and dec_status is not null
+        </if>
+    </select>
 
 </mapper>

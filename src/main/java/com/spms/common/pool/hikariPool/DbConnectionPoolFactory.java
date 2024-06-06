@@ -141,6 +141,8 @@ public class DbConnectionPoolFactory {
             dbInstancekey = new DbDMInstancePoolKeyDTO();
         } else if (databaseType.equals(DbConstants.DB_TYPE_CLICKHOUSE)) {
             dbInstancekey = new DbClickHouseInstancePoolKeyDTO();
+        } else if (databaseType.equals(DbConstants.DB_TYPE_KB)) {
+            dbInstancekey = new DbKingBaseInstancePoolKeyDTO();
         } else {
             log.info("Error:未实现的数据库类型");
             throw new ZAYKException("未实现的数据库类型");
@@ -187,6 +189,10 @@ public class DbConnectionPoolFactory {
             instanceKey = new DbPostgreSQLInstancePoolKeyDTO();
         } else if (databaseType.equals(DbConstants.DB_TYPE_DM)) {
             instanceKey = new DbDMInstancePoolKeyDTO();
+        } else if (databaseType.equals(DbConstants.DB_TYPE_KB)) {
+            instanceKey = new DbKingBaseInstancePoolKeyDTO();
+        } else if (databaseType.equals(DbConstants.DB_TYPE_CLICKHOUSE)) {
+            instanceKey = new DbClickHouseInstancePoolKeyDTO();
         } else {
             throw new ZAYKException("不支持的数据库类型：" + databaseType);
         }

@@ -21,44 +21,56 @@ public final class DBUtil {
     /**
      * 查询获取数据库所有表名
      */
-    public static List<String> findAllTables(Connection conn, String userName,String dbType) {
-        return findAllTables(conn,userName,dbType,"","");
+    public static List<String> findAllTables(Connection conn, String userName, String dbType) {
+        return findAllTables(conn, userName, dbType, "", "");
     }
-    public static List<String> findAllTables(Connection conn, String userName,String dbType,String dbName,String schema) {
+    public static List<String> findAllTables(Connection conn, String userName, String dbType, String dbName, String schema) {
         Statement stmt = null;
         List<String> tableNamesList = new ArrayList<String>();
         try {
             stmt = conn.createStatement();
-            if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(dbType)){
+            if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(dbType)) {
                 ResultSet resultSet = stmt.executeQuery("select TABLE_NAME from all_tables WHERE owner='" + userName.toUpperCase() + "'");
                 while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
                     tableNamesList.add(resultSet.getString("TABLE_NAME"));
                 }
                 resultSet.close();
-            }else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(dbType)){
+            } else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(dbType)) {
                 ResultSet resultSet = stmt.executeQuery(DbConstants.DB_SQL_SQLSERVER_TABLE_QUERY);
                 while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
                     tableNamesList.add(resultSet.getString("name"));
                 }
                 resultSet.close();
-            }else  if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(dbType)){
+            } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(dbType)) {
                 String sql = "SELECT table_name as table_name FROM information_schema.tables WHERE table_schema = '" + dbName + "' and table_type = 'BASE TABLE'";
                 ResultSet resultSet = stmt.executeQuery(sql);
                 while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
                     tableNamesList.add(resultSet.getString("table_name"));
                 }
                 resultSet.close();
-            }else  if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(dbType)){
-                String sql = "select tablename from pg_tables where schemaname = '"+schema+"'";
+            } else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(dbType)) {
+                String sql = "select tablename from pg_tables where schemaname = '" + schema + "'";
                 ResultSet resultSet = stmt.executeQuery(sql);
                 while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
                     tableNamesList.add(resultSet.getString("tablename"));
                 }
                 resultSet.close();
-            }else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(dbType)){
+            } else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(dbType)) {
                 ResultSet resultSet = stmt.executeQuery("select TABLE_NAME FROM all_tables WHERE owner='" + userName.toUpperCase() + "'");
                 while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
                     tableNamesList.add(resultSet.getString("TABLE_NAME"));
+                }
+                resultSet.close();
+            } else if (DbConstants.DB_TYPE_CLICKHOUSE.equalsIgnoreCase(dbType)) {
+                ResultSet resultSet = stmt.executeQuery("SELECT name as TABLE_NAME FROM system.tables WHERE database = '" + schema + "'");
+                while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
+                    tableNamesList.add(resultSet.getString("TABLE_NAME"));
+                }
+                resultSet.close();
+            } else if (DbConstants.DB_TYPE_KB.equalsIgnoreCase(dbType)) {
+                ResultSet resultSet = stmt.executeQuery("SELECT table_name FROM information_schema.tables WHERE table_schema = '" + schema + "' AND table_type = 'BASE TABLE'");
+                while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
+                    tableNamesList.add(resultSet.getString("table_name"));
                 }
                 resultSet.close();
             }
@@ -102,23 +114,23 @@ public final class DBUtil {
         ResultSet rs = null;
         ResultSetMetaData rsmd = null;
         try {
-            if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(dbType)){
+            if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(dbType)) {
                 ps = conn.prepareStatement("select * from " + tableName.toUpperCase() + " limit 1");
                 rs = ps.executeQuery();
                 rsmd = rs.getMetaData();
                 for (int i = 1; i <= rsmd.getColumnCount(); i++) {
-                    Map<String,String> colMap =new HashMap<>();
+                    Map<String, String> colMap = new HashMap<>();
                     colMap.put(DbConstants.DB_COLUMN_NAME, rsmd.getColumnName(i));
                     colMap.put("columnType", rsmd.getColumnTypeName(i));
                     colList.add(colMap);
                 }
-            }else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(dbType)){
+            } else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(dbType)) {
                 Statement stmt = null;
                 try {
                     stmt = conn.createStatement();
                     ResultSet resultSet = stmt.executeQuery("select column_name,data_type,CHARACTER_MAXIMUM_LENGTH from information_schema.columns where table_name = '" + tableName.toUpperCase() + "'");
                     while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
-                        Map<String,String> colMap =new HashMap<>();
+                        Map<String, String> colMap = new HashMap<>();
                         colMap.put(DbConstants.DB_COLUMN_NAME, resultSet.getString("column_name"));
                         colMap.put("columnType", resultSet.getString("data_type") + "(" + resultSet.getString("CHARACTER_MAXIMUM_LENGTH") + ")");
                         colList.add(colMap);
@@ -129,13 +141,13 @@ public final class DBUtil {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-            }else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(dbType)){
+            } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(dbType)) {
                 Statement stmt = null;
                 try {
                     stmt = conn.createStatement();
                     ResultSet resultSet = stmt.executeQuery("DESCRIBE `" + tableName + "`");
                     while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
-                        Map<String,String> colMap =new HashMap<>();
+                        Map<String, String> colMap = new HashMap<>();
                         colMap.put(DbConstants.DB_COLUMN_NAME, resultSet.getString("Field"));
                         colMap.put("columnType", resultSet.getString("Type"));
                         colMap.put("Key", resultSet.getString("Key"));
@@ -147,7 +159,7 @@ public final class DBUtil {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-            }else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(dbType)){
+            } else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(dbType)) {
                 Statement stmt = null;
                 try {
                     stmt = conn.createStatement();
@@ -157,10 +169,10 @@ public final class DBUtil {
                     //                "' and a.attrelid = c.oid and a.attnum>0");
                     ResultSet resultSet = stmt.executeQuery(
                             "SELECT data_type as type ,column_name as name ,character_maximum_length as length   \n" +
-                                 "FROM information_schema.columns \n" +
-                                  "WHERE table_name ='" + tableName + "' ORDER BY ordinal_position");
+                                    "FROM information_schema.columns \n" +
+                                    "WHERE table_name ='" + tableName + "' ORDER BY ordinal_position");
                     while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
-                        Map<String,String> colMap =new HashMap<>();
+                        Map<String, String> colMap = new HashMap<>();
                         colMap.put(DbConstants.DB_COLUMN_NAME, resultSet.getString("name"));
                         colMap.put("columnType", resultSet.getString("type"));
                         colList.add(colMap);
@@ -172,24 +184,34 @@ public final class DBUtil {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-            }else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(dbType)){
+            } else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(dbType)) {
                 ps = conn.prepareStatement("select * from " + tableName + " limit 1");
                 rs = ps.executeQuery();
                 rsmd = rs.getMetaData();
                 for (int i = 1; i <= rsmd.getColumnCount(); i++) {
-                    Map<String,String> colMap =new HashMap<>();
+                    Map<String, String> colMap = new HashMap<>();
                     colMap.put(DbConstants.DB_COLUMN_NAME, rsmd.getColumnName(i));
                     colMap.put("columnType", rsmd.getColumnTypeName(i));
                     colList.add(colMap);
                 }
-            }else if (DbConstants.DB_TYPE_KB.equalsIgnoreCase(dbType)){
-                ps = conn.prepareStatement("SELECT column_name,data_type  FROM USER_TABLES WHERE " +tableName);
+            } else if (DbConstants.DB_TYPE_KB.equalsIgnoreCase(dbType)) {
+                ps = conn.prepareStatement("SELECT column_name,data_type  FROM USER_TABLES WHERE " + tableName);
                 rs = ps.executeQuery();
                 rsmd = rs.getMetaData();
                 for (int i = 1; i <= rsmd.getColumnCount(); i++) {
-                    Map<String,String> colMap =new HashMap<>();
+                    Map<String, String> colMap = new HashMap<>();
                     colMap.put(DbConstants.DB_COLUMN_NAME, rsmd.getColumnName(i));
                     colMap.put("columnType", rsmd.getColumnTypeName(i));
+                    colList.add(colMap);
+                }
+            } else if (DbConstants.DB_TYPE_CLICKHOUSE.equalsIgnoreCase(dbType)) {
+                ps = conn.prepareStatement("select name, type,if(is_in_primary_key = 1,'PRI','') as Key from system.columns where database = 'default' and table='" + tableName + "'");
+                rs = ps.executeQuery();
+                while (rs.next()) {
+                    Map<String, String> colMap = new HashMap<>();
+                    colMap.put(DbConstants.DB_COLUMN_NAME, rs.getString("name"));
+                    colMap.put("columnType", rs.getString("type"));
+                    colMap.put("Key", rs.getString("Key"));
                     colList.add(colMap);
                 }
             }
@@ -209,28 +231,30 @@ public final class DBUtil {
     }
 
     //获取用户表空间
-    public static Map<String, String> findSchemaByTable(Connection conn,String table) {
-        Statement stmt ;
-        Map<String,String> map=new HashMap<>();
+    public static Map<String, String> findSchemaByTable(Connection conn, String table) {
+        Statement stmt;
+        Map<String, String> map = new HashMap<>();
         try {
             stmt = conn.createStatement();
             ResultSet resultSet = stmt.executeQuery("SELECT s.name AS SchemaName,t.name AS TableName " +
                     "FROM sys.tables t INNER JOIN sys.schemas s ON t.schema_id = s.schema_id WHERE t.name ='" + table + "'");
             while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
-                map.put("schemaName",resultSet.getString("SchemaName"));
+                map.put("schemaName", resultSet.getString("SchemaName"));
             }
             resultSet.close();
             stmt.close();
             resultSet.close();
-        }catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return map;
     }
 
-    /** 获取列原始定义*/
+    /**
+     * 获取列原始定义
+     */
     public static String getColumnDefinition(Connection connection, DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd) throws ZAYKException {
-        CallableStatement cstmt=null;
+        CallableStatement cstmt = null;
         String schemaName = dbhsmEncryptColumnsAdd.getDbUserName();
         String tableName = dbhsmEncryptColumnsAdd.getDbTable();
         String columnName = dbhsmEncryptColumnsAdd.getEncryptColumns();
@@ -271,7 +295,7 @@ public final class DBUtil {
     }
 
     public static void main(String[] args) {
-        String columnDefinition ="CREATE TABLE \"W1229\".\"demo1229\"\n" +
+        String columnDefinition = "CREATE TABLE \"W1229\".\"demo1229\"\n" +
                 "(\n" +
                 "\"COLUMN_2\" CHAR(10),\n" +
                 "\"COLUMN_3\" CHAR(10),\n" +
@@ -283,14 +307,14 @@ public final class DBUtil {
                 "\"COLUMN_9\" CHAR(10),\n" +
                 "\"COLUMN_10\" CHAR(10),\n" +
                 "\"COLUMN_11\" CHAR(10) ENCRYPT WITH SM4_ECB MANUAL BY WRAPPED '0x1EC162702C34E1548A3ABB636D2085FFC45DF216915657D42DF93F1F0DCEA92E188E9044' USER(\"W1229\" ),\n" +
-                "\"COLUMN_12\" CHAR(10)) STORAGE(ON \"MAIN\", CLUSTERBTR) ;\n" ;
-        String col ="\"CREATE TABLE \\\"DMU1\\\".\\\"TABLE_4\\\"\\n\" +\n" +
+                "\"COLUMN_12\" CHAR(10)) STORAGE(ON \"MAIN\", CLUSTERBTR) ;\n";
+        String col = "\"CREATE TABLE \\\"DMU1\\\".\\\"TABLE_4\\\"\\n\" +\n" +
                 "                \"(\\n\" +\n" +
                 "                \"\\\"COLUMN_1\\\" INT IDENTITY(1, 1) NOT NULL,\\n\" +\n" +
                 "                \"\\\"COLUMN_2\\\" CHAR(10),\\n\" +\n" +
                 "                \"UNIQUE(\\\"COLUMN_1\\\"),\\n\" +\n" +
                 "                \"NOT CLUSTER PRIMARY KEY(\\\"COLUMN_1\\\")) STORAGE(ON \\\"MAIN\\\", CLUSTERBTR) ;";
-        String c ="))";
+        String c = "))";
         int i = c.indexOf(")");
         System.out.println(i);
     }

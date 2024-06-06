@@ -50,10 +50,10 @@ public class DbhsmDbInstance extends BaseEntity
     private String databaseDbaPassword;
 
     @Excel(name = "业务账号")
-    private String serverUser;
+    private String serviceUser;
 
     @Excel(name = "业务密码")
-    private String serverPassword;
+    private String servicePassword;
 
     /** 密码服务IP */
     @Excel(name = "密码服务IP")
@@ -70,6 +70,9 @@ public class DbhsmDbInstance extends BaseEntity
     /** 加密插件地址 */
     @Excel(name = "加密插件地址")
     private String encLibapiPath;
+
+    @Excel(name = "插件模式")
+    private Integer plugMode;
 
     /** 数据库版本号
     0:11g及以前版本,
@@ -180,20 +183,20 @@ public class DbhsmDbInstance extends BaseEntity
         this.passwordServiceIp = passwordServiceIp;
     }
 
-    public String getServerUser() {
-        return serverUser;
+    public String getServiceUser() {
+        return serviceUser;
     }
 
-    public void setServerUser(String serverUser) {
-        this.serverUser = serverUser;
+    public void setServiceUser(String serviceUser) {
+        this.serviceUser = serviceUser;
     }
 
-    public String getServerPassword() {
-        return serverPassword;
+    public String getServicePassword() {
+        return servicePassword;
     }
 
-    public void setServerPassword(String serverPassword) {
-        this.serverPassword = serverPassword;
+    public void setServicePassword(String servicePassword) {
+        this.servicePassword = servicePassword;
     }
 
     public String getPasswordServiceIp()
@@ -243,6 +246,14 @@ public class DbhsmDbInstance extends BaseEntity
 
     public void setEncLibapiPath(String encLibapiPath) {
         this.encLibapiPath = encLibapiPath;
+    }
+
+    public Integer getPlugMode() {
+        return plugMode;
+    }
+
+    public void setPlugMode(Integer plugMode) {
+        this.plugMode = plugMode;
     }
 
     @Override

@@ -13,6 +13,7 @@ import com.ccsp.common.security.utils.SecurityUtils;
 import com.spms.common.CommandUtil;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.dbTool.DBUtil;
+import com.spms.common.enums.DatabaseTypeEnum;
 import com.spms.common.pool.hikariPool.DbConnectionPoolFactory;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
@@ -38,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
@@ -94,6 +96,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
      * @return null
      */
     @Override
+    @Transactional
     public AjaxResult upEncryptColumns(TaskQueueRequest request) {
 
         DbhsmTaskQueue taskQueue = dbhsmTaskQueueMapper.findByPrimaryKey(request.getTaskId());
@@ -101,24 +104,29 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         DbhsmEncryptTable encryptTable = dbhsmEncryptTableMapper.findByPrimaryKey(taskQueue.getTableId());
 
         DbhsmEncryptColumns dbhsmEncryptColumns = new DbhsmEncryptColumns();
-        dbhsmEncryptColumns.setTableId(encryptTable.getTableId());
+        dbhsmEncryptColumns.setTableId(String.valueOf(encryptTable.getTableId()));
         dbhsmEncryptColumns.setEncryptionStatus(DbConstants.ENC_MODE.equals(request.getTaskMode()) ? 0 : 3);
         List<DbhsmEncryptColumns> columnsList = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsList(dbhsmEncryptColumns);
+        if (CollectionUtils.isEmpty(columnsList)) {
+            return AjaxResult.error("需要加密的列为空，执行失败");
+        }
 
         try {
             if (null != request.getTaskType() && !DbConstants.UP.equals(request.getTaskType())) {
                 //暂停
                 if (DbConstants.DOWN.equals(request.getTaskType())) {
-//                    stockDataOperateService.pause(encryptTable.getTableId());
+                    stockDataOperateService.pause(String.valueOf(encryptTable.getTableId()));
                 } else if (DbConstants.CONTINUE.equals(request.getTaskType())) {
                     //任务继续
-//                    stockDataOperateService.resume(taskQueue.getTableId());
+                    stockDataOperateService.resume(taskQueue.getTableId());
                 }
 
+                //设置状态
+                Integer status = DbConstants.DOWN.equals(request.getTaskType()) ? 2 : 1;
                 if (null != taskQueue.getEncStatus()) {
-                    taskQueue.setEncStatus(DbConstants.DOWN.equals(request.getTaskType()) ? 2 : 1);
+                    taskQueue.setEncStatus(status);
                 } else {
-                    taskQueue.setDecStatus(DbConstants.DOWN.equals(request.getTaskType()) ? 2 : 1);
+                    taskQueue.setDecStatus(status);
                 }
                 dbhsmTaskQueueMapper.updateRecord(taskQueue);
                 return AjaxResult.success();
@@ -127,6 +135,8 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             //获取数据库基本信息
             DbhsmDbInstance dbhsmDbInstance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(encryptTable.getInstanceId());
             DatabaseDTO database = BeanConvertUtils.beanToBean(dbhsmDbInstance, DatabaseDTO.class);
+            database.setDatabaseType(DatabaseTypeEnum.getNameByCode(database.getDatabaseType()));
+            database.setDatabaseName(dbhsmDbInstance.getDatabaseServerName());
             database.setInstanceType(dbhsmDbInstance.getDatabaseExampleType());
             String instance = CommandUtil.getInstance(dbhsmDbInstance);
             database.setConnectUrl(instance);
@@ -134,6 +144,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             //组装表基本信息
             List<ColumnDTO> columnDTOS = encryptColumnsAll(dbhsmDbInstance, columnsList);
             TableDTO tableDTO = BeanConvertUtils.beanToBean(encryptTable, TableDTO.class);
+            tableDTO.setId(encryptTable.getTableId());
             tableDTO.setBatchSize(encryptTable.getBatchCount());
             tableDTO.setThreadNum(encryptTable.getThreadCount());
             tableDTO.setColumnDTOList(columnDTOS);
@@ -150,6 +161,9 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                 //修改加密列状态
                 updateEncrypt(1, columnsList);
                 dbhsmTaskQueueMapper.updateRecord(taskQueue);
+                //表状态修改为加密中
+                encryptTable.setTableStatus(DbConstants.ENC_FLAG);
+                dbhsmEncryptTableMapper.updateRecord(encryptTable);
             } else {
                 //解密
                 stockDataOperateService.stockDataOperate(database, false);
@@ -158,6 +172,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                 dbhsmTaskQueueMapper.updateRecord(taskQueue);
             }
         } catch (Exception e) {
+            log.error(e.getMessage());
             return AjaxResult.error("操作任务队列表：" + encryptTable.getTableName() + "失败！");
         }
 
@@ -194,8 +209,8 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                     ColumnDTO columnDTO = new ColumnDTO();
                     Statement stmt = conn.createStatement();
                     ResultSet resultSet = null;
-                    String sql = databaseTypeSqlColumns(dbhsmDbInstance.getDatabaseType(), dbhsmEncryptColumn.getDbTable());
-                    stmt.executeQuery(sql);
+                    String sql = databaseTypeSqlColumns(dbhsmDbInstance.getDatabaseType(), dbhsmEncryptColumn.getDbTable(),dbhsmDbInstance.getDatabaseServerName());
+                    resultSet = stmt.executeQuery(sql);
                     while (resultSet.next()) {
                         Map<String, String> map = new HashMap<>();
                         String columnName = resultSet.getString("Field");
@@ -221,7 +236,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                         columnDTO.setComment(remarks);
                         list.add(columnDTO);
                     }
-                    columnDTO.setEncryptAlgorithm(dbhsmEncryptColumn.getEncryptionAlgorithm());
+                    columnDTO.setEncryptAlgorithm("TestAlg");
                     columnDTO.setEncryptKeyIndex(dbhsmEncryptColumn.getSecretKeyId());
                 }
 
@@ -239,7 +254,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         return list;
     }
 
-    public static String databaseTypeSqlColumns(String type, String table) {
+    public static String databaseTypeSqlColumns(String type, String table,String schema) {
         String sql = "";
         //sqlserver
         if (DbConstants.DB_TYPE_SQLSERVER.equals(type)) {
@@ -257,18 +272,26 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                     "where d.name = '" + table + "' order by a.id, a.colorder";
         } else if (DbConstants.DB_TYPE_ORACLE.equals(type)) {
             //Oracle
-        } else if (DbConstants.DB_TYPE_POSTGRESQL.equals(type)) {
+            sql = "select * from " + table.toUpperCase() + " limit 1";
+        } else if (DbConstants.DB_TYPE_DM.equals(type)) {
+            //dm
+            sql = "select * from " + table + " limit 1";
+        } else if (DbConstants.DB_TYPE_POSTGRESQL.equals(type) || DbConstants.DB_TYPE_KB.equals(type)) {
+            //pgSql || Kingbase
             sql = "SELECT column_name as Field, data_type as Type, is_nullable as 'Null', column_default as 'Default' FROM information_schema.columns WHERE  table_name = '" + table + "'";
-            //PostgreSQL
         } else if (DbConstants.DB_TYPE_MYSQL.equals(type)) {
             //MySql
             sql = "SHOW FULL COLUMNS from " + table;
+        } else if (DbConstants.DB_TYPE_CLICKHOUSE.equals(type)) {
+            //ClickHouse
+            sql = "select name as Field,type as Type,comment as Comment,default_expression as Default,if(is_in_primary_key = 1,'PRI','') as Key,\n" +
+                    "if(type like '%Nullable%','YES','NO') as Null from system.columns where database = '"+schema+"' and  table='" + table + "';";
         }
         return sql;
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRED)
     public AjaxResult insertDecColumnsOnEnc(TaskDecColumnsOnEncRequest request) {
         /**
          * 解密队列添加到加密队列
@@ -276,44 +299,71 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         DbhsmTaskQueue dbhsmTaskQueue = dbhsmTaskQueueMapper.findByPrimaryKey(request.getTaskId());
         DbhsmEncryptTable encryptTable = dbhsmEncryptTableMapper.findByPrimaryKey(dbhsmTaskQueue.getTableId());
 
-        //更新数据
+        //更新表数据
         encryptTable.setThreadCount(request.getThreadCount());
         encryptTable.setBatchCount(request.getBatchCount());
-
         dbhsmEncryptTableMapper.updateRecord(encryptTable);
 
         DbhsmEncryptColumns dbhsmEncryptColumn = new DbhsmEncryptColumns();
-        dbhsmEncryptColumn.setTableId(encryptTable.getTableId());
-        dbhsmEncryptColumn.setDbInstanceId(encryptTable.getInstanceId());
+        dbhsmEncryptColumn.setTableId(String.valueOf(encryptTable.getTableId()));
+        dbhsmEncryptColumn.setEncryptionStatus(3);
+        //如果当前队列是加密队列  查询已加密的列  ->  否则查询未开始解密的列
+        if (null == dbhsmTaskQueue.getDecStatus()) {
+            dbhsmEncryptColumn.setEncryptionStatus(2);
+        }
 
-        //查询表中的已加密列
+        //查询表中的解密列
         List<DbhsmEncryptColumns> columnsList = dbhsmEncryptColumnsMapper.selectDbhsmEncryptColumnsList(dbhsmEncryptColumn);
 
-        //组装update数据
-        for (EncryptColumns encryptColumns : request.getEncryptedLists()) {
-            DbhsmEncryptColumns dbhsmEncryptColumns = new DbhsmEncryptColumns();
-            BeanUtils.copyProperties(encryptColumns, dbhsmEncryptColumns);
-            //修改未未开始加密
-            dbhsmEncryptColumn.setEncryptionStatus(3);
-            dbhsmEncryptColumnsMapper.updateDbhsmEncryptColumns(dbhsmEncryptColumns);
-
+        //队列数据为空不做任何操作
+        if (CollectionUtils.isEmpty(columnsList)) {
+            return AjaxResult.error("表中的字段无法添加至加密队列");
         }
 
-        DbhsmTaskQueue taskQueue = new DbhsmTaskQueue();
-        BeanUtils.copyProperties(dbhsmTaskQueue, taskQueue);
+        //更新当期队列中列的状态  如果当前队列为加密完成更改为未解密密  如果是未解密数据  更改完已加密
+        for (DbhsmEncryptColumns dbhsmEncryptColumns : columnsList) {
+            for (EncryptColumns encryptColumns : request.getEncryptedLists()) {
+                if (encryptColumns.getEncryptColumns().equals(dbhsmEncryptColumns.getEncryptColumns())) {
+                    BeanUtils.copyProperties(encryptColumns, dbhsmEncryptColumns);
+                    dbhsmEncryptColumns.setEncryptionStatus(2);
+                    if (null == dbhsmTaskQueue.getDecStatus()) {
+                        dbhsmEncryptColumns.setEncryptionStatus(3);
+                    }
+                    dbhsmEncryptColumnsMapper.updateDbhsmEncryptColumns(dbhsmEncryptColumns);
+                }
+            }
+        }
 
-        //如果数据一样,说明加密队列中所有加密字段都添加至解密队列中，此时更改加密队列状态为空
+        //如果当前队列中的数据全部被选中 那么当前任务队列直接删除 不记录队列状态
         if (columnsList.size() == request.getEncryptedLists().size()) {
-            taskQueue.setEncStatus(4);
+            dbhsmTaskQueueMapper.deleteRecords(request.getTaskId());
         }
 
-        taskQueue.setDecStatus(0);
-        dbhsmTaskQueueMapper.updateRecord(taskQueue);
+        //改步骤为查询  该表是否存在任务队列，如果当前任务是加密 ->解密  就查询当前表的解密队列反之加密队列
+        DbhsmTaskQueue taskQueue = dbhsmTaskQueueMapper.queryTableTask(dbhsmTaskQueue.getTableId(), null == dbhsmTaskQueue.getEncStatus() ? "enc" : "dec");
+
+        //如果当前表没有需要操作的任务队列，进行新增反之什么也不做
+        //队列存储结构为  一个表->多个任务
+        if (null == taskQueue) {
+            DbhsmTaskQueue newTaskQueue = new DbhsmTaskQueue();
+            newTaskQueue.setTableId(dbhsmTaskQueue.getTableId());
+            newTaskQueue.setCreateTime(new Date());
+            newTaskQueue.setCreateBy(SecurityUtils.getUsername());
+            if (null == dbhsmTaskQueue.getDecStatus()) {
+                newTaskQueue.setDecStatus(0);
+            } else {
+                //解密至加密队列队列状态为已完成
+                newTaskQueue.setEncStatus(3);
+            }
+            //如果为空则新数据
+            dbhsmTaskQueueMapper.insertRecord(newTaskQueue);
+        }
+
         return AjaxResult.success();
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRED)
     public AjaxResult insertTask(TaskQueueInsertRequest request) {
 
         //数据库实例信息
@@ -323,6 +373,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         dbhsmEncryptTable.setTableStatus(DbConstants.CREATED_ON_WEB_SEDE);
 
         try {
+            //获取表的DDL语句
             String ddl = showTableDdl(dbhsmDbInstance, request.getTableName());
             dbhsmEncryptTable.setTableDdl(ddl);
         } catch (Exception e) {
@@ -335,12 +386,12 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             DbhsmEncryptTable encryptTable = dbhsmEncryptTableMapper.queryTableRecord(request.getInstanceId(), request.getTableName());
             if (null == encryptTable) {
                 snowflakeId = SnowFlakeUtil.getSnowflakeId();
-                dbhsmEncryptTable.setTableId(snowflakeId);
+                dbhsmEncryptTable.setTableId(Long.valueOf(snowflakeId));
                 dbhsmEncryptTable.setCreateTime(DateUtils.getNowDate());
                 dbhsmEncryptTable.setCreateBy(SecurityUtils.getUsername());
                 dbhsmEncryptTableMapper.insertRecord(dbhsmEncryptTable);
             } else {
-                snowflakeId = encryptTable.getTableId();
+                snowflakeId = String.valueOf(encryptTable.getTableId());
                 isTask = true;
             }
         }
@@ -407,9 +458,34 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
 
         Connection conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
         Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery("SHOW CREATE TABLE " + table);
+
+        String sql = "";
+        int index = 1;
+        if (DbConstants.DB_TYPE_ORACLE.equals(dbhsmDbInstance.getDatabaseType())) {
+            sql = "SELECT DBMS_METADATA.GET_DDL('TABLE', '" + table + "') FROM " + table + ";";
+        } else if (DbConstants.DB_TYPE_SQLSERVER.equals(dbhsmDbInstance.getDatabaseType())) {
+            sql = "select 'create table [' + so.name + '] (' + o.list + ')' + CASE\n" +
+                    " WHEN tc.Constraint_Name IS NULL THEN '' ELSE 'ALTER TABLE ' + so.Name +\n" +
+                    " ' ADD CONSTRAINT ' + tc.Constraint_Name + ' PRIMARY KEY ' + ' (' + LEFT(j.List, Len(j.List)-1) + ')' END\n" +
+                    " from sysobjects so cross apply (SELECT ' ['+ column_name +'] ' data_type + case data_type when 'sql_variant' then '' when 'text' then '' when 'ntext' then '' when 'xml' then '' when 'image' then ''\n" +
+                    " when 'decimal' then '(' + cast (numeric_precision as varchar) + ', ' + cast (numeric_scale as varchar) + ')'\n" +
+                    " else coalesce ('('+ case when character_maximum_length = -1 then 'MAX' else cast (character_maximum_length as varchar) end +')', '') end + ' ' +\n" +
+                    " case when exists ( select id from syscolumns where object_name(id)=so.name and name = column_name and columnproperty(id, name, 'IsIdentity') = 1 ) then\n" +
+                    " 'IDENTITY(' cast (ident_seed(so.name) as varchar) + ',' cast (ident_incr(so.name) as varchar) + ')'else '' end + ' ' +\n" +
+                    " (case when IS_NULLABLE = 'No' then 'NOT ' else '' end ) + 'NULL ' + case when information_schema.columns.COLUMN_DEFAULT IS NOT NULL THEN 'DEFAULT '+ information_schema.columns.COLUMN_DEFAULT ELSE '' END + ', '\n" +
+                    " from information_schema.columns where table_name = so.name order by ordinal_position FOR XML PATH ('')) o (list) left join information_schema.table_constraints tc\n" +
+                    " on tc.Table_name = so.Name AND tc.Constraint_Type = 'PRIMARY KEY' cross apply (select '[' + Column_Name + '], '\n" +
+                    " FROM information_schema.key_column_usage kcu WHERE kcu.Constraint_Name = tc.Constraint_Name ORDER BY ORDINAL_POSITION FOR XML PATH ('')) j (list) where xtype = 'U' AND name = '" + table + "' ";
+        } else if (DbConstants.DB_TYPE_POSTGRESQL.equals(dbhsmDbInstance.getDatabaseType())) {
+        } else if (DbConstants.DB_TYPE_MYSQL.equals(dbhsmDbInstance.getDatabaseType()) || DbConstants.DB_TYPE_CLICKHOUSE.equals(dbhsmDbInstance.getDatabaseType())) {
+            sql = "SHOW CREATE TABLE " + table;
+            index = DbConstants.DB_TYPE_MYSQL.equals(dbhsmDbInstance.getDatabaseType()) ? 2 : 1;
+        }else if (DbConstants.DB_TYPE_KB.equals(dbhsmDbInstance.getDatabaseType())) {
+        }
+
+        ResultSet rs = stmt.executeQuery(sql);
         if (rs.next()) {
-            ddl = rs.getString(2);
+            ddl = rs.getString(index);
         }
         conn.close();
         return ddl;
@@ -464,7 +540,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         encryptTable.setThreadCount(request.getThreadCount());
         dbhsmEncryptTableMapper.updateRecord(encryptTable);
 
-        columns.setTableId(encryptTable.getTableId());
+        columns.setTableId(String.valueOf(encryptTable.getTableId()));
         columns.setDbTable(encryptTable.getTableName());
 
         //新增数据
@@ -493,6 +569,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRED)
     public AjaxResult queryEncryptionProgress(Long taskId) {
         DbhsmTaskQueue taskQueue = dbhsmTaskQueueMapper.findByPrimaryKey(taskId);
         if (null == taskQueue) {
@@ -505,6 +582,33 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         } catch (Exception e) {
             log.error(e.getMessage());
             AjaxResult.error("查询" + encryptTable.getTableName() + "表任务队列进度失败！");
+        }
+
+        //加密状态是否到达阈值
+        if (100 == i) {
+            //更新列状态
+            List<DbhsmEncryptColumns> columnsList = dbhsmEncryptColumnsMapper.selectDbhsmEncryptByTableId(String.valueOf(encryptTable.getTableId()));
+            if (null == taskQueue.getDecStatus()) {
+                //加密完成更新加密列状态    解密完成不需要更新
+                updateEncrypt(2, columnsList);
+                //解密状态为空说明是加密队列  加密表状态修改为   加密后
+                encryptTable.setTableStatus(DbConstants.ENCRYPTED);
+                dbhsmEncryptTableMapper.updateRecord(encryptTable);
+            } else {
+                String[] array = columnsList.stream().filter(col -> DbConstants.DECRYPTING.equals(col.getEncryptionStatus())).map(DbhsmEncryptColumns::getId).toArray(String[]::new);
+                //1.删除解密中的的数据
+                dbhsmEncryptColumnsMapper.deleteDbhsmEncryptColumnsByIds(array);
+
+                //2.如果当前表中的列全部属于解密状态   删除加密表的信息以及解密列
+                if (array.length == columnsList.size()) {
+                    dbhsmEncryptTableMapper.deleteRecords(String.valueOf(encryptTable.getTableId()));
+                    dbhsmTaskQueueMapper.deleteRecords(taskId);
+                }
+//                //解密完成  删除队列数据
+//                dbhsmEncryptTableMapper.updateRecord(encryptTable);
+//                //否则是解密队列  表状态应为全部还原
+//                encryptTable.setTableStatus(DbConstants.ENCRYPTING);
+            }
         }
         return AjaxResult.success(i);
     }
@@ -546,10 +650,13 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
 
         TaskQueueListResponse response = BeanConvertUtils.beanToBean(dbhsmDbInstance, TaskQueueListResponse.class);
 
-        //设置用户信息
+        //设置用户信息 前端插件模式用户信息为DBA信息
         DbhsmDbUser dbhsmDbUser = dbUsersMapper.selectDbhsmDbUsersById(dbUserId);
+        if (DbConstants.FG_PLUG.equals(dbhsmDbInstance.getPlugMode())) {
+            dbhsmDbUser = new DbhsmDbUser();
+            dbhsmDbUser.setUserName(dbhsmDbInstance.getDatabaseDba());
+        }
         response.setUserName(dbhsmDbUser.getUserName());
-
         response.setTableName(dbTableName);
         DbhsmEncryptTable encryptTable = dbhsmEncryptTableMapper.queryTableRecord(dbInstanceId, dbTableName);
         if (null != encryptTable) {
@@ -576,7 +683,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         //查询任务队列中的表
         DbhsmEncryptTable dbTable = dbhsmEncryptTableMapper.findByPrimaryKey(taskQueue.getTableId());
         //查询表关联的字段信息
-        List<DbhsmEncryptColumns> columnsList = dbhsmEncryptColumnsMapper.selectDbhsmEncryptByTableId(dbTable.getTableId());
+        List<DbhsmEncryptColumns> columnsList = dbhsmEncryptColumnsMapper.selectDbhsmEncryptByTableId(String.valueOf(dbTable.getTableId()));
 
         //数据转换
         List<EncryptColumns> list = new ArrayList<>(BeanConvertUtils.beanToBeanInList(columnsList, EncryptColumns.class));
@@ -589,6 +696,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             List<String> columnNames = list.stream().map(EncryptColumns::getEncryptColumns).collect(Collectors.toList());
             List<TaskPolicyDetailsResponse> unEncColumns = encryptColumnsAll(dbhsmDbInstance, dbTable.getTableName(), columnNames);
             if (!CollectionUtils.isEmpty(unEncColumns)) {
+                unEncColumns = unEncColumns.stream().filter(po -> "-".equals(po.getDisablingEncryption())).collect(Collectors.toList());
                 list.addAll(new ArrayList<>(BeanConvertUtils.beanToBeanInList(unEncColumns, EncryptColumns.class)));
             }
         } else if ("2".equals(detailsMode)) {
@@ -648,7 +756,6 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                     encryptColumns.setEncryptColumns(columnName);
 
                     String key = allColumnsInfo.get(j).get("Key");
-                    encryptColumns.setDisablingEncryption("-");
                     if (StringUtils.isNotBlank(key)) {
                         encryptColumns.setDisablingEncryption("PRI".equals(key) ? "主键禁止加密" : ("MUL".equals(key) ? "外键禁止加密" : "-"));
                     }
@@ -672,7 +779,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
 
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRED)
     public AjaxResult deleteEncryptColumns(Long taskId) {
         /**
          * 删除 :任务队列、加密列、加密表

@@ -66,8 +66,8 @@ public class TaskQueueListResponse {
     private Integer tableStatus;
 
     @ApiModelProperty(name = "batchCount",value = "批次条数")
-    private String batchCount;
+    private Integer batchCount;
 
     @ApiModelProperty(name = "threadCount",value = "线程数")
-    private String threadCount;
+    private Integer threadCount;
 }
