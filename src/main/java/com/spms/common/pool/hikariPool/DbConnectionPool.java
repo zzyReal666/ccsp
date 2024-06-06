@@ -65,6 +65,10 @@ public class DbConnectionPool {
                 config.setJdbcUrl("jdbc:clickhouse://" + databaseIp + ":" + databasePort + "/" + databaseServerName);
                 config.setDriverClassName("com.clickhouse.jdbc.ClickHouseDriver");
                 break;
+            case DbConstants.DB_TYPE_KB:
+                config.setJdbcUrl("jdbc:kingbase8://" + databaseIp + ":" + databasePort + "/" + databaseServerName);
+                config.setDriverClassName("com.kingbase8.Driver");
+                break;
             default:
                 throw new IllegalArgumentException("Unsupported database type: " + databaseType);
         }

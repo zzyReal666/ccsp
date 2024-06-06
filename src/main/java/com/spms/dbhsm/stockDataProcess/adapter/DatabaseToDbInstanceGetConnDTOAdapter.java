@@ -1,6 +1,5 @@
 package com.spms.dbhsm.stockDataProcess.adapter;
 
-import com.spms.common.constant.DbConstants;
 import com.spms.common.enums.DatabaseTypeEnum;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.DatabaseDTO;
@@ -21,15 +20,7 @@ public class DatabaseToDbInstanceGetConnDTOAdapter {
     public static DbInstanceGetConnDTO adapter(DatabaseDTO databaseDTO, AdapterType adapterType) {
         DbInstanceGetConnDTO dbInstanceGetConnDTO = new DbInstanceGetConnDTO();
         dbInstanceGetConnDTO.setDatabaseIp(databaseDTO.getDatabaseIp());
-
-        //mysql
-        if (databaseDTO.getDatabaseType().equals(DatabaseTypeEnum.MySQL.name())) {
-            dbInstanceGetConnDTO.setDatabaseType(DbConstants.DB_TYPE_MYSQL);
-        }
-        //clickHouse
-        if (databaseDTO.getDatabaseType().equals(DatabaseTypeEnum.ClickHouse.name())) {
-            dbInstanceGetConnDTO.setDatabaseType(DbConstants.DB_TYPE_CLICKHOUSE);
-        }
+        dbInstanceGetConnDTO.setDatabaseType(DatabaseTypeEnum.getCodeByName(databaseDTO.getDatabaseType()));
         dbInstanceGetConnDTO.setDatabasePort(databaseDTO.getDatabasePort());
         if (adapterType == AdapterType.DBA) {
             dbInstanceGetConnDTO.setDatabaseDba(databaseDTO.getDatabaseDba());

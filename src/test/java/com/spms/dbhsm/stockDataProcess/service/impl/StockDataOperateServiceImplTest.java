@@ -4,6 +4,7 @@ import com.ccsp.common.core.exception.ZAYKException;
 import com.spms.dbhsm.stockDataProcess.domain.dto.ColumnDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.DatabaseDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.TableDTO;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 
 import java.sql.Connection;
@@ -15,6 +16,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+@Slf4j
 public class StockDataOperateServiceImplTest {
 
     static final StockDataOperateServiceImpl service = new StockDataOperateServiceImpl();
@@ -61,6 +63,7 @@ public class StockDataOperateServiceImplTest {
 
         TableDTO tableDTO = new TableDTO();
         tableDTO.setId(1L);
+        tableDTO.setSchema("public");
         tableDTO.setBatchSize(10);
         tableDTO.setTableName("student");
         tableDTO.setThreadNum(10);
@@ -77,7 +80,7 @@ public class StockDataOperateServiceImplTest {
         dto.setConnectUrl("jdbc:kingbase8://192.168.7.113:54321/ZZY");
         dto.setDatabaseType("KingBase");
         dto.setDatabaseVersion("8.0");
-        dto.setDatabaseName("ZZY");
+        dto.setDatabaseName("ZZY?");
         dto.setInstanceType("SID");
         dto.setServiceUser("SYSTEM");
         dto.setServicePassword("123456");
@@ -87,7 +90,7 @@ public class StockDataOperateServiceImplTest {
 
     private static void initEnvironment() throws ClassNotFoundException, SQLException {
         Class.forName("com.kingbase8.Driver");
-        conn = DriverManager.getConnection("jdbc:kingbase8://192.168.7.113:54321/TEST", "SYSTEM", "123456");
+        conn = DriverManager.getConnection("jdbc:kingbase8://192.168.7.113:54321/ZZY", "SYSTEM", "123456");
 
         conn.createStatement().execute("DROP TABLE IF EXISTS student");
         //如果不存在则创建学生表
@@ -112,7 +115,9 @@ public class StockDataOperateServiceImplTest {
             preparedStatement.addBatch();
         }
         preparedStatement.executeBatch();
+        conn.commit();
         conn.setAutoCommit(true);
+        log.info("===================init environment success");
     }
 
 

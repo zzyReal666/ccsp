@@ -2,6 +2,7 @@ package com.spms.dbhsm.stockDataProcess.sqlExecute;
 
 import com.spms.common.spi.typed.TypedSPI;
 import com.spms.dbhsm.stockDataProcess.domain.dto.AddColumnsDTO;
+import com.spms.dbhsm.stockDataProcess.domain.dto.DatabaseDTO;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -110,4 +111,12 @@ public interface SqlExecuteSPI extends TypedSPI {
     void dropColumn(Connection conn, String table, List<String> columns);
 
 
+    /**
+     *  如果需要对数据库连接进行操作，调用此方法
+     *   postgres 系列需要设置search_path
+     * @param conn
+     */
+    default void connectionOperate(Connection conn , DatabaseDTO databaseDTO) {
+
+    }
 }
