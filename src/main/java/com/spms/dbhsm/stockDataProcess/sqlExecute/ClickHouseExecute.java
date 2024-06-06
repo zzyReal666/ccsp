@@ -161,11 +161,11 @@ public class ClickHouseExecute implements SqlExecuteSPI {
     }
 
     @Override
-    public void batchUpdate(Connection conn, String table, List<Map<String, String>> data, int limit, int offset) {
+    public void batchUpdate(Connection conn, String table, List<Map<String, String>> data) {
     }
 
     @Override
-    public void columnBatchUpdate(Object... args) throws SQLException {
+    public void columnBatchUpdate(Object... args) {
         //获取参数
         Connection conn = (Connection) args[0];
         String table = (String) args[1];
@@ -208,9 +208,15 @@ public class ClickHouseExecute implements SqlExecuteSPI {
         return sql;
     }
 
-    private static List<String> getAllColumnNames(Connection conn, String table) throws SQLException {
+    private static List<String> getAllColumnNames(Connection conn, String table) {
         //数据库实例
-        String currentDatabase = conn.getSchema() == null ? conn.getCatalog() : conn.getSchema();
+        String currentDatabase;
+        try {
+            currentDatabase = conn.getSchema() == null ? conn.getCatalog() : conn.getSchema();
+        } catch (SQLException e) {
+            log.error("get currentDatabase error", e);
+            throw new RuntimeException(e);
+        }
         //查询全部字段
         String sql = new ST(SELECT_ALL_COLUMN_NAMES).add("databaseName", currentDatabase).add("tableName", table).render();
         log.info("getAllColumnNames sql:{}", sql);
@@ -252,7 +258,7 @@ public class ClickHouseExecute implements SqlExecuteSPI {
     @Override
     public void dropColumn(Connection conn, String table, List<String> columns) {
         //删除旧表
-        String sql = new ST(DROP).add("table", TEMP_COLUMN_SUFFIX+table).render();
+        String sql = new ST(DROP).add("table", TEMP_COLUMN_SUFFIX + table).render();
         try (Statement statement = conn.createStatement()) {
             statement.execute(sql);
         } catch (Exception e) {

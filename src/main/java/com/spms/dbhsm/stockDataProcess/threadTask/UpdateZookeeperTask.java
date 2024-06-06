@@ -43,7 +43,9 @@ public class UpdateZookeeperTask extends Thread {
 
     private void addEncryptRules(ColumnDTO col) {
         //基础路径
-        String path = PathEnum.RULE.getValue().replace("${namespace}", databaseDTO.getDatabaseIp() + ":" + databaseDTO.getDatabasePort()).replace("${tableName}", databaseDTO.getTableDTOList().get(0).getTableName());
+        String path = PathEnum.RULE.getValue()
+                .replace("${namespace}", databaseDTO.getDatabaseIp() + ":" + databaseDTO.getDatabasePort() + "/" + databaseDTO.getDatabaseName())
+                .replace("${tableName}", databaseDTO.getTableDTOList().get(0).getTableName());
 
         //新增活跃版本号 active_version:0
         ZookeeperUtils.updateNode("0", path + PathEnum.ACTIVE_VERSION.getValue());
@@ -66,7 +68,7 @@ public class UpdateZookeeperTask extends Thread {
 
                 //加密
                 Map<String, Object> cipher = new HashMap<>();
-                cipher.put("encryptorName", column.getColumnName()+"_encryptor");
+                cipher.put("encryptorName", column.getColumnName() + "_encryptor");
                 cipher.put("name", column.getColumnName());
                 columnMap.put("cipher", cipher);
 
@@ -101,7 +103,9 @@ public class UpdateZookeeperTask extends Thread {
 
     private void addEncryptor(ColumnDTO col) {
         //基础路径
-        String path = PathEnum.ENCRYPTOR.getValue().replace("${namespace}", databaseDTO.getDatabaseIp() + ":" + databaseDTO.getDatabasePort()).replace("${encryptorName}", col.getColumnName() + "_encryptor");
+        String path = PathEnum.ENCRYPTOR.getValue()
+                .replace("${namespace}", databaseDTO.getDatabaseIp() + ":" + databaseDTO.getDatabasePort() + "/" + databaseDTO.getDatabaseName())
+                .replace("${encryptorName}", col.getColumnName() + "_encryptor");
 
         //新增活跃版本号
         ZookeeperUtils.updateNode("0", path + PathEnum.ACTIVE_VERSION.getValue());

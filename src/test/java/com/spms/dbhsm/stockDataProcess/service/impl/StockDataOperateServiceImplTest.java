@@ -17,29 +17,104 @@ import java.util.List;
 
 public class StockDataOperateServiceImplTest {
 
+    static final StockDataOperateServiceImpl service = new StockDataOperateServiceImpl();
+    static Connection conn = null;
+
     @Test
-    public void stockDataOperate() throws Exception {
-//        mysqlTest();
-        clickHouseTest();
+    public void mysql() throws Exception {
+        mysqlTest();
     }
 
     @Test
-    public void pause() {
-    }
-
-    @Test
-    public void resume() {
-    }
-
-    @Test
-    public void queryProgress() {
-    }
-
-    private static void clickHouseTest() throws ZAYKException, SQLException, InterruptedException {
+    public void clickHouse() throws Exception {
         StockDataOperateServiceImpl service = new StockDataOperateServiceImpl();
         DatabaseDTO dto = getCLickHouseDTO();
         service.stockDataOperate(dto, true);
     }
+
+    @Test
+    public void kingBase() throws Exception {
+        initEnvironment();
+        DatabaseDTO dto = getKingBaseDto();
+        service.stockDataOperate(dto, true);
+    }
+
+    private DatabaseDTO getKingBaseDto() {
+        //准备加密函数的入参
+        ColumnDTO name = new ColumnDTO();
+        name.setId(1L);
+        name.setColumnName("name");
+        name.setComment("名字");
+        name.setNotNull(true);
+        name.setEncryptAlgorithm("TestAlg");
+        name.setEncryptKeyIndex("1");
+
+        ColumnDTO address = new ColumnDTO();
+        address.setId(3L);
+        address.setColumnName("address");
+        address.setComment("地址");
+        address.setNotNull(true);
+        address.setEncryptAlgorithm("TestAlg");
+        address.setEncryptKeyIndex("1");
+
+        List<ColumnDTO> columns = Arrays.asList(name, address);
+
+        TableDTO tableDTO = new TableDTO();
+        tableDTO.setId(1L);
+        tableDTO.setBatchSize(10);
+        tableDTO.setTableName("student");
+        tableDTO.setThreadNum(10);
+        tableDTO.setColumnDTOList(columns);
+
+        List<TableDTO> tables = Collections.singletonList(tableDTO);
+
+        DatabaseDTO dto = new DatabaseDTO();
+        dto.setId(123456L);
+        dto.setDatabaseDba("SYSTEM");
+        dto.setDatabaseIp("192.168.7.113");
+        dto.setDatabasePort("54321");
+        dto.setDatabaseDbaPassword("123456");
+        dto.setConnectUrl("jdbc:kingbase8://192.168.7.113:54321/ZZY");
+        dto.setDatabaseType("KingBase");
+        dto.setDatabaseVersion("8.0");
+        dto.setDatabaseName("ZZY");
+        dto.setInstanceType("SID");
+        dto.setServiceUser("SYSTEM");
+        dto.setServicePassword("123456");
+        dto.setTableDTOList(tables);
+        return dto;
+    }
+
+    private static void initEnvironment() throws ClassNotFoundException, SQLException {
+        Class.forName("com.kingbase8.Driver");
+        conn = DriverManager.getConnection("jdbc:kingbase8://192.168.7.113:54321/TEST", "SYSTEM", "123456");
+
+        conn.createStatement().execute("DROP TABLE IF EXISTS student");
+        //如果不存在则创建学生表
+        String createSQL = "CREATE TABLE IF NOT EXISTS student\n" +
+                "(\n" +
+                "    id      INTEGER PRIMARY KEY,\n" +
+                "    name    VARCHAR(100) NOT NULL,\n" +
+                "    age     INTEGER      NOT NULL,\n" +
+                "    address varchar(100)\n" +
+                ");";
+        conn.createStatement().execute(createSQL);
+
+        //添加数据
+        conn.setAutoCommit(false);
+        String insertSQL = "INSERT INTO student (id, name, age, address) VALUES (?,?,?,?)";
+        PreparedStatement preparedStatement = conn.prepareStatement(insertSQL);
+        for (int i = 0; i < 200000; i++) {
+            preparedStatement.setInt(1, i);
+            preparedStatement.setString(2, "name" + i);
+            preparedStatement.setInt(3, i % 55);
+            preparedStatement.setString(4, "address" + i);
+            preparedStatement.addBatch();
+        }
+        preparedStatement.executeBatch();
+        conn.setAutoCommit(true);
+    }
+
 
     private static DatabaseDTO getCLickHouseDTO() {
         //准备加密函数的入参
@@ -59,7 +134,7 @@ public class StockDataOperateServiceImplTest {
         address.setEncryptAlgorithm("TestAlg");
         address.setEncryptKeyIndex("1");
 
-        List<ColumnDTO> columns = Arrays.asList(name,address);
+        List<ColumnDTO> columns = Arrays.asList(name, address);
 
 
         TableDTO tableDTO = new TableDTO();
@@ -88,7 +163,7 @@ public class StockDataOperateServiceImplTest {
         return dto;
     }
 
-    private static void mysqlTest() throws ZAYKException, SQLException, InterruptedException {
+    private static void mysqlTest() throws Exception {
         DatabaseDTO databaseDTO = getMysqlDTO();
         StockDataOperateServiceImpl service = new StockDataOperateServiceImpl();
         //开一个线程

@@ -298,7 +298,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
                     });
                 });
                 //更新数据
-                sqlExecute.batchUpdate(conn, tableDTO.getTableName(), data, limit, finalOffset);
+                sqlExecute.batchUpdate(conn, tableDTO.getTableName(), data);
             }
         } catch (Exception e) {
             log.error("加密/解密失败", e);

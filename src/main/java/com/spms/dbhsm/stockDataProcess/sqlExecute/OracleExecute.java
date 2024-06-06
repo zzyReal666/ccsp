@@ -40,7 +40,7 @@ public class OracleExecute implements SqlExecuteSPI {
     }
 
     @Override
-    public void batchUpdate(Connection conn, String table, List<Map<String, String>> data,int limit,int offset) {
+    public void batchUpdate(Connection conn, String table, List<Map<String, String>> data) {
 
     }
 

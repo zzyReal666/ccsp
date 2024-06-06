@@ -1,6 +1,5 @@
 package com.spms.dbhsm.stockDataProcess.sqlExecute;
 
-import com.ccsp.common.core.utils.StringUtils;
 import com.spms.common.enums.DatabaseTypeEnum;
 import com.spms.dbhsm.stockDataProcess.domain.dto.AddColumnsDTO;
 import lombok.extern.slf4j.Slf4j;
@@ -20,22 +19,22 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * @author zzypersonally@gmail.com
  * @description
- * @since 2024/5/21 16:32
+ * @since 2024/6/6 11:08
  */
 @Slf4j
-public class MysqlExecute implements SqlExecuteSPI {
+public class KingBaseExecute implements SqlExecuteSPI {
 
-    //获取主键语句模版
-    private static final String GET_PRIMARY_KEY_SQL = "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '<schema>' AND TABLE_NAME = '<table>' AND COLUMN_KEY = 'PRI'";
+    //获取主键
+    private static final String GET_PRIMARY_KEY_SQL = "SELECT a.attname AS pk\n" + "FROM pg_constraint AS c\n" + "         JOIN pg_attribute AS a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)\n" + "         JOIN pg_class AS t ON t.oid = c.conrelid\n" + "WHERE c.contype = 'p'\n" + "  AND t.relname = '<tableName>'";
 
     //临时字段后缀
-    private static final String TEMP_COLUMN_SUFFIX = "_temp$zAyK_dbEnc_Mysql_";
+    private static final String TEMP_COLUMN_SUFFIX = "_temp$zAyK_dbEnc_KingBase_";
 
     //添加字段主句
     private static final String ADD_COLUMN = "ALTER TABLE <table> ";
 
     //添加字段字句 循环段
-    private static final String ADD_COLUMN_LOOP = "ADD COLUMN <field> <type> <null> <default> <comment>";
+    private static final String ADD_COLUMN_LOOP = "ADD <field> <type> <null> <default>";
 
     //统计表中数据量语句
     private static final String COUNT_DATA = "SELECT COUNT(*) FROM <table>";
@@ -46,24 +45,27 @@ public class MysqlExecute implements SqlExecuteSPI {
     //更新语句
     private static final String UPDATE = "UPDATE <table> SET <set> WHERE <where>";
 
-    //重命名字段 8.0版本以上 ALTER TABLE employees RENAME COLUMN last_name TO surname;
+    //重命名字段
     private static final String RENAME_COLUMN = "ALTER TABLE <table> RENAME COLUMN <old> TO <new>";
 
     //删除字段
     private static final String DROP_COLUMN = "ALTER TABLE <table> <drop>";
 
+    //删除字段循环段
+    private static final String DROP_COLUMN_LOOP = "DROP COLUMN <column>";
 
-    //获取主键字段名称
+
     @Override
-    public String getPrimaryKey(Connection conn, String schema, String table) {
-        String sql = new ST(GET_PRIMARY_KEY_SQL).add("schema", schema).add("table", table).render();
+    public String getPrimaryKey(Connection conn, String schema, String table) throws SQLException {
+        String sql = new ST(GET_PRIMARY_KEY_SQL).add("tableName", table).render();
+        log.info("getPrimaryKey sql:{}", sql);
         try (Statement statement = conn.createStatement()) {
             ResultSet resultSet = statement.executeQuery(sql);
             resultSet.next();
             return resultSet.getString(1);
         } catch (SQLException e) {
-            log.error("getPrimaryKey error", e);
-            throw new RuntimeException(e);
+            log.error("getPrimaryKey error sql:{}", sql, e);
+            throw e;
         }
     }
 
@@ -72,33 +74,19 @@ public class MysqlExecute implements SqlExecuteSPI {
         return TEMP_COLUMN_SUFFIX;
     }
 
-
-    /**
-     * 新增临时字段
-     *
-     * @param conn              连接
-     * @param table             表名
-     * @param addColumnsDtoList 需要添加的字段信息
-     */
     @Override
     public void addTempColumn(Connection conn, String table, List<AddColumnsDTO> addColumnsDtoList) {
         StringBuilder sql = new StringBuilder().append(new ST(ADD_COLUMN).add("table", table).render());
-
         addColumnsDtoList.forEach(addColumnsDTO -> {
-            //列定义
             Map<String, String> columnDefinition = addColumnsDTO.getColumnDefinition();
-            //加密 全部改成text
+            //加密 新增临时字段，固定text类型
             if (addColumnsDTO.isEncrypt()) {
-                String definitionSql = new ST(ADD_COLUMN_LOOP).add("field", addColumnsDTO.getColumnName() + TEMP_COLUMN_SUFFIX).add("type", "text").add("null", addColumnsDTO.isNotNull() ? "NOT NULL" : "")
-                        //todo 默认值暂时不设置
-                        .add("default", "").add("comment", StringUtils.isBlank(addColumnsDTO.getComment()) ? "" : "COMMENT '" + addColumnsDTO.getComment() + "'").render();
+                String definitionSql = new ST(ADD_COLUMN_LOOP).add("field", addColumnsDTO.getColumnName() + TEMP_COLUMN_SUFFIX).add("type", "text").add("null", addColumnsDTO.isNotNull() ? "NOT NULL" : "").add("default", "").render();
                 sql.append(definitionSql).append(",");
             }
             //解密 还原为原始字段
             else {
-                String definitionSql = new ST(ADD_COLUMN_LOOP).add("field", addColumnsDTO.getColumnName() + TEMP_COLUMN_SUFFIX).add("type", columnDefinition.get("type")).add("null", "NO".equals(columnDefinition.get("null")) ? "NOT NULL" : "")
-                        //todo 默认值暂时不设置
-                        .add("default", columnDefinition.get("default") == null ? "" : columnDefinition.get("default")).add("comment", columnDefinition.get("comment") == null ? "" : "COMMENT '" + addColumnsDTO.getComment() + "'").render();
+                String definitionSql = new ST(ADD_COLUMN_LOOP).add("field", addColumnsDTO.getColumnName() + TEMP_COLUMN_SUFFIX).add("type", columnDefinition.get("type")).add("null", "NO".equals(columnDefinition.get("null")) ? "NOT NULL" : "").render();
                 sql.append(definitionSql).append(",");
             }
         });
@@ -113,9 +101,6 @@ public class MysqlExecute implements SqlExecuteSPI {
         }
     }
 
-    /**
-     * 统计整张表全部的数据量
-     */
     @Override
     public int count(Connection conn, String table) {
         String sql = new ST(COUNT_DATA).add("table", table).render();
@@ -130,7 +115,6 @@ public class MysqlExecute implements SqlExecuteSPI {
         }
     }
 
-    //分页查询指定的字段，可以指定多个字段，必须查询主键字段，主键字段放在第一个
     @Override
     public List<Map<String, String>> selectColumn(Connection conn, String table, List<String> columns, int limit, int offset) {
         String columnStr = String.join(",", columns);
@@ -160,12 +144,6 @@ public class MysqlExecute implements SqlExecuteSPI {
         }
     }
 
-    /**
-     * 批量更新
-     *
-     * @param table 表名
-     * @param data  要更新的数据 必须是有序map
-     */
     @Override
     public void batchUpdate(Connection conn, String table, List<Map<String, String>> data) {
         StringBuilder set = new StringBuilder();
@@ -229,7 +207,7 @@ public class MysqlExecute implements SqlExecuteSPI {
         try (Statement statement = conn.createStatement()) {
             statement.execute(sql);
         } catch (SQLException e) {
-            log.error("renameColumn {}->{} error", oldColumn, newColumn, e);
+            log.error("renameColumn error", e);
             throw new RuntimeException(e);
         }
     }
@@ -238,7 +216,8 @@ public class MysqlExecute implements SqlExecuteSPI {
     public void dropColumn(Connection conn, String table, List<String> columns) {
         StringBuilder drop = new StringBuilder();
         columns.forEach(col -> {
-            drop.append("DROP COLUMN ").append(col).append(",");
+            String dropLoop = new ST(DROP_COLUMN_LOOP).add("column", col).render();
+            drop.append(dropLoop).append(",");
         });
         drop.deleteCharAt(drop.length() - 1);
         String sql = new ST(DROP_COLUMN).add("table", table).add("drop", drop).render();
@@ -249,11 +228,10 @@ public class MysqlExecute implements SqlExecuteSPI {
             log.error("dropColumn {} error", columns, e);
             throw new RuntimeException(e);
         }
-
     }
 
     @Override
     public String getType() {
-        return DatabaseTypeEnum.MySQL.name();
+        return DatabaseTypeEnum.KingBase.name();
     }
 }
