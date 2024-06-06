@@ -13,7 +13,8 @@ public enum DatabaseTypeEnum {
     SQLServer("1", "SQLServer"),
     MySQL("2", "MySql"),
     PostgresSQL("3", "PostgresSQL"),
-    ClickHouse("6", "ClickHouse");
+    ClickHouse("6", "ClickHouse"),
+    KingBase("7", "KingBase");
 
     private final String code;
     private final String name;

@@ -81,7 +81,7 @@ public class MysqlExecuteTest {
             }
             list.add(map);
         }
-        executeSPI.batchUpdate(connection, "t1", list, 0, 0);
+        executeSPI.batchUpdate(connection, "t1", list);
     }
 
     @Test

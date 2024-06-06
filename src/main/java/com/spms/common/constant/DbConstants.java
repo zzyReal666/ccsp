@@ -120,7 +120,7 @@ public class DbConstants {
     public static final String DB_TYPE_CLICKHOUSE_DESC = "ClickHouse";
 
     public static final String DB_TYPE_KING_BASE = "KingBase";
-    public static final String DB_TYPE_KB = "6";
+    public static final String DB_TYPE_KB = "7";
     public static final String DB_COLUMN_NAME = "columnName";
 
     /**
