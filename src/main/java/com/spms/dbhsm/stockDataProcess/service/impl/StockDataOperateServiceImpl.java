@@ -345,7 +345,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         DbConnectionPoolFactory factory = new DbConnectionPoolFactory();
         Connection connection = factory.getConnection(dbInstanceGetConnDTO);
         connection.setSchema(databaseDTO.getDatabaseName());
-        log.info("获取连接成功,schema:{}", connection.getSchema());
+        getSqlExecute(databaseDTO).connectionOperate(connection, databaseDTO);
         return connection;
     }
     //endregion

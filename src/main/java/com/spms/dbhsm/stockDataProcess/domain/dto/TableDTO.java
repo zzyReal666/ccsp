@@ -6,16 +6,23 @@ import java.util.List;
 
 /**
  * @author zzypersonally@gmail.com
- * @description   待加密的表的信息
+ * @description 待加密的表的信息
  * @since 2024/4/28 15:43
  */
 @Data
 public class TableDTO {
 
+
     /**
      * id
      */
     private Long id;
+
+
+    /**
+     * schema 名称  用于postgres系列数据库
+     */
+    private String schema;
 
     /**
      * 表名字
@@ -33,7 +40,7 @@ public class TableDTO {
     private Integer batchSize;
 
     /**
-     *  待加密的字段/列信息
+     * 待加密的字段/列信息
      */
     List<ColumnDTO> columnDTOList;
 

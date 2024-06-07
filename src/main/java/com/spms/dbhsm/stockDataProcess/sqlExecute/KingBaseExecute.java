@@ -2,6 +2,7 @@ package com.spms.dbhsm.stockDataProcess.sqlExecute;
 
 import com.spms.common.enums.DatabaseTypeEnum;
 import com.spms.dbhsm.stockDataProcess.domain.dto.AddColumnsDTO;
+import com.spms.dbhsm.stockDataProcess.domain.dto.DatabaseDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.stringtemplate.v4.ST;
 
@@ -59,8 +60,8 @@ public class KingBaseExecute implements SqlExecuteSPI {
     public String getPrimaryKey(Connection conn, String schema, String table) throws SQLException {
         String sql = new ST(GET_PRIMARY_KEY_SQL).add("tableName", table).render();
         log.info("getPrimaryKey sql:{}", sql);
-        try (Statement statement = conn.createStatement()) {
-            ResultSet resultSet = statement.executeQuery(sql);
+        try {
+            ResultSet resultSet = conn.createStatement().executeQuery(sql);
             resultSet.next();
             return resultSet.getString(1);
         } catch (SQLException e) {
@@ -76,17 +77,23 @@ public class KingBaseExecute implements SqlExecuteSPI {
 
     @Override
     public void addTempColumn(Connection conn, String table, List<AddColumnsDTO> addColumnsDtoList) {
-        StringBuilder sql = new StringBuilder().append(new ST(ADD_COLUMN).add("table", table).render());
+
+        StringBuilder sql = new StringBuilder().append(new ST(ADD_COLUMN)
+                .add("table", table).render());
         addColumnsDtoList.forEach(addColumnsDTO -> {
             Map<String, String> columnDefinition = addColumnsDTO.getColumnDefinition();
             //加密 新增临时字段，固定text类型
             if (addColumnsDTO.isEncrypt()) {
-                String definitionSql = new ST(ADD_COLUMN_LOOP).add("field", addColumnsDTO.getColumnName() + TEMP_COLUMN_SUFFIX).add("type", "text").add("null", addColumnsDTO.isNotNull() ? "NOT NULL" : "").add("default", "").render();
+                String definitionSql = new ST(ADD_COLUMN_LOOP).add("field", addColumnsDTO.getColumnName() + TEMP_COLUMN_SUFFIX).add("type", "text").add("null", "").add("default", "").render();
                 sql.append(definitionSql).append(",");
             }
             //解密 还原为原始字段
             else {
-                String definitionSql = new ST(ADD_COLUMN_LOOP).add("field", addColumnsDTO.getColumnName() + TEMP_COLUMN_SUFFIX).add("type", columnDefinition.get("type")).add("null", "NO".equals(columnDefinition.get("null")) ? "NOT NULL" : "").render();
+                String definitionSql = new ST(ADD_COLUMN_LOOP)
+                        .add("field", addColumnsDTO.getColumnName() + TEMP_COLUMN_SUFFIX)
+                        .add("type", columnDefinition.get("type"))
+                        .add("null", "NO".equals(columnDefinition.get("null")) ? "NOT NULL" : "")
+                        .render();
                 sql.append(definitionSql).append(",");
             }
         });
@@ -96,7 +103,7 @@ public class KingBaseExecute implements SqlExecuteSPI {
         try (Statement statement = conn.createStatement()) {
             statement.execute(sql.toString());
         } catch (SQLException e) {
-            log.error("addTempColumn error", e);
+            log.error("addTempColumn error sql:{}", sql, e);
             throw new RuntimeException(e);
         }
     }
@@ -228,6 +235,17 @@ public class KingBaseExecute implements SqlExecuteSPI {
             log.error("dropColumn {} error", columns, e);
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public void connectionOperate(Connection conn, DatabaseDTO databaseDTO) {
+        try (Statement statement = conn.createStatement()) {
+            statement.execute("set search_path to '" + databaseDTO.getTableDTOList().get(0).getSchema() + "'");
+        } catch (SQLException e) {
+            log.error("connectionOperate error", e);
+            throw new RuntimeException(e);
+        }
+
     }
 
     @Override

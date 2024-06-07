@@ -24,6 +24,7 @@ public enum DatabaseTypeEnum {
         this.name = name;
     }
 
+    //  根据值获取名称
     public static String getNameByCode(String code) {
         DatabaseTypeEnum[] var1 = values();
         for (DatabaseTypeEnum e : var1) {
@@ -33,4 +34,39 @@ public enum DatabaseTypeEnum {
         }
         return null;
     }
+
+    //根据名称获取值
+    public static String getCodeByName(String name) {
+        DatabaseTypeEnum[] var1 = values();
+        for (DatabaseTypeEnum e : var1) {
+            if (name.equals(e.getName())) {
+                return e.getCode();
+            }
+        }
+        return null;
+    }
+
+    //根据值获取枚举
+    public static DatabaseTypeEnum getEnumByCode(String code) {
+        DatabaseTypeEnum[] values = values();
+        for (DatabaseTypeEnum e : values) {
+            if (code.equals(e.getCode())) {
+                return e;
+            }
+        }
+        return null;
+    }
+
+    //根据名字获取枚举
+    public static DatabaseTypeEnum getEnumByName(String name) {
+        DatabaseTypeEnum[] values = values();
+        for (DatabaseTypeEnum e : values) {
+            if (name.equals(e.getCode())) {
+                return e;
+            }
+        }
+        return null;
+    }
+
+
 }
