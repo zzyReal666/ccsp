@@ -69,6 +69,10 @@ public class DbConnectionPool {
                 config.setJdbcUrl("jdbc:kingbase8://" + databaseIp + ":" + databasePort + "/" + databaseServerName);
                 config.setDriverClassName("com.kingbase8.Driver");
                 break;
+            case DbConstants.DB_TYPE_HB:
+                config.setJdbcUrl("jdbc:phoenix://" + databaseIp + ":" + databasePort + ":/" + databaseServerName);
+                config.setDriverClassName("org.apache.phoenix.jdbc.PhoenixDriver");
+                break;
             default:
                 throw new IllegalArgumentException("Unsupported database type: " + databaseType);
         }

@@ -24,6 +24,7 @@ public final class DBUtil {
     public static List<String> findAllTables(Connection conn, String userName, String dbType) {
         return findAllTables(conn, userName, dbType, "", "");
     }
+
     public static List<String> findAllTables(Connection conn, String userName, String dbType, String dbName, String schema) {
         Statement stmt = null;
         List<String> tableNamesList = new ArrayList<String>();
@@ -195,17 +196,20 @@ public final class DBUtil {
                     colList.add(colMap);
                 }
             } else if (DbConstants.DB_TYPE_KB.equalsIgnoreCase(dbType)) {
-                ps = conn.prepareStatement("SELECT column_name,data_type  FROM USER_TABLES WHERE " + tableName);
+                ps = conn.prepareStatement("SELECT column_name, data_type, \n" +
+                        "CASE WHEN (column_name = (SELECT a.attname AS pk_column_name\n" +
+                        "FROM pg_class t,pg_attribute a,pg_constraint c WHERE c.contype = 'p'AND c.conrelid = t.oid AND a.attrelid = t.oid AND a.attnum = ANY(c.conkey) AND t.relkind = 'r' AND t.relname = '"+tableName+"'))THEN  'PRI' ELSE  '' END  as key\n" +
+                        "FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" + tableName + "';");
                 rs = ps.executeQuery();
-                rsmd = rs.getMetaData();
-                for (int i = 1; i <= rsmd.getColumnCount(); i++) {
+                while (rs.next()) {
                     Map<String, String> colMap = new HashMap<>();
-                    colMap.put(DbConstants.DB_COLUMN_NAME, rsmd.getColumnName(i));
-                    colMap.put("columnType", rsmd.getColumnTypeName(i));
+                    colMap.put(DbConstants.DB_COLUMN_NAME, rs.getString("column_name"));
+                    colMap.put("columnType", rs.getString("data_type"));
+                    colMap.put("Key", rs.getString("Key"));
                     colList.add(colMap);
                 }
             } else if (DbConstants.DB_TYPE_CLICKHOUSE.equalsIgnoreCase(dbType)) {
-                ps = conn.prepareStatement("select name, type,if(is_in_primary_key = 1,'PRI','') as Key from system.columns where database = 'default' and table='" + tableName + "'");
+                ps = conn.prepareStatement("select name, type,if(is_in_primary_key = 1,'PRI','') as Key from system.columns where table='" + tableName + "'");
                 rs = ps.executeQuery();
                 while (rs.next()) {
                     Map<String, String> colMap = new HashMap<>();

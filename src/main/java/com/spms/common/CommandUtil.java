@@ -26,6 +26,12 @@ public class CommandUtil {
             databaseType = DbConstants.DB_TYPE_POSTGRESQL_DESC;
         }else if(DbConstants.DB_TYPE_DM.equals(instance.getDatabaseType())) {
             databaseType = DbConstants.DB_TYPE_DM_DESC;
+        }else if(DbConstants.DB_TYPE_CLICKHOUSE.equals(instance.getDatabaseType())) {
+            databaseType = DbConstants.DB_TYPE_CLICKHOUSE_DESC;
+        }else if(DbConstants.DB_TYPE_KB.equals(instance.getDatabaseType())) {
+            databaseType = DbConstants.DB_TYPE_KING_BASE_DESC;
+        }else if(DbConstants.DB_TYPE_HB.equals(instance.getDatabaseType())) {
+            databaseType = DbConstants.DB_TYPE_HBASE_DESC;
         }
         return databaseType + ":" + instance.getDatabaseIp() + ":" + instance.getDatabasePort() + instance.getDatabaseExampleType() + instance.getDatabaseServerName();
     }

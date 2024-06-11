@@ -142,12 +142,11 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             database.setConnectUrl(instance);
 
             //组装表基本信息
-            List<ColumnDTO> columnDTOS = encryptColumnsAll(dbhsmDbInstance, columnsList);
-            TableDTO tableDTO = BeanConvertUtils.beanToBean(encryptTable, TableDTO.class);
+            TableDTO tableDTO = encryptColumnsAll(dbhsmDbInstance, columnsList);
+            BeanUtils.copyProperties(encryptTable,tableDTO);
             tableDTO.setId(encryptTable.getTableId());
             tableDTO.setBatchSize(encryptTable.getBatchCount());
             tableDTO.setThreadNum(encryptTable.getThreadCount());
-            tableDTO.setColumnDTOList(columnDTOS);
 
             //加密表信息
             List<TableDTO> list = new ArrayList<>();
@@ -197,25 +196,33 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
      * @throws ZAYKException
      * @throws SQLException
      */
-    public static List<ColumnDTO> encryptColumnsAll(DbhsmDbInstance dbhsmDbInstance, List<DbhsmEncryptColumns> dbhsmEncryptColumns) {
-        List<ColumnDTO> list = new ArrayList<>();
+    public static TableDTO encryptColumnsAll(DbhsmDbInstance dbhsmDbInstance, List<DbhsmEncryptColumns> dbhsmEncryptColumns) {
+        TableDTO tableDTO = new TableDTO();
         Connection conn = null;
         try {
+            tableDTO.setSchema(dbhsmDbInstance.getDatabaseServerName());
             DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
             BeanUtils.copyProperties(dbhsmDbInstance, connDTO);
             conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
             if (Optional.ofNullable(conn).isPresent()) {
+                List<ColumnDTO> list = new ArrayList<>();
                 for (DbhsmEncryptColumns dbhsmEncryptColumn : dbhsmEncryptColumns) {
                     ColumnDTO columnDTO = new ColumnDTO();
                     Statement stmt = conn.createStatement();
                     ResultSet resultSet = null;
-                    String sql = databaseTypeSqlColumns(dbhsmDbInstance.getDatabaseType(), dbhsmEncryptColumn.getDbTable(),dbhsmDbInstance.getDatabaseServerName());
+                    String sql = databaseTypeSqlColumns(dbhsmDbInstance.getDatabaseType(), dbhsmEncryptColumn.getDbTable(), dbhsmDbInstance.getDatabaseServerName());
+                    log.info("获取表字段信息SQL：{}",sql);
                     resultSet = stmt.executeQuery(sql);
                     while (resultSet.next()) {
                         Map<String, String> map = new HashMap<>();
                         String columnName = resultSet.getString("Field");
+                        //只获取需要加密的列字段
                         if (!dbhsmEncryptColumn.getEncryptColumns().equals(columnName)) {
                             continue;
+                        }
+                        if (DbConstants.DB_TYPE_KB.equals(dbhsmDbInstance.getDatabaseType())){
+                            String schema = resultSet.getString("table_schema");
+                            tableDTO.setSchema(schema);
                         }
                         String type = resultSet.getString("Type");
                         String isNullable = resultSet.getString("Null");
@@ -234,16 +241,16 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                         columnDTO.setColumnName(columnName);
                         columnDTO.setNotNull(!"YES".equalsIgnoreCase(isNullable));
                         columnDTO.setComment(remarks);
+                        columnDTO.setEncryptAlgorithm("TestAlg");
+                        columnDTO.setEncryptKeyIndex(dbhsmEncryptColumn.getSecretKeyId());
                         list.add(columnDTO);
                     }
-                    columnDTO.setEncryptAlgorithm("TestAlg");
-                    columnDTO.setEncryptKeyIndex(dbhsmEncryptColumn.getSecretKeyId());
                 }
-
+                tableDTO.setColumnDTOList(list);
             }
         } catch (Exception e) {
             log.error(e.getMessage());
-            return new ArrayList<>();
+            return new TableDTO();
         } finally {
             try {
                 conn.close();
@@ -251,10 +258,10 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                 throw new RuntimeException(e);
             }
         }
-        return list;
+        return tableDTO;
     }
 
-    public static String databaseTypeSqlColumns(String type, String table,String schema) {
+    public static String databaseTypeSqlColumns(String type, String table, String schema) {
         String sql = "";
         //sqlserver
         if (DbConstants.DB_TYPE_SQLSERVER.equals(type)) {
@@ -277,15 +284,18 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             //dm
             sql = "select * from " + table + " limit 1";
         } else if (DbConstants.DB_TYPE_POSTGRESQL.equals(type) || DbConstants.DB_TYPE_KB.equals(type)) {
-            //pgSql || Kingbase
-            sql = "SELECT column_name as Field, data_type as Type, is_nullable as 'Null', column_default as 'Default' FROM information_schema.columns WHERE  table_name = '" + table + "'";
+            //pgSql || Kingbase TODO 多个架构SQL报错
+            sql = "SELECT table_schema,column_name as Field, data_type as Type, is_nullable as Null, column_default as Default,\n" +
+                    "CASE WHEN (column_name = (SELECT a.attname AS pk_column_name FROM pg_class t,pg_attribute a,pg_constraint c WHERE c.contype = 'p'AND c.conrelid = t.oid AND a.attrelid = t.oid AND a.attnum = ANY(c.conkey) AND t.relkind = 'r' AND t.relname = '"+table+"'))THEN  'PRI' ELSE  '' END  as key,\n" +
+                    "(SELECT col_description(c.oid, a.attnum) AS column_comment FROM pg_class AS c JOIN pg_attribute AS a ON c.oid = a.attrelid WHERE c.relname = 'student' and a.attname = column_name AND a.attnum > 0 ORDER BY a.attnum)  as Comment\n" +
+                    "FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '"+table+"';";
         } else if (DbConstants.DB_TYPE_MYSQL.equals(type)) {
             //MySql
             sql = "SHOW FULL COLUMNS from " + table;
         } else if (DbConstants.DB_TYPE_CLICKHOUSE.equals(type)) {
             //ClickHouse
             sql = "select name as Field,type as Type,comment as Comment,default_expression as Default,if(is_in_primary_key = 1,'PRI','') as Key,\n" +
-                    "if(type like '%Nullable%','YES','NO') as Null from system.columns where database = '"+schema+"' and  table='" + table + "';";
+                    "if(type like '%Nullable%','YES','NO') as Null from system.columns where database = '" + schema + "' and  table='" + table + "';";
         }
         return sql;
     }
@@ -480,7 +490,21 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         } else if (DbConstants.DB_TYPE_MYSQL.equals(dbhsmDbInstance.getDatabaseType()) || DbConstants.DB_TYPE_CLICKHOUSE.equals(dbhsmDbInstance.getDatabaseType())) {
             sql = "SHOW CREATE TABLE " + table;
             index = DbConstants.DB_TYPE_MYSQL.equals(dbhsmDbInstance.getDatabaseType()) ? 2 : 1;
-        }else if (DbConstants.DB_TYPE_KB.equals(dbhsmDbInstance.getDatabaseType())) {
+        } else if (DbConstants.DB_TYPE_KB.equals(dbhsmDbInstance.getDatabaseType())) {
+            //组装创建表的DDL以及主键信息
+            sql = "SELECT 'CREATE TABLE ' || table_name || ' (' || array_to_string( array_agg(\n" +
+                    "            column_name || ' ' || data_type ||\n" +
+                    "            CASE WHEN data_type IN ('integer', 'int', 'int4', 'int8') THEN '' ELSE COALESCE('(' || character_maximum_length || ')', '') END ||\n" +
+                    "            CASE WHEN is_nullable = 'NO' THEN ' NOT NULL' ELSE '' END ||\n" +
+                    "            COALESCE(' ' || column_default, '') ), ', ' ) || '); ' ||\n" +
+                    "    COALESCE((\n" +
+                    "        SELECT 'ALTER TABLE ' || kcu.table_name || ' ADD CONSTRAINT ' || tc.constraint_name || ' PRIMARY KEY (' || string_agg(kcu.column_name, ', ') || ');'\n" +
+                    "        FROM information_schema.table_constraints tc JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name\n" +
+                    "        WHERE tc.table_schema = ( SELECT table_schema FROM information_schema.columns WHERE table_name = '"+table+"' LIMIT 1 )\n" +
+                    "        AND tc.table_name = '"+table+"' AND tc.constraint_type = 'PRIMARY KEY' GROUP BY kcu.table_name, tc.constraint_name ), '') AS ddl_statement\n" +
+                    "FROM information_schema.columns\n" +
+                    "WHERE table_schema = ( SELECT table_schema FROM information_schema.columns WHERE table_name = '"+table+"'  LIMIT 1 )\n" +
+                    "    AND table_name = '"+table+"' GROUP BY table_name;";
         }
 
         ResultSet rs = stmt.executeQuery(sql);
