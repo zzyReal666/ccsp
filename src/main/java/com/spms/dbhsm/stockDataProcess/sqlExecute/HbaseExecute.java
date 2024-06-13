@@ -176,8 +176,8 @@ public class HbaseExecute implements SqlExecuteForColSPI {
                 scan.addColumn(Bytes.toBytes(split[0]), Bytes.toBytes(split[1]));
             });
             //查询-修改-插入
-            ResultScanner scanner = table.getScanner(scan);
             ArrayList<Put> puts = new ArrayList<>();
+            ResultScanner scanner = table.getScanner(scan);
             for (Result result : scanner) {
                 byte[] row = result.getRow();
                 columnDTOList.forEach(columnDTO -> {

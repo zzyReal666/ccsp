@@ -26,7 +26,7 @@ public interface DbhsmWarningConfigMapper
 
     /**
      * 查询warningConfig
-     *
+     *1
      * @param verificationValue 校验值
      * @return warningConfig
      */

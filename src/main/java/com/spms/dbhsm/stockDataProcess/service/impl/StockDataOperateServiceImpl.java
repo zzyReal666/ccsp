@@ -140,12 +140,13 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
             offsetQueue.add(offset);
             offset += limit;
         }
+        log.info("分块成功，共{}块", offsetQueue.size());
         AtomicInteger progress = PROGRESS_MAP.get(String.valueOf(tableDTO.getId()));
         AtomicBoolean paused = PAUSED_MAP.get(String.valueOf(tableDTO.getId()));
-
+        org.apache.hadoop.hbase.client.Connection connection = getConnection(sqlExecute, databaseDTO);
         for (int i = 0; i < threadNum; i++) {
             executor.execute(() -> {
-                processForCol(operateType, sqlExecute, offsetQueue, paused, databaseDTO, limit, progress, count);
+                processForCol(operateType, sqlExecute, offsetQueue, paused, databaseDTO, limit, progress, count, connection);
             });
         }
         //关闭线程池
@@ -161,31 +162,27 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         }
     }
 
+    private static org.apache.hadoop.hbase.client.Connection getConnection(SqlExecuteForColSPI sqlExecute, DatabaseDTO databaseDTO) {
+        return (org.apache.hadoop.hbase.client.Connection) sqlExecute.getConnection(databaseDTO.getDatabaseIp(), databaseDTO.getDatabasePort(), databaseDTO.getDatabaseName(), databaseDTO.getServiceUser(), databaseDTO.getServicePassword());
+    }
+
     //列式数据库的线程任务
-    private void processForCol(boolean operateType, SqlExecuteForColSPI sqlExecute, LinkedBlockingQueue<Integer> offsetQueue, AtomicBoolean paused, DatabaseDTO databaseDTO, int limit, AtomicInteger progress, int count) {
+    private void processForCol(boolean operateType, SqlExecuteForColSPI sqlExecute, LinkedBlockingQueue<Integer> offsetQueue, AtomicBoolean paused, DatabaseDTO databaseDTO, int limit, AtomicInteger progress, int count, org.apache.hadoop.hbase.client.Connection connection) {
         TableDTO tableDTO = databaseDTO.getTableDTOList().get(0);
         //循环次数
         int loop = 1;
-        log.info("当前线程:{},线程id:{}", Thread.currentThread().getName(), Thread.currentThread().getId());
-        try (org.apache.hadoop.hbase.client.Connection connection = (org.apache.hadoop.hbase.client.Connection) sqlExecute.getConnection(databaseDTO.getDatabaseIp(), databaseDTO.getDatabasePort(), databaseDTO.getDatabaseName(), databaseDTO.getServiceUser(), databaseDTO.getServicePassword());) {
-            while (!offsetQueue.isEmpty() && !paused.get()) {
-                Integer currentOffset = offsetQueue.poll();
-                log.info("线程:{} 第{}轮执行，offset:{}", Thread.currentThread().getName(), loop, currentOffset);
-                if (currentOffset == null) {
-                    break;
-                }
-                //线程任务
-                try {
-                    //查询数据
-                    List<Map<String, String>> data = (List<Map<String, String>>) sqlExecute.selectData(connection, tableDTO, currentOffset, limit, operateType);
-                    //加密数据
-                    data.forEach(map -> map.entrySet().forEach(entry -> entry.setValue(encryptOrDecrypt(entry.getKey(), entry.getValue(), tableDTO, operateType))));
-                    //存储数据
-                    sqlExecute.insertData(connection, tableDTO.getTableName() + sqlExecute.getPrefixOrSuffix(), data);
-                } catch (Exception e) {
-                    log.error("加密/解密失败", e);
-                    throw new RuntimeException();
-                }
+        Integer currentOffset = null;
+        try {
+            while (offsetQueue.poll() != null && !paused.get()) {
+                currentOffset = offsetQueue.poll();
+                log.info("线程:{} 第{}轮开始执行第{}块数据，offset:{}", Thread.currentThread().getName(), loop, currentOffset / limit, currentOffset);
+                //查询数据
+                List<Map<String, String>> data = (List<Map<String, String>>) sqlExecute.selectData(connection, tableDTO, currentOffset, limit, operateType);
+                //加密数据
+                data.forEach(map -> map.entrySet().forEach(entry -> entry.setValue(encryptOrDecrypt(entry.getKey(), entry.getValue(), tableDTO, operateType))));
+                //存储数据
+                sqlExecute.insertData(connection, tableDTO.getTableName() + sqlExecute.getPrefixOrSuffix(), data);
+
                 int processed = currentOffset + limit;
                 progress.set((int) (((double) processed / count) * 100));
                 PROGRESS_MAP.put(String.valueOf(tableDTO.getId()), progress);
@@ -194,11 +191,11 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
                     STOP_POSITION.put(tableDTO.getId(), currentOffset);
                     break;
                 }
+                log.info("线程:{} 第{}轮执行完成，offset:{}", Thread.currentThread().getName(), loop, currentOffset);
                 loop++;
             }
         } catch (Exception e) {
-            //打印错误
-            log.error("加密/解密失败，当前线程:{}", Thread.currentThread().getName(), e);
+            log.error("线程:{} 第{}轮执行第{}块数据错误，offset:{}", Thread.currentThread().getName(), loop, currentOffset / limit, currentOffset, e);
             throw new RuntimeException(e);
         }
     }
