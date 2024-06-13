@@ -5,13 +5,28 @@ import com.spms.dbhsm.stockDataProcess.domain.dto.ColumnDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.DatabaseDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.TableDTO;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -39,6 +54,97 @@ public class StockDataOperateServiceImplTest {
         initEnvironment();
         DatabaseDTO dto = getKingBaseDto();
         service.stockDataOperate(dto, true);
+    }
+
+    @Test
+    public void hBase() throws Exception {
+        initHbase();
+        DatabaseDTO dto = getHbaseDTO();
+        service.stockDataOperate(dto, true);
+
+    }
+
+    private static DatabaseDTO getHbaseDTO() {
+        //dto
+        //准备加密函数的入参
+        ColumnDTO name = new ColumnDTO();
+        name.setId(1L);
+        name.setColumnName("info1:name");
+        name.setEncryptAlgorithm("TestAlg");
+        name.setEncryptKeyIndex("1");
+
+        ColumnDTO address = new ColumnDTO();
+        address.setId(3L);
+        address.setColumnName("info2:address");
+        address.setEncryptAlgorithm("TestAlg");
+        address.setEncryptKeyIndex("1");
+
+        List<ColumnDTO> columns = Arrays.asList(name, address);
+
+        TableDTO tableDTO = new TableDTO();
+        tableDTO.setId(1L);
+        tableDTO.setBatchSize(2000);
+        tableDTO.setTableName("student");
+        tableDTO.setThreadNum(10);
+        tableDTO.setColumnDTOList(columns);
+
+        List<TableDTO> tables = Collections.singletonList(tableDTO);
+
+        DatabaseDTO dto = new DatabaseDTO();
+        dto.setDbStorageMode(DatabaseDTO.DbStorageMode.COLUMN);
+        dto.setId(123456L);
+        dto.setDatabaseIp("192.168.7.113");
+        dto.setDatabasePort("3181");
+        dto.setConnectUrl("jdbc:kingbase8://192.168.7.113:3181/hbase");
+        dto.setDatabaseType("HBase");
+        dto.setDatabaseName("hbase");
+        dto.setDatabaseDba("hbase");
+        dto.setDatabaseDbaPassword("");
+        dto.setServiceUser("hbase");
+        dto.setServicePassword("");
+        dto.setTableDTOList(tables);
+
+        return dto;
+    }
+
+    private static void initHbase() throws IOException {
+        //准备连接
+        Configuration conf = HBaseConfiguration.create();
+        conf.set("hbase.zookeeper.quorum", "192.168.7.113");
+        conf.set("zookeeper.znode.parent", "/hbase");
+        conf.set("hbase.zookeeper.property.clientPort", "3181");
+
+        UserGroupInformation.setConfiguration(conf);
+        UserGroupInformation romoteUser = UserGroupInformation.createRemoteUser("hbase");
+        UserGroupInformation.setLoginUser(romoteUser);
+
+        org.apache.hadoop.hbase.client.Connection connection = ConnectionFactory.createConnection(conf);
+
+        //判断存在
+        Admin admin = connection.getAdmin();
+        admin.disableTable(TableName.valueOf("student"));
+        admin.deleteTable(TableName.valueOf("student"));
+        //准备HBase表
+        TableDescriptorBuilder tdesBuilder = TableDescriptorBuilder.newBuilder(TableName.valueOf("student"));
+        ArrayList<ColumnFamilyDescriptor> cflist = new ArrayList<>();
+        cflist.add(ColumnFamilyDescriptorBuilder.of("info1"));
+        cflist.add(ColumnFamilyDescriptorBuilder.of("info2"));
+        tdesBuilder.setColumnFamilies(cflist);
+        TableDescriptor tableDescriptor = tdesBuilder.build();
+        admin.createTable(tableDescriptor);
+        ArrayList<Put> puts = new ArrayList<>();
+        for (int i = 0; i < 100000; i++) {
+            String rowKey = "rowKey" + i;
+            Put put = new Put(Bytes.toBytes(rowKey));
+            put.addColumn(Bytes.toBytes("info1"), Bytes.toBytes("name"), Bytes.toBytes("zhangsan" + i));
+            put.addColumn(Bytes.toBytes("info2"), Bytes.toBytes("age"), Bytes.toBytes("20" + i));
+            put.addColumn(Bytes.toBytes("info2"), Bytes.toBytes("address"), Bytes.toBytes("address" + i));
+            puts.add(put);
+        }
+        Table table = connection.getTable(TableName.valueOf("student"));
+        table.put(puts);
+        table.close();
+        connection.close();
     }
 
     private DatabaseDTO getKingBaseDto() {
@@ -94,13 +200,7 @@ public class StockDataOperateServiceImplTest {
 
         conn.createStatement().execute("DROP TABLE IF EXISTS student");
         //如果不存在则创建学生表
-        String createSQL = "CREATE TABLE IF NOT EXISTS student\n" +
-                "(\n" +
-                "    id      INTEGER PRIMARY KEY,\n" +
-                "    name    VARCHAR(100) NOT NULL,\n" +
-                "    age     INTEGER      NOT NULL,\n" +
-                "    address varchar(100)\n" +
-                ");";
+        String createSQL = "CREATE TABLE IF NOT EXISTS student\n" + "(\n" + "    id      INTEGER PRIMARY KEY,\n" + "    name    VARCHAR(100) NOT NULL,\n" + "    age     INTEGER      NOT NULL,\n" + "    address varchar(100)\n" + ");";
         conn.createStatement().execute(createSQL);
 
         //添加数据

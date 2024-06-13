@@ -12,6 +12,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum AlgorithmTypeEnum {
     SGD_SM4_ECB("401"),
+    SGD_SM4_CBC("402"),
     TestAlg("000");
     private final String code;
 

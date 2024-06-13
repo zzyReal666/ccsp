@@ -18,6 +18,11 @@ public class DatabaseDTO {
     private Long id;
 
     /**
+     * 数据库的存储模式
+     */
+    private DbStorageMode dbStorageMode;
+
+    /**
      * 数据库类型 0：Oracle 1：SQLServer 2:mysql 3:PostgreSQL 4：DM8,
      */
     private String databaseType;
@@ -73,11 +78,18 @@ public class DatabaseDTO {
     private String connectUrl;
 
 
-
     /**
      * 待加密的表
      */
     List<TableDTO> tableDTOList;
+
+
+    /**
+     * 数据库存储模式
+     */
+    public enum DbStorageMode {
+        ROW, COLUMN
+    }
 
 
 }

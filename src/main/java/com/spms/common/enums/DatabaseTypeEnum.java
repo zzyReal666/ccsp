@@ -9,12 +9,7 @@ import lombok.Getter;
  */
 @Getter
 public enum DatabaseTypeEnum {
-    Oracle("0", "Oracle"),
-    SQLServer("1", "SQLServer"),
-    MySQL("2", "MySql"),
-    PostgresSQL("3", "PostgresSQL"),
-    ClickHouse("6", "ClickHouse"),
-    KingBase("7", "KingBase");
+    Oracle("0", "Oracle"), SQLServer("1", "SQLServer"), MySQL("2", "MySql"), PostgresSQL("3", "PostgresSQL"), ClickHouse("6", "ClickHouse"), KingBase("7", "KingBase"), HBase("8", "HBase");
 
     private final String code;
     private final String name;
@@ -61,7 +56,7 @@ public enum DatabaseTypeEnum {
     public static DatabaseTypeEnum getEnumByName(String name) {
         DatabaseTypeEnum[] values = values();
         for (DatabaseTypeEnum e : values) {
-            if (name.equals(e.getCode())) {
+            if (name.equals(e.getName())) {
                 return e;
             }
         }
