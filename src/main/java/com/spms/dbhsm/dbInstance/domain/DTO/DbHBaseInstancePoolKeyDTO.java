@@ -10,7 +10,7 @@ import lombok.Data;
  */
 @Data
 @Builder
-public class DbKingBaseInstancePoolKeyDTO extends DbInstancePoolKeyDTO{
+public class DbHBaseInstancePoolKeyDTO extends DbInstancePoolKeyDTO{
     /** 数据库类型 */
     private String databaseType;
 
@@ -26,10 +26,10 @@ public class DbKingBaseInstancePoolKeyDTO extends DbInstancePoolKeyDTO{
     /** 数据库DBA */
     private String databaseDba;
 
-    public DbKingBaseInstancePoolKeyDTO() {
+    public DbHBaseInstancePoolKeyDTO() {
     }
 
-    public DbKingBaseInstancePoolKeyDTO(String databaseType, String databaseIp, String databasePort, String databaseServerName, String databaseDba) {
+    public DbHBaseInstancePoolKeyDTO(String databaseType, String databaseIp, String databasePort, String databaseServerName, String databaseDba) {
         this.databaseType = databaseType;
         this.databaseIp = databaseIp;
         this.databasePort = databasePort;

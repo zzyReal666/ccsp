@@ -20,7 +20,7 @@ public class DbhsmEncryptTable implements Serializable {
 
 	/**id*/
 	@ApiModelProperty(name = "tableId",value = "id")
-	private String tableId;
+	private Long tableId;
 
 	/**数据库实例ID*/
 	@ApiModelProperty(name = "instanceId",value = "数据库实例ID")

@@ -49,7 +49,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
     @Autowired
     private DbhsmDbUsersMapper dbhsmDbUsersMapper;
 
-    //    @PostConstruct
+    @PostConstruct
     public void init() {
         // 创建线程1
         ExecutorService executor = Executors.newFixedThreadPool(1);
@@ -118,6 +118,12 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
                     break;
                 case DbConstants.DB_TYPE_DM:
                     vo.setLabel(vo.getLabel() + "(" + DbConstants.DB_TYPE_DM_DESC + ")");
+                    break;
+                case DbConstants.DB_TYPE_CLICKHOUSE:
+                    vo.setLabel(vo.getLabel() + "(" + DbConstants.DB_TYPE_CLICKHOUSE_DESC + ")");
+                    break;
+                case DbConstants.DB_TYPE_KB:
+                    vo.setLabel(vo.getLabel() + "(" + DbConstants.DB_TYPE_KING_BASE_DESC + ")");
                     break;
                 default:
                     // 处理未知的数据库类型
@@ -540,12 +546,11 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
         DbInstanceGetConnDTO instanceGetConnDTO = new DbInstanceGetConnDTO();
         BeanUtils.copyProperties(dbhsmDbInstance, instanceGetConnDTO);
         try {
-            DbConnectionPoolFactory.buildDataSourcePool(instanceGetConnDTO);
             DbConnectionPoolFactory.queryPool();
         } catch (Exception e) {
             e.printStackTrace();
             log.info("初始化数据库连接池失败:{}", e.getMessage());
-            return AjaxResult2.error();
+            return AjaxResult2.error("测试连接失败，请稍后重试！");
         }
         return AjaxResult2.success(true);
     }

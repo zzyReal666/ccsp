@@ -119,8 +119,11 @@ public class DbConstants {
     public static final String DB_TYPE_CLICKHOUSE = "6";
     public static final String DB_TYPE_CLICKHOUSE_DESC = "ClickHouse";
 
-    public static final String DB_TYPE_KING_BASE = "KingBase";
     public static final String DB_TYPE_KB = "7";
+    public static final String DB_TYPE_KING_BASE_DESC = "KingBase";
+
+    public static final String DB_TYPE_HB = "8";
+    public static final String DB_TYPE_HBASE_DESC = "Hbase";
     public static final String DB_COLUMN_NAME = "columnName";
 
     /**
@@ -131,6 +134,12 @@ public class DbConstants {
     public static final Integer ENCRYPTING = 3;
 
     public static final Integer DECRYPTING = 4;
+
+
+    /*插件模式 0：前端插件  1：后端插件*/
+    public static final Integer FG_PLUG = 0;
+
+    public static final Integer BE_PLUG = 1;
     /**
      * 是否唯一返回码
      */

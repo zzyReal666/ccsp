@@ -69,6 +69,10 @@ public class DbConnectionPool {
                 config.setJdbcUrl("jdbc:kingbase8://" + databaseIp + ":" + databasePort + "/" + databaseServerName);
                 config.setDriverClassName("com.kingbase8.Driver");
                 break;
+            case DbConstants.DB_TYPE_HB:
+                config.setJdbcUrl("jdbc:phoenix://" + databaseIp + ":" + databasePort + ":/" + databaseServerName);
+                config.setDriverClassName("org.apache.phoenix.jdbc.PhoenixDriver");
+                break;
             default:
                 throw new IllegalArgumentException("Unsupported database type: " + databaseType);
         }
@@ -111,44 +115,35 @@ public class DbConnectionPool {
     public static void main(String[] args) throws SQLException, ZAYKException {
 
         DbInstanceGetConnDTO instance = new DbInstanceGetConnDTO();
-        //instance.setDatabaseType(DbConstants.DB_TYPE_ORACLE);
-        //instance.setDatabaseIp("192.168.6.158");
-        //instance.setDatabasePort("1521");
-        //instance.setDatabaseServerName("orcl");
-        //instance.setDatabaseExampleType(":");
-        //instance.setDatabaseDba("user55");
-        //instance.setDatabaseDbaPassword("12345678");
-        instance.setDatabaseType(DbConstants.DB_TYPE_DM);
-        instance.setDatabaseIp("192.168.6.158");
-        instance.setDatabasePort("5236");
-        instance.setDatabaseServerName("dbtest");
+        instance.setDatabaseType(DbConstants.DB_TYPE_CLICKHOUSE);
+        instance.setDatabaseIp("192.168.7.113");
+        instance.setDatabasePort("18123");
+        instance.setDatabaseServerName("default");
         instance.setDatabaseExampleType(":");
-        instance.setDatabaseDba("SYSDBA");
-        instance.setDatabaseDbaPassword("SYSDBA");
+        instance.setDatabaseDba("default");
+        instance.setDatabaseDbaPassword("123456");
         DbConnectionPoolFactory factory = new DbConnectionPoolFactory();
         Connection connection = factory.getConnection(instance);
-        System.out.println(connection);
-        String sql = "select * from DEVUSER.TABLE_1";
-        //String sql1 = "drop user testuser12";
-        //String sql = DbConstants.DB_SQL_SQLSERVER_USER_QUERY;
+
         PreparedStatement statement = null;
         ResultSet resultSet = null;
+        String sql = "INSERT INTO default.student (id, name, age, address) VALUES (?,?,?,?);";
+        statement = connection.prepareStatement(sql);
 
         try {
-            statement = connection.prepareStatement(sql);
-            //statement = connSQLServer().prepareStatement(sql1);
-            statement.execute();
-            //connection.commit();
-            if (connection != null) {
-                statement = connection.prepareStatement(sql);
-                resultSet = statement.executeQuery();
-                while (resultSet.next()) {
-                    // 处理结果集
-                    //System.out.println(resultSet.getString("id"));
-                    System.out.println(resultSet.getString("COLUMN_2"));
-                }
+            connection.setAutoCommit(false);
+            for (int i = 7; i < 2000000; i++) {
+                statement.setInt(1, i);
+                statement.setString(2, "新增数据第：" + i + "条");
+                statement.setInt(3, i + 1);
+                statement.setString(4, "济南：" + i);
+                statement.addBatch();
             }
-
+            //执行SQL
+            statement.executeBatch();
+            //清除SQL
+            statement.clearBatch();
+            connection.commit();
         } catch (SQLException e) {
             // 处理异常
             e.printStackTrace();

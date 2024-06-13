@@ -27,7 +27,7 @@ public enum DatabaseTypeEnum {
                 return e.getName();
             }
         }
-        return null;
+        return code;
     }
 
     //根据名称获取值
@@ -38,7 +38,7 @@ public enum DatabaseTypeEnum {
                 return e.getCode();
             }
         }
-        return null;
+        return name;
     }
 
     //根据值获取枚举

@@ -87,4 +87,6 @@ public interface DbhsmTaskQueueMapper {
 
     void deleteRecords(@Param("taskId")  Long taskId);
 
+    DbhsmTaskQueue queryTableTask(@Param("tableId") String tableId,  @Param("taskMode") String taskMode);
+
 }

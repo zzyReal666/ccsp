@@ -4,17 +4,16 @@ import cn.hutool.db.DbRuntimeException;
 import cn.hutool.db.DbUtil;
 import com.ccsp.cert.sanwei.ByteUtils;
 import com.ccsp.cert.sm4.SM4Utils;
-import com.ccsp.common.core.domain.R;
 import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.DateUtils;
 import com.ccsp.common.core.utils.SnowFlakeUtil;
 import com.ccsp.common.core.utils.StringUtils;
+import com.ccsp.common.core.utils.bean.BeanConvertUtils;
 import com.ccsp.common.core.utils.tree.EleTreeWrapper;
 import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.ccsp.common.security.utils.DictUtils;
 import com.ccsp.common.security.utils.SecurityUtils;
 import com.ccsp.system.api.hsmSvsTsaApi.RemoteSecretKeyService;
-import com.ccsp.system.api.hsmSvsTsaApi.domain.DevBaseData;
 import com.ccsp.system.api.systemApi.RemoteConfigService;
 import com.ccsp.system.api.systemApi.domain.SysDictData;
 import com.spms.common.DBIpUtil;
@@ -56,7 +55,6 @@ import org.springframework.util.CollectionUtils;
 import java.sql.*;
 import java.util.Date;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 数据库加密列Service业务层处理
@@ -98,6 +96,8 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
     //@Value("${server.port:10013}")
     private static int dbhsmPort = 80;
 
+    private static boolean isThread = true;
+
     private String taskStatus = "Encrypting";
 
     static {
@@ -130,12 +130,27 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         String tableName = "";
         List<DbhsmEncryptColumns> columnsList = new ArrayList<>();
         Connection conn = null;
-        //根据用户Id获取用户信息
-        DbhsmDbUser dbUserInfo = dbUsersMapper.selectDbhsmDbUsersById(columnsDto.getDbUserId());
 
-        if (dbUserInfo == null) {
-            log.error("未获取到数据库用户 dbUserId:{}", columnsDto.getDbUserId());
-            throw new Exception("未获取到数据库用户");
+        //创建数据库服务连接
+        DbhsmDbInstance instance = instanceMapper.selectDbhsmDbInstanceById(columnsDto.getDbInstanceId());
+        if (instance == null) {
+            log.error("根据ID未获取到数据库实例 dbInstanceId:{}", columnsDto.getDbInstanceId());
+            throw new Exception("未获取到数据库实例：dbInstanceId：" + columnsDto.getDbInstanceId());
+        }
+
+        DbhsmDbUser dbUserInfo;
+        if (DbConstants.BE_PLUG.equals(instance.getPlugMode())) {
+            //根据用户Id获取用户信息
+            dbUserInfo = dbUsersMapper.selectDbhsmDbUsersById(columnsDto.getDbUserId());
+            if (dbUserInfo == null) {
+                log.error("未获取到数据库用户 dbUserId:{}", columnsDto.getDbUserId());
+                throw new Exception("未获取到数据库用户");
+            }
+        } else {
+            //前端插件模式使用DBA用户信息
+            dbUserInfo = new DbhsmDbUser();
+            dbUserInfo.setUserName(instance.getDatabaseDba());
+            dbUserInfo.setPassword(instance.getDatabaseDbaPassword());
         }
 
         if (StringUtils.isEmpty(dbUserInfo.getUserName()) || StringUtils.isEmpty(dbUserInfo.getPassword())) {
@@ -143,12 +158,6 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             throw new Exception("数据库用户名或密码为空");
         }
 
-        //创建数据库服务连接
-        DbhsmDbInstance instance = instanceMapper.selectDbhsmDbInstanceById(columnsDto.getDbInstanceId());
-        if (dbUserInfo == null) {
-            log.error("根据ID未获取到数据库实例 dbInstanceId:{}", columnsDto.getDbInstanceId());
-            throw new Exception("未获取到数据库实例：dbInstanceId：" + columnsDto.getDbInstanceId());
-        }
         try {
             DbInstanceGetConnDTO connDTO = new DbInstanceGetConnDTO();
             BeanUtils.copyProperties(instance, connDTO);
@@ -163,6 +172,10 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 tableName = columnsDto.getDbTableName();
             } else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())) {
                 tableName = dbUserInfo.getUserName() + ".\"" + columnsDto.getDbTableName() + "\"";
+            } else if (DbConstants.DB_TYPE_CLICKHOUSE.equalsIgnoreCase(instance.getDatabaseType())) {
+                tableName = columnsDto.getDbTableName();
+            } else if (DbConstants.DB_TYPE_KB.equalsIgnoreCase(instance.getDatabaseType())) {
+                tableName = columnsDto.getDbTableName();
             }
 
             List<Map<String, String>> columnsInfoList = DBUtil.findAllColumnsInfo(conn, tableName, instance.getDatabaseType());
@@ -214,16 +227,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         String id = insertDbEncryptColumns(dbhsmEncryptColumnsAdd);
         taskStatus = "Encrypting";
 
-
-        boolean isThread = true;
-        //判断使用哪种方式去加密
-        R<DevBaseData> devBaseData = remoteConfigService.selectBaseDataByKey("isThreadOrEncryptColumns");
-        DevBaseData data = devBaseData.getData();
-        if (null != data) {
-            isThread = Boolean.getBoolean(data.getDataValue());
-        }
-
-        //如果设置isThreadOrEncryptColumns为true直接进行加密操作
+        //如果后端插件模式直接进行加密  否则加入队列等待手动加密
         if (isThread) {
             Thread thread = new Thread(() -> {
                 try {
@@ -326,6 +330,10 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
 
         // 使用DBA创建连接
         DbhsmDbInstance instance = instanceMapper.selectDbhsmDbInstanceById(dbhsmEncryptColumnsAdd.getDbInstanceId());
+
+        //如果为前端插件模式
+        isThread = !DbConstants.CREATED_ON_WEB_SEDE.equals(instance.getPlugMode());
+
         dbhsmEncryptColumnsAdd.setDatabaseType(instance.getDatabaseType());
         dbhsmEncryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
         Connection conn = null;
@@ -353,11 +361,11 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 } else {
                     TransUtil.transFPEEncryptColumns(conn, dbhsmEncryptColumnsAdd);
                 }
-            }else if (DbConstants.DB_TYPE_KB.equalsIgnoreCase(instance.getDatabaseType())) {
+            } else if (DbConstants.DB_TYPE_KB.equalsIgnoreCase(instance.getDatabaseType())) {
                 //KingBase(SM4/FPE)触发器
                 TransUtil.transEncryptColumnsFunToKingBase(conn, dbhsmEncryptColumnsAdd);
                 TransUtil.transEncryptColumnsToKingBase(conn, dbhsmEncryptColumnsAdd);
-            }  else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
+            } else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
                 //创建 SqlServer 触发器
                 TransUtil.transEncryptColumnsToSqlServer(conn, dbhsmEncryptColumnsAdd);
             } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
@@ -542,7 +550,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                     //删除KingBase触发器
 
                     String funName = encryptColumns.getDbUserName() + ".trfunc_" + DbConstants.algMappingStrOrFpe(encryptColumns.getEncryptionAlgorithm()) + "_" + encryptColumns.getDbUserName() + "_" + encryptColumns.getDbTable() + "_" + encryptColumns.getEncryptColumns();
-                    sql = "DROP TRIGGER " + funName +" CASCADE; ";
+                    sql = "DROP TRIGGER " + funName + " CASCADE; ";
                     preparedStatement = connection.prepareStatement(sql);
                     resultSet = preparedStatement.executeUpdate();
                 }
@@ -770,10 +778,37 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 if (HttpClientUtil.isDatabaseServerReachable(connDTO.getDatabaseIp(), Integer.parseInt(connDTO.getDatabasePort()), 5)) {
                     continue;
                 }
-                DbhsmDbUser dbUser = new DbhsmDbUser();
-                dbUser.setDatabaseInstanceId(instance.getId());
-                dbUser.setDbInstanceGetConnDTO(connDTO);
-                usersList = dbUsersMapper.selectDbhsmDbUsersList(dbUser);
+
+                //如果是前端插件模式手动挂载用户
+                if (DbConstants.CREATED_ON_WEB_SEDE.equals(instance.getPlugMode())) {
+                    user = new DbhsmDbUser();
+                    user.setId(0L);
+                    user.setIsSelfBuilt(0);
+                    user.setUserName(instance.getDatabaseDba());
+                    if (DbConstants.DB_TYPE_KB.equals(instance.getDatabaseType())) {
+                        usersList.clear();
+                        //如果是kingbase数据库多获取一层schema
+                        conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
+                        Statement stmt = conn.createStatement();
+                        String sql = "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('information_schema', 'sys_schema','pg_catalog', 'pg_toast');";
+                        ResultSet rs = stmt.executeQuery(sql);
+                        while (rs.next()) {
+                            user.setUserName(rs.getString(1));
+                            user.setDbSchema(rs.getString(1));
+                            log.info("schema：" + rs.getString(1));
+                            usersList.add(BeanConvertUtils.beanToBean(user, DbhsmDbUser.class));
+                        }
+                    } else {
+                        user.setDbSchema(instance.getDatabaseServerName());
+                        usersList = Collections.singletonList(user);
+                    }
+                    //防止出现重复用户信息
+                } else {
+                    DbhsmDbUser dbUser = new DbhsmDbUser();
+                    dbUser.setDatabaseInstanceId(instance.getId());
+                    dbUser.setDbInstanceGetConnDTO(connDTO);
+                    usersList = dbUsersMapper.selectDbhsmDbUsersList(dbUser);
+                }
 
                 for (int j = 0; j < usersList.size(); j++) {
                     try {
@@ -789,7 +824,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                         userMap.put("title", user.getUserName());
                         userMap.put("level", 2);
                         instancetTrees.add(userMap);
-                        conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
+                        conn = null == conn ? DbConnectionPoolFactory.getInstance().getConnection(connDTO) : conn;
                         if (Optional.ofNullable(conn).isPresent()) {
                             List<String> tableNameList = DBUtil.findAllTables(conn, user.getUserName(), instance.getDatabaseType(), instance.getDatabaseServerName(), user.getDbSchema());
                             for (int k = 0; k < tableNameList.size(); k++) {

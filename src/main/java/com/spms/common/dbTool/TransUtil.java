@@ -122,7 +122,7 @@ public class TransUtil {
         String userSchema = "\"" + encryptColumns.getDbUserName() + "\"";
         try {
             // 1、创建触发器，设置所触发的条件和执行的函数
-            log.info("创建PostgreSql触发器start");
+            log.info("创建KingBase触发器start");
 
             StringBuffer transSql = new StringBuffer("create trigger " + transName);
             transSql.append(System.lineSeparator());

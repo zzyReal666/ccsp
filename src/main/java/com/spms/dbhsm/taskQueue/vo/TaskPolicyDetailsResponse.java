@@ -34,5 +34,5 @@ public class TaskPolicyDetailsResponse {
     private Integer encryptionStatus;
 
     @ApiModelProperty(name = "disablingEncryption", value = "禁止加密原因")
-    private String disablingEncryption;
+    private String disablingEncryption = "-";
 }

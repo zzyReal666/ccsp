@@ -135,6 +135,7 @@
             <artifactId>clickhouse-jdbc</artifactId>
             <version>0.4.6</version>
         </dependency>
+
         <!-- https://mvnrepository.com/artifact/cn.com.kingbase/kingbase8 -->
         <dependency>
             <groupId>cn.com.kingbase</groupId>

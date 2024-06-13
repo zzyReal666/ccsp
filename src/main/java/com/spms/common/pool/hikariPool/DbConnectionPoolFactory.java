@@ -122,9 +122,9 @@ public class DbConnectionPoolFactory {
             buildDataSourcePool(instanceGetConnDTO, dbInstancekey);
         }
         Connection connection = DbConnectionPoolFactory.getInstance().getDbConnectionPool(dbInstancekey).getConnection();
-//        if (!databaseType.equals(DbConstants.DB_TYPE_CLICKHOUSE)) {
-//            connection.setAutoCommit(false);
-//        }
+        if (!databaseType.equals(DbConstants.DB_TYPE_CLICKHOUSE)) {
+            connection.setAutoCommit(false);
+        }
         return connection;
     }
 
@@ -142,7 +142,9 @@ public class DbConnectionPoolFactory {
         } else if (databaseType.equals(DbConstants.DB_TYPE_CLICKHOUSE)) {
             dbInstancekey = new DbClickHouseInstancePoolKeyDTO();
         } else if (databaseType.equals(DbConstants.DB_TYPE_KB)) {
-            dbInstancekey = new DbClickHouseInstancePoolKeyDTO();
+            dbInstancekey = new DbKingBaseInstancePoolKeyDTO();
+        } else if (databaseType.equals(DbConstants.DB_TYPE_HB)) {
+            dbInstancekey = new DbHBaseInstancePoolKeyDTO();
         } else {
             log.info("Error:未实现的数据库类型");
             throw new ZAYKException("未实现的数据库类型");
@@ -270,9 +272,9 @@ public class DbConnectionPoolFactory {
         //instance.setDatabaseDba("usre55");
         //instance.setDatabaseDbaPassword("12345678");
         instance.setDatabaseType(DbConstants.DB_TYPE_ORACLE);
-        instance.setDatabaseIp("192.168.7.149");
-        instance.setDatabasePort("5236");
-        instance.setDatabaseServerName("DAMENG");
+        instance.setDatabaseIp("192.168.7.113");
+        instance.setDatabasePort("3181");
+        instance.setDatabaseServerName("hbase");
         instance.setDatabaseExampleType("/");
         instance.setDatabaseDba("SYSDBA");
         instance.setDatabaseDbaPassword("SYSDBA");
