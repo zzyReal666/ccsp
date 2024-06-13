@@ -170,7 +170,7 @@ public class StockDataOperateServiceImplTest {
         TableDTO tableDTO = new TableDTO();
         tableDTO.setId(1L);
         tableDTO.setSchema("public");
-        tableDTO.setBatchSize(10);
+        tableDTO.setBatchSize(200);
         tableDTO.setTableName("student");
         tableDTO.setThreadNum(10);
         tableDTO.setColumnDTOList(columns);
@@ -207,7 +207,7 @@ public class StockDataOperateServiceImplTest {
         conn.setAutoCommit(false);
         String insertSQL = "INSERT INTO student (id, name, age, address) VALUES (?,?,?,?)";
         PreparedStatement preparedStatement = conn.prepareStatement(insertSQL);
-        for (int i = 0; i < 200000; i++) {
+        for (int i = 0; i < 20000; i++) {
             preparedStatement.setInt(1, i);
             preparedStatement.setString(2, "name" + i);
             preparedStatement.setInt(3, i % 55);

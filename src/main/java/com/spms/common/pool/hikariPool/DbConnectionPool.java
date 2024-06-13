@@ -27,7 +27,7 @@ import java.sql.SQLException;
 public class DbConnectionPool {
     private static DataSource dataSource;
     //连接池大小
-    private static final int MAX_CONNECTIONS = 10;
+    private static final int MAX_CONNECTIONS = 20;
 
     public static DataSource initialize(DbInstanceGetConnDTO instanceGetConnDTO) {
         String databaseIp = instanceGetConnDTO.getDatabaseIp();

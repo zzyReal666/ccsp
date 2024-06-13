@@ -9,7 +9,13 @@ import lombok.Getter;
  */
 @Getter
 public enum DatabaseTypeEnum {
-    Oracle("0", "Oracle"), SQLServer("1", "SQLServer"), MySQL("2", "MySql"), PostgresSQL("3", "PostgresSQL"), ClickHouse("6", "ClickHouse"), KingBase("7", "KingBase"), HBase("8", "HBase");
+    Oracle("0", "Oracle"),
+    SQLServer("1", "SQLServer"),
+    MySQL("2", "MySql"),
+    PostgresSQL("3", "PostgresSQL"),
+    ClickHouse("6", "ClickHouse"),
+    KingBase("7", "KingBase"),
+    HBase("8", "HBase");
 
     private final String code;
     private final String name;
