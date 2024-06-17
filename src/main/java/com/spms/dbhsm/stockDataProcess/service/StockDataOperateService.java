@@ -18,7 +18,6 @@ public interface StockDataOperateService {
      */
     void stockDataOperate(DatabaseDTO databaseDTO, boolean operateType) throws Exception;
 
-
     /**
      * 暂停
      */
@@ -35,5 +34,10 @@ public interface StockDataOperateService {
      * 查询进度
      */
     int queryProgress(String tableId) throws Exception;
+
+    /**
+     * 清理map  任务完成后调用，此后查询进度先判断状态，已经完成的为100
+     */
+    void clearMap(String tableId) throws Exception;
 
 }

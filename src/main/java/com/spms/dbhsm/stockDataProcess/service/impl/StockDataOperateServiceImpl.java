@@ -73,6 +73,14 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         return PROGRESS_MAP.get(tableId) == null ? 0 : PROGRESS_MAP.get(tableId).get();
     }
 
+    //清理map
+    @Override
+    public void clearMap(String tableId)  {
+        PAUSED_MAP.remove(tableId);
+        PROGRESS_MAP.remove(tableId);
+        STOP_POSITION.remove(Long.valueOf(tableId));
+    }
+
     /**
      * 存量数据加密/解密
      *
@@ -162,6 +170,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         }
     }
 
+    //hbase
     private static org.apache.hadoop.hbase.client.Connection getConnection(SqlExecuteForColSPI sqlExecute, DatabaseDTO databaseDTO) {
         return (org.apache.hadoop.hbase.client.Connection) sqlExecute.getConnection(databaseDTO.getDatabaseIp(), databaseDTO.getDatabasePort(), databaseDTO.getDatabaseName(), databaseDTO.getServiceUser(), databaseDTO.getServicePassword());
     }

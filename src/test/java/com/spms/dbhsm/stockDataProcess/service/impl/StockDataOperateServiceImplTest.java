@@ -95,7 +95,6 @@ public class StockDataOperateServiceImplTest {
         dto.setId(123456L);
         dto.setDatabaseIp("192.168.7.113");
         dto.setDatabasePort("3181");
-        dto.setConnectUrl("jdbc:kingbase8://192.168.7.113:3181/hbase");
         dto.setDatabaseType("HBase");
         dto.setDatabaseName("hbase");
         dto.setDatabaseDba("hbase");
@@ -120,7 +119,7 @@ public class StockDataOperateServiceImplTest {
 
         org.apache.hadoop.hbase.client.Connection connection = ConnectionFactory.createConnection(conf);
 
-        //判断存在
+        //删除存在的表（没有则不执行，会表不存在）
         Admin admin = connection.getAdmin();
         admin.disableTable(TableName.valueOf("student"));
         admin.deleteTable(TableName.valueOf("student"));
