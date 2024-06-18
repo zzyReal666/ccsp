@@ -8,9 +8,14 @@ import com.spms.dbhsm.dbInstance.domain.DTO.*;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.CollectionUtils;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -150,6 +155,18 @@ public class DbConnectionPoolFactory {
             throw new ZAYKException("未实现的数据库类型");
         }
         return dbInstancekey;
+    }
+
+    //构建Hbase连接
+    public static org.apache.hadoop.hbase.client.Connection buildHbaseDataSource(DbhsmDbInstance instance) throws IOException {
+        Configuration conf = HBaseConfiguration.create();
+        conf.set("hbase.zookeeper.quorum", instance.getDatabaseIp());
+        conf.set("zookeeper.znode.parent", "/hbase");
+        conf.set("hbase.zookeeper.property.clientPort", instance.getDatabasePort());
+        UserGroupInformation.setConfiguration(conf);
+        UserGroupInformation romoteUser = UserGroupInformation.createRemoteUser(instance.getDatabaseDba());
+        UserGroupInformation.setLoginUser(romoteUser);
+        return ConnectionFactory.createConnection(conf);
     }
 
 
