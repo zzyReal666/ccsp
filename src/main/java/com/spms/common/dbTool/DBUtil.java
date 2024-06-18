@@ -3,9 +3,18 @@ package com.spms.common.dbTool;
 import com.ccsp.common.core.exception.ZAYKException;
 import com.spms.common.ParseCreateSQL;
 import com.spms.common.constant.DbConstants;
+import com.spms.common.pool.hikariPool.DbConnectionPoolFactory;
+import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsAdd;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.security.UserGroupInformation;
 
+import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -81,6 +90,26 @@ public final class DBUtil {
             e.printStackTrace();
         }
         return tableNamesList;
+    }
+
+    public static List<String> findHbaseTables(DbhsmDbInstance instance) {
+        List<String> list = new ArrayList<>();
+        try {
+            org.apache.hadoop.hbase.client.Connection connection = DbConnectionPoolFactory.buildHbaseDataSource(instance);
+            // 获取Admin对象来进行管理操作
+            Admin admin = connection.getAdmin();
+            // 获取所有表的名称
+            TableName[] tableNames = admin.listTableNames();
+            for (TableName tableName : tableNames) {
+                list.add(tableName.getNameAsString());
+            }
+
+            admin.close();
+            connection.close();
+        } catch (IOException e) {
+            log.error("查询Hbase表列表Error:{}", e.getMessage());
+        }
+        return list;
     }
 
     public static String getCataLog(Connection conn) {
@@ -198,7 +227,7 @@ public final class DBUtil {
             } else if (DbConstants.DB_TYPE_KB.equalsIgnoreCase(dbType)) {
                 ps = conn.prepareStatement("SELECT column_name, data_type, \n" +
                         "CASE WHEN (column_name = (SELECT a.attname AS pk_column_name\n" +
-                        "FROM pg_class t,pg_attribute a,pg_constraint c WHERE c.contype = 'p'AND c.conrelid = t.oid AND a.attrelid = t.oid AND a.attnum = ANY(c.conkey) AND t.relkind = 'r' AND t.relname = '"+tableName+"'))THEN  'PRI' ELSE  '' END  as key\n" +
+                        "FROM pg_class t,pg_attribute a,pg_constraint c WHERE c.contype = 'p'AND c.conrelid = t.oid AND a.attrelid = t.oid AND a.attnum = ANY(c.conkey) AND t.relkind = 'r' AND t.relname = '" + tableName + "'))THEN  'PRI' ELSE  '' END  as key\n" +
                         "FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" + tableName + "';");
                 rs = ps.executeQuery();
                 while (rs.next()) {

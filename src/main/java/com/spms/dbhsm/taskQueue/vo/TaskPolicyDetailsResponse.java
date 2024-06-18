@@ -22,7 +22,7 @@ public class TaskPolicyDetailsResponse {
     private String encryptionAlgorithm;
 
     @ApiModelProperty(name = "columnsType", value = "列类型")
-    private String columnsType;
+    private String columnsType = "-";
 
     @ApiModelProperty(name = "secretKeyId", value = "密钥ID")
     private String secretKeyId;

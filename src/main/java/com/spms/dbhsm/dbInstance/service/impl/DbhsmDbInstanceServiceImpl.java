@@ -70,6 +70,9 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
                 return;
             }
             for (DbhsmDbInstance dbhsmDbInstance : dbhsmDbInstanceList) {
+                if (DbConstants.DB_TYPE_HB.equals(dbhsmDbInstance.getDatabaseType())) {
+                    continue;
+                }
                 DbInstancePoolKeyDTO instanceKey = new DbInstancePoolKeyDTO();
                 BeanUtils.copyProperties(dbhsmDbInstance, instanceKey);
                 DbInstanceGetConnDTO instanceGetConnDTO = new DbInstanceGetConnDTO();

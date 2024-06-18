@@ -20,10 +20,7 @@ import com.spms.common.DBIpUtil;
 import com.spms.common.HttpClientUtil;
 import com.spms.common.JSONDataUtil;
 import com.spms.common.constant.DbConstants;
-import com.spms.common.dbTool.DBUtil;
-import com.spms.common.dbTool.FunctionUtil;
-import com.spms.common.dbTool.TransUtil;
-import com.spms.common.dbTool.ViewUtil;
+import com.spms.common.dbTool.*;
 import com.spms.common.dbTool.stockDataProcess.mysql.MysqlStock;
 import com.spms.common.dbTool.stockDataProcess.oracle.OraclelStock;
 import com.spms.common.dbTool.stockDataProcess.postgresql.PostgreSQLStock;
@@ -393,6 +390,9 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 dbhsmEncryptColumns.setColumnDefinitions(columnDefinition);
                 dbhsmEncryptColumnsMapper.insertDbhsmEncryptColumns(dbhsmEncryptColumns);
                 return dbhsmEncryptColumnsAdd.getId();
+            } else if (DbConstants.DB_TYPE_HB.equalsIgnoreCase(instance.getDatabaseType())) {
+                //组装hbase XML配置文件
+                HbaseConfigXmlUtil.initHbaseXmlFile(dbhsmEncryptColumnsAdd);
             }
             int ret = dbhsmEncryptColumnsMapper.insertDbhsmEncryptColumns(dbhsmEncryptColumns);
 
@@ -747,7 +747,6 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
         List<DbhsmDbUser> usersList = new ArrayList<>();
         DbhsmDbInstance instance;
         DbhsmDbUser user;
-        String tableName;
         Connection conn = null;
         List<Map<String, Object>> instancetTrees = new ArrayList<Map<String, Object>>();
         List<DbhsmDbInstance> instanceList = instanceMapper.selectDbhsmDbInstanceList(new DbhsmDbInstance());
@@ -824,21 +823,26 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                         userMap.put("title", user.getUserName());
                         userMap.put("level", 2);
                         instancetTrees.add(userMap);
-                        conn = null == conn ? DbConnectionPoolFactory.getInstance().getConnection(connDTO) : conn;
-                        if (Optional.ofNullable(conn).isPresent()) {
-                            List<String> tableNameList = DBUtil.findAllTables(conn, user.getUserName(), instance.getDatabaseType(), instance.getDatabaseServerName(), user.getDbSchema());
-                            for (int k = 0; k < tableNameList.size(); k++) {
-                                tableName = tableNameList.get(k);
-                                Map<String, Object> dbTableMetaMap = new HashMap<String, Object>();
-                                dbTableMetaMap.put("id", tableName + idPrefix);
-                                dbTableMetaMap.put("pId", user.getId() + idPrefix + user.getUserName());
-                                dbTableMetaMap.put("title", tableName);
-                                dbTableMetaMap.put("level", 3);
-                                instancetTrees.add(dbTableMetaMap);
+                        List<String> tableNameList = new ArrayList<>();
+                        if (DbConstants.DB_TYPE_HB.equals(instance.getDatabaseType())) {
+                            //Hbase使用API操作，无法进行jdbc连接
+                            tableNameList = DBUtil.findHbaseTables(instance);
+                        } else {
+                            conn = null == conn ? DbConnectionPoolFactory.getInstance().getConnection(connDTO) : conn;
+                            if (Optional.ofNullable(conn).isPresent()) {
+                                tableNameList = DBUtil.findAllTables(conn, user.getUserName(), instance.getDatabaseType(), instance.getDatabaseServerName(), user.getDbSchema());
                             }
                         }
+                        for (String tableName : tableNameList) {
+                            Map<String, Object> dbTableMetaMap = new HashMap<String, Object>();
+                            dbTableMetaMap.put("id", tableName + idPrefix);
+                            dbTableMetaMap.put("pId", user.getId() + idPrefix + user.getUserName());
+                            dbTableMetaMap.put("title", tableName);
+                            dbTableMetaMap.put("level", 3);
+                            instancetTrees.add(dbTableMetaMap);
+                        }
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        log.error("数据库连接错误:{}", e.getMessage());
                     } finally {
                         try {
                             if (conn != null) {
@@ -846,13 +850,13 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                                 conn = null;
                             }
                         } catch (Exception e) {
-                            e.printStackTrace();
+                            log.error("关闭conn错误：{}", e.getMessage());
                         }
                     }
                 }
 
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error(e.getMessage());
             }
         }
 
