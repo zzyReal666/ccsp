@@ -39,7 +39,7 @@ public class HbaseExecute implements SqlExecuteForColSPI {
      */
     private static int connectionNum = 25;
 
-    private Connection connection = null;
+    private static Connection connection = null;
 
 
     /**
@@ -251,6 +251,13 @@ public class HbaseExecute implements SqlExecuteForColSPI {
      */
     @Override
     public void dropTable(Object... args) {
+        Connection connection = (Connection) args[0];
+        try {
+            connection.close();
+        } catch (IOException e) {
+            log.error("dropTable error args:{}", args);
+            throw new RuntimeException(e);
+        }
 //        Connection connection = (Connection) args[0];
 //        String tableName = (String) args[1];
 //        try {

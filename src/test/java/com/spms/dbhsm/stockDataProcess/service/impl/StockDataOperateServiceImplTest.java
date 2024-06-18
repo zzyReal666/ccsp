@@ -44,10 +44,12 @@ public class StockDataOperateServiceImplTest {
 
     @Test
     public void clickHouse() throws Exception {
-        StockDataOperateServiceImpl service = new StockDataOperateServiceImpl();
+        initCK();
         DatabaseDTO dto = getCLickHouseDTO();
         service.stockDataOperate(dto, true);
+        service.stockDataOperate(dto, false);
     }
+
 
     @Test
     public void kingBase() throws Exception {
@@ -63,6 +65,32 @@ public class StockDataOperateServiceImplTest {
         service.stockDataOperate(dto, true);
 
     }
+
+    private void initCK() throws Exception {
+        //准备连接
+        Class.forName("com.clickhouse.jdbc.ClickHouseDriver");
+        conn = DriverManager.getConnection("jdbc:clickhouse://192.168.7.113:18123/demo_ds_0", "default", "123456");
+        //准备表
+        Statement statement = conn.createStatement();
+        statement.execute("CREATE TABLE IF NOT EXISTS student (id Int64, name String, age Int8, phone String, address String) ENGINE = MergeTree ORDER BY id");
+        statement.execute("TRUNCATE TABLE student");
+
+        //准备数据
+        PreparedStatement preparedStatement = conn.prepareStatement("INSERT INTO student (id, name, age, phone, address) VALUES (?,?,?,?,?)");
+        for (int i = 0; i < 1000; i++) {
+            preparedStatement.setLong(1, i);
+            preparedStatement.setString(2, "张三"+i);
+            preparedStatement.setInt(3, i%55);
+            preparedStatement.setString(4, "13800138000");
+            preparedStatement.setString(5, "北京市朝阳区"+i);
+            preparedStatement.addBatch();
+        }
+        preparedStatement.executeBatch();
+        preparedStatement.close();
+        statement.close();
+        conn.close();
+    }
+
 
     private static DatabaseDTO getHbaseDTO() {
         //dto

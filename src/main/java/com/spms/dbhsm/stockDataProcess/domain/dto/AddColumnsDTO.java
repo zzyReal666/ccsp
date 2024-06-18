@@ -28,6 +28,9 @@ public class AddColumnsDTO {
     //是否为空 true:非空 false:可空
     private boolean notNull;
 
-    //列原始定义
+    /**
+     * 列原始定义 ,具体的键值对取决于具体的数据库，例如ClickHouse需要的属性，其键从ClickHouseExecute的声明的静态变量中获取
+     */
     private Map<String, String> columnDefinition;
+
 }

@@ -23,6 +23,8 @@ import java.util.Map;
 @Slf4j
 public class ClickHouseExecute implements SqlExecuteSPI {
 
+    //region ======> SQL语句模版
+
     //创建临时表
     private static final String CREATE_TEMP_TABLE = "CREATE TABLE <table><suffix> AS <table>";
 
@@ -56,6 +58,13 @@ public class ClickHouseExecute implements SqlExecuteSPI {
     //删除表
     private static final String DROP = "DROP TABLE <table>";
 
+    //endregion
+
+    //region ======> 从 {@link AddColumnsDTO} columnDefinition 字段中需要获取的属性
+    private static final String DATA_TYPE = "dataType";
+
+    //endregion
+
 
     //查询Clickhouse的  排序键
     @Override
@@ -79,9 +88,15 @@ public class ClickHouseExecute implements SqlExecuteSPI {
         return TEMP_COLUMN_SUFFIX;
     }
 
+    /**
+     * clickhouse 采用 新建表替代行式的新建列行为，并且将全部数据导入新表，需要加密的做处理
+     *
+     * @param conn              数据库连接
+     * @param table             原始表名
+     * @param addColumnsDtoList 新增字段列表 注意，此处为原名，添加后缀在实现类进行处理
+     */
     @Override
     public void addTempColumn(Connection conn, String table, List<AddColumnsDTO> addColumnsDtoList) {
-        //clickhouse 采用 新建表替代行式的新建列行为，并且将全部数据导入新表，需要加密的做处理
         //新建临时表
         createTempTable(conn, table);
         //修改数据类型
@@ -102,11 +117,16 @@ public class ClickHouseExecute implements SqlExecuteSPI {
     private static void changeDataType(Connection conn, String table, List<AddColumnsDTO> addColumnsDtoList) {
         StringBuilder sql = new StringBuilder(new ST(ALTER_TABLE_COLUMN).add("table", table).add("suffix", TEMP_COLUMN_SUFFIX).render());
         addColumnsDtoList.forEach(addColumnsDto -> {
-            String loop = new ST(ALTER_TABLE_COLUMN_LOOP).add("column", addColumnsDto.getColumnName()).add("type", "String").render();
+            String loop = new ST(ALTER_TABLE_COLUMN_LOOP)
+                    .add("column", addColumnsDto.getColumnName())
+                    .add("type","String")
+//                    .add("type", addColumnsDto.isEncrypt()? "String" : addColumnsDto.getColumnDefinition().get(DATA_TYPE))
+                    .render();
             sql.append(loop).append(",");
         });
         //删除最后一个逗号
         sql.deleteCharAt(sql.length() - 1);
+        log.info("changeDataType sql: {}", sql);
         try (Statement statement = conn.createStatement()) {
             statement.execute(sql.toString());
         } catch (Exception e) {
@@ -193,7 +213,7 @@ public class ClickHouseExecute implements SqlExecuteSPI {
             if (data.containsKey(col)) {
                 selectColumns.append("CASE ");
                 data.get(col).forEach(plainCipherMap -> {
-                    selectColumns.append("WHEN ").append(col).append(" = '").append(plainCipherMap.get("plain")).append("' THEN '").append(plainCipherMap.get("cipher")).append("' ");
+                    selectColumns.append("WHEN ").append(col).append(" = '").append(plainCipherMap.get("before")).append("' THEN '").append(plainCipherMap.get("after")).append("' ");
                 });
                 selectColumns.append("END AS ").append(col).append(",");
             } else {
@@ -254,7 +274,7 @@ public class ClickHouseExecute implements SqlExecuteSPI {
     }
 
 
-    //对于ClickHouse 是删除原来的表
+    //对于ClickHouse 是删除原来的表 此时原来的表已经改名为前
     @Override
     public void dropColumn(Connection conn, String table, List<String> columns) {
         //删除旧表

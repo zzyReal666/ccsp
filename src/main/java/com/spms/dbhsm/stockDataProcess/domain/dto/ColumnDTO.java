@@ -23,7 +23,7 @@ public class ColumnDTO {
     private String columnName;
 
     /**
-     * 列原始定义 比如Mysql type：varchar（50），
+     * 列原始定义 比如Mysql type：varchar（50），decimal：30，根据sql具体情况具体处理
      */
     private Map<String,String > columnDefinition;
 

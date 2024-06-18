@@ -17,7 +17,6 @@ import com.spms.dbhsm.stockDataProcess.sqlExecute.SqlExecuteForColSPI;
 import com.spms.dbhsm.stockDataProcess.sqlExecute.SqlExecuteSPI;
 import com.spms.dbhsm.stockDataProcess.threadTask.UpdateZookeeperTask;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
@@ -83,11 +82,10 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
 
     /**
      * 存量数据加密/解密
-     *
+     * 注意！ 控制层需要异步调用，因为该流程很长，控制层不需要等待该方法完成
      * @param databaseDTO 数据库信息
      * @param operateType 操作类型 true:加密 false:解密
      */
-    @Async
     @Override
     public void stockDataOperate(DatabaseDTO databaseDTO, boolean operateType) throws ZAYKException, SQLException, InterruptedException {
         //todo 参数检查
@@ -235,6 +233,11 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         //分块 加/解密
         blockOperate(operateType, sqlExecute, dbaConn, databaseDTO, primaryKey, 0);
 
+        //洗数据完成后的操作
+        afterOperate(databaseDTO, tableDTO, sqlExecute, dbaConn);
+    }
+
+    private void afterOperate(DatabaseDTO databaseDTO, TableDTO tableDTO, SqlExecuteSPI sqlExecute, Connection dbaConn) throws InterruptedException {
         //设置进度 注意，执行到这里肯定已经完成，强制设置进度为100
         PROGRESS_MAP.put(String.valueOf(tableDTO.getId()), new AtomicInteger(100));
 
@@ -244,8 +247,10 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         //删除旧字段 注意，此时旧字段经过名字交换已经变为 前缀+字段名 todo 后续改成原字段存留一段时间，手动执行删除
         sqlExecute.dropColumn(dbaConn, tableDTO.getTableName(), tableDTO.getColumnDTOList().stream().map(columnDTO -> sqlExecute.getTempColumnSuffix() + columnDTO.getColumnName()).collect(Collectors.toList()));
 
-        // 加密策略写入 zookeeper
-        writeConfigToZookeeper(databaseDTO);
+        // 加密策略写入 zookeeper 前置插件模式才需要 当前仅ck需要
+        if (sqlExecute instanceof ClickHouseExecute) {
+            writeConfigToZookeeper(databaseDTO);
+        }
     }
 
     //行式新增临时字段
@@ -392,23 +397,24 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
 
             //clickHouse做特殊处理
             if (sqlExecute.getType().equals(DatabaseTypeEnum.ClickHouse.name())) {
-                Map<String, List<Map<String, String>>> dataIncludeCipher = new HashMap<>();
+                //因为clickHouse的需要处理前的数据定位，所以这个地方需要携带着原始数据
+                Map<String, List<Map<String, String>>> dataIncludeBefore = new HashMap<>();
                 data.forEach(map -> {
                     map.forEach((fieldName, plain) -> {
                         Map<String, String> valueMap = new HashMap<>();
                         if (fieldName.equals(primaryKey)) {
-                            valueMap.put("plain", plain);
+                            valueMap.put("before", plain);
                         } else {
-                            valueMap.put("plain", plain);
-                            valueMap.put("cipher", encryptOrDecrypt(fieldName, plain, tableDTO, operateType));
+                            valueMap.put("before", plain);
+                            valueMap.put("after", encryptOrDecrypt(fieldName, plain, tableDTO, operateType));
                         }
                         // 将加密后的数据直接放入 transformedData
-                        dataIncludeCipher.putIfAbsent(fieldName, new ArrayList<>());
-                        dataIncludeCipher.get(fieldName).add(valueMap);
+                        dataIncludeBefore.putIfAbsent(fieldName, new ArrayList<>());
+                        dataIncludeBefore.get(fieldName).add(valueMap);
                     });
                 });
                 // 更新数据
-                sqlExecute.columnBatchUpdate(conn, tableDTO.getTableName(), primaryKey, dataIncludeCipher, limit, finalOffset);
+                sqlExecute.columnBatchUpdate(conn, tableDTO.getTableName(), primaryKey, dataIncludeBefore, limit, finalOffset);
             }
             //行式数据库
             else {
