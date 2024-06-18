@@ -63,6 +63,7 @@ public class StockDataOperateServiceImplTest {
         initHbase();
         DatabaseDTO dto = getHbaseDTO();
         service.stockDataOperate(dto, true);
+        service.stockDataOperate(dto, false);
 
     }
 
@@ -160,7 +161,7 @@ public class StockDataOperateServiceImplTest {
         TableDescriptor tableDescriptor = tdesBuilder.build();
         admin.createTable(tableDescriptor);
         ArrayList<Put> puts = new ArrayList<>();
-        for (int i = 0; i < 100000; i++) {
+        for (int i = 0; i < 10000; i++) {
             String rowKey = "rowKey" + i;
             Put put = new Put(Bytes.toBytes(rowKey));
             put.addColumn(Bytes.toBytes("info1"), Bytes.toBytes("name"), Bytes.toBytes("zhangsan" + i));

@@ -11,6 +11,7 @@ import com.spms.dbhsm.stockDataProcess.domain.dto.AddColumnsDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.ColumnDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.DatabaseDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.TableDTO;
+import com.spms.dbhsm.stockDataProcess.service.OperateContext;
 import com.spms.dbhsm.stockDataProcess.service.StockDataOperateService;
 import com.spms.dbhsm.stockDataProcess.sqlExecute.ClickHouseExecute;
 import com.spms.dbhsm.stockDataProcess.sqlExecute.SqlExecuteForColSPI;
@@ -54,6 +55,9 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
     //暂停｜失败 记录位置 tableId:offset
     private static final Map<Long, Integer> STOP_POSITION = new ConcurrentHashMap<>();
 
+    //继续时的上下文
+    private static final Map<Long, OperateContext> contexts = new ConcurrentHashMap<>();
+
     //暂停
     @Override
     public void pause(String tableId) {
@@ -64,6 +68,8 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
     @Override
     public void resume(String tableId) {
         PAUSED_MAP.get(tableId).set(false);
+        OperateContext context = contexts.get(Long.valueOf(tableId));
+//        blockOperate(context.isEncrypt(), context.getSqlExecute(), context.getDbaConn(), context.getDatabaseDTO(), context.getPrimaryKey(), );
     }
 
     //查询执行进度
@@ -74,7 +80,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
 
     //清理map
     @Override
-    public void clearMap(String tableId)  {
+    public void clearMap(String tableId) {
         PAUSED_MAP.remove(tableId);
         PROGRESS_MAP.remove(tableId);
         STOP_POSITION.remove(Long.valueOf(tableId));
@@ -83,6 +89,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
     /**
      * 存量数据加密/解密
      * 注意！ 控制层需要异步调用，因为该流程很长，控制层不需要等待该方法完成
+     *
      * @param databaseDTO 数据库信息
      * @param operateType 操作类型 true:加密 false:解密
      */
@@ -178,10 +185,13 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         TableDTO tableDTO = databaseDTO.getTableDTOList().get(0);
         //循环次数
         int loop = 1;
-        Integer currentOffset = null;
+        Integer currentOffset = 0;
         try {
-            while (offsetQueue.poll() != null && !paused.get()) {
+            while (!offsetQueue.isEmpty()  && !paused.get()) {
                 currentOffset = offsetQueue.poll();
+                if (currentOffset == null) {
+                    break;
+                }
                 log.info("线程:{} 第{}轮开始执行第{}块数据，offset:{}", Thread.currentThread().getName(), loop, currentOffset / limit, currentOffset);
                 //查询数据
                 List<Map<String, String>> data = (List<Map<String, String>>) sqlExecute.selectData(connection, tableDTO, currentOffset, limit, operateType);
@@ -231,6 +241,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         addTempColumns(tableDTO, sqlExecute, dbaConn, operateType);
 
         //分块 加/解密
+        contexts.put(tableDTO.getId(), new OperateContext(operateType, sqlExecute, dbaConn, databaseDTO, primaryKey, 0));
         blockOperate(operateType, sqlExecute, dbaConn, databaseDTO, primaryKey, 0);
 
         //洗数据完成后的操作
