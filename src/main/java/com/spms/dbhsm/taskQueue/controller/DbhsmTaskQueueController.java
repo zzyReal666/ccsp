@@ -46,14 +46,14 @@ public class DbhsmTaskQueueController extends BaseController {
 
     @PostMapping("/insertEncryptColumnsTask")
     @ApiOperation(value = "新增数据库加密/解密")
-    @CrossOrigin(origins="*")
+    @CrossOrigin(origins = "*")
     public AjaxResult insertEncryptColumnsTask(@RequestBody TaskQueueInsertRequest request) {
         return dbhsmTaskQueueService.insertTask(request);
     }
 
     @PostMapping("/insertDecColumnsOnEnc")
     @ApiOperation(value = "添加至加密队列")
-    public AjaxResult insertDecColumnsOnEnc(@RequestBody TaskDecColumnsOnEncRequest request){
+    public AjaxResult insertDecColumnsOnEnc(@RequestBody TaskDecColumnsOnEncRequest request) {
         return dbhsmTaskQueueService.insertDecColumnsOnEnc(request);
     }
 
@@ -88,19 +88,19 @@ public class DbhsmTaskQueueController extends BaseController {
     }
 
 
-   /*
-    * @description 策略配置详情使用
-    * @author wzh [zhwang2012@yeah.net]
-    * @date 16:24 2024/5/28
-    * @param dbInstanceId
-    * @param dbUserId
-    * @param tableName
-    * @return {@link TaskQueueListResponse}
-    */
+    /*
+     * @description 策略配置详情使用
+     * @author wzh [zhwang2012@yeah.net]
+     * @date 16:24 2024/5/28
+     * @param dbInstanceId
+     * @param dbUserId
+     * @param tableName
+     * @return {@link TaskQueueListResponse}
+     */
     @GetMapping("/queryDbInstanceInfo")
     @ApiOperation(value = "策略配置详情数据库实例信息")
-    public AjaxResult2<TaskQueueListResponse> queryDbInstanceInfo(Long dbInstanceId,Long dbUserId, String tableName){
-        return dbhsmTaskQueueService.queryDbInstanceInfo(dbInstanceId,dbUserId,tableName);
+    public AjaxResult2<TaskQueueListResponse> queryDbInstanceInfo(Long dbInstanceId, Long dbUserId, String tableName) {
+        return dbhsmTaskQueueService.queryDbInstanceInfo(dbInstanceId, dbUserId, tableName);
     }
 
 
@@ -125,7 +125,11 @@ public class DbhsmTaskQueueController extends BaseController {
     @PostMapping(value = "/upOnDownTask")
     @ApiOperation(value = "启动/暂停(加密、解密)队列")
     public AjaxResult upEncryptColumns(@RequestBody TaskQueueRequest request) {
-        return dbhsmTaskQueueService.upEncryptColumns(request);
+        try {
+            return dbhsmTaskQueueService.upEncryptColumns(request);
+        } catch (Exception e) {
+            return AjaxResult.error("操作队列失败!");
+        }
     }
 
     @DeleteMapping

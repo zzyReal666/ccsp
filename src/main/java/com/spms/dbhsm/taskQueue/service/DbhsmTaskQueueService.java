@@ -23,7 +23,7 @@ public interface DbhsmTaskQueueService {
 
     List<TaskQueueListResponse> list(TaskQueueListRequest request);
 
-    AjaxResult upEncryptColumns(TaskQueueRequest request);
+    AjaxResult upEncryptColumns(TaskQueueRequest request) throws Exception;
 
     AjaxResult updateDbhsmEncryptColumns(UpEncryptColumnsRequest dbhsmEncryptColumns);
 

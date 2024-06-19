@@ -32,9 +32,6 @@ public class TaskQueueInsertRequest {
     @ApiModelProperty(name = "threadCount",value = "线程数")
     private Integer threadCount;
 
-    @ApiModelProperty(name = "queueMode",value = "队列模式",example = "新增解密：dec 加密：enc")
-    private String queueMode;
-
     @ApiModelProperty(name = "tableId",value = "表ID",notes = "新增解密队列使用")
     private String tableId;
 

@@ -238,7 +238,8 @@ public final class DBUtil {
                     colList.add(colMap);
                 }
             } else if (DbConstants.DB_TYPE_CLICKHOUSE.equalsIgnoreCase(dbType)) {
-                ps = conn.prepareStatement("select name, type,if(is_in_primary_key = 1,'PRI','') as Key from system.columns where table='" + tableName + "'");
+                String[] split = tableName.split(":");
+                ps = conn.prepareStatement("select name, type,if(is_in_primary_key = 1,'PRI','') as Key from system.columns where table='" + split[1] + "' and database='" + split[0] + "'");
                 rs = ps.executeQuery();
                 while (rs.next()) {
                     Map<String, String> colMap = new HashMap<>();

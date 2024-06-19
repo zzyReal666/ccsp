@@ -117,7 +117,7 @@ public class DbConnectionPoolFactory {
 
     public Connection getConnection(DbInstanceGetConnDTO instanceGetConnDTO) throws ZAYKException, SQLException {
         DbInstancePoolKeyDTO dbInstancekey = new DbInstancePoolKeyDTO();
-        if (ObjectUtils.isEmpty(instanceGetConnDTO)) {
+        if (ObjectUtils.isEmpty(instanceGetConnDTO) || DbConstants.DB_TYPE_HB.equals(instanceGetConnDTO.getDatabaseType())) {
             return null;
         }
         String databaseType = instanceGetConnDTO.getDatabaseType();
@@ -275,69 +275,6 @@ public class DbConnectionPoolFactory {
             DbInstancePoolKeyDTO key = keys.nextElement();
             javax.sql.DataSource value = hashtable.get(key);
             log.info("Key: " + key + ", Value: " + value);
-        }
-    }
-
-    public static void main(String[] args) throws ZAYKException, SQLException {
-
-        DbInstanceGetConnDTO instance = new DbInstanceGetConnDTO();
-        instance.setDatabaseType(DbConstants.DB_TYPE_ORACLE);
-        //instance.setDatabaseIp("192.168.6.158");
-        //instance.setDatabasePort("1521");
-        //instance.setDatabaseServerName("orcl");
-        //instance.setDatabaseExampleType(":");
-        //instance.setDatabaseDba("usre55");
-        //instance.setDatabaseDbaPassword("12345678");
-        instance.setDatabaseType(DbConstants.DB_TYPE_ORACLE);
-        instance.setDatabaseIp("192.168.7.113");
-        instance.setDatabasePort("3181");
-        instance.setDatabaseServerName("hbase");
-        instance.setDatabaseExampleType("/");
-        instance.setDatabaseDba("SYSDBA");
-        instance.setDatabaseDbaPassword("SYSDBA");
-
-        DbConnectionPoolFactory factory = new DbConnectionPoolFactory();
-        Connection connection = factory.getConnection(instance);
-        System.out.println(connection);
-        //String sql = "select * from table1";
-        String sql = "select * from table1";
-        PreparedStatement statement = null;
-        ResultSet resultSet = null;
-        try {
-            if (connection != null) {
-                statement = connection.prepareStatement(sql);
-                resultSet = statement.executeQuery();
-                while (resultSet.next()) {
-                    // 处理结果集
-                    System.out.println(resultSet.getString("id"));
-                    System.out.println(resultSet.getString("name"));
-                }
-            }
-        } catch (SQLException e) {
-            // 处理异常
-            e.printStackTrace();
-        } finally {
-            if (resultSet != null) {
-                try {
-                    resultSet.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (statement != null) {
-                try {
-                    statement.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
         }
     }
 
