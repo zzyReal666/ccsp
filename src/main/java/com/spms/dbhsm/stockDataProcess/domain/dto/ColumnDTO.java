@@ -23,9 +23,11 @@ public class ColumnDTO {
     private String columnName;
 
     /**
-     * 列原始定义 比如Mysql type：varchar（50），decimal：30，根据sql具体情况具体处理
+     * 列原始定义  解密时必须的信息，用来还原数据类型，适配具体数据库的时候和web侧充分沟通！
+     * 比如Mysql type：varchar（50），decimal：30，根据sql具体情况具体处理
+     * 20240624 -  mysql: type,length
      */
-    private Map<String,String > columnDefinition;
+    private Map<String, String> columnDefinition;
 
 
     /**
