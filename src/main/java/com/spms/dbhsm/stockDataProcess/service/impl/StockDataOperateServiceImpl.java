@@ -233,9 +233,6 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
 
         //是否有主键，没有主键不能加密
         String primaryKey = sqlExecute.getPrimaryKey(dbaConn, databaseDTO.getDatabaseName(), tableDTO.getTableName());
-        if (primaryKey == null) {
-            throw new ZAYKException("表没有主键，不能加密");
-        }
 
         // 新增临时字段
         addTempColumns(tableDTO, sqlExecute, dbaConn, operateType);

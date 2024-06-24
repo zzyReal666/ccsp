@@ -1,4 +1,5 @@
 com.spms.dbhsm.stockDataProcess.sqlExecute.MysqlExecute
+com.spms.dbhsm.stockDataProcess.sqlExecute.Mysql57Execute
 com.spms.dbhsm.stockDataProcess.sqlExecute.OracleExecute
 com.spms.dbhsm.stockDataProcess.sqlExecute.ClickHouseExecute
 com.spms.dbhsm.stockDataProcess.sqlExecute.KingBaseExecute

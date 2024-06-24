@@ -29,6 +29,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 @Slf4j
@@ -40,6 +41,43 @@ public class StockDataOperateServiceImplTest {
     @Test
     public void mysql() throws Exception {
         mysqlTest();
+    }
+
+    @Test
+    public void mysql57() throws Exception {
+        initMysql57();
+        DatabaseDTO dto = getMysql57DTO();
+        service.stockDataOperate(dto, true);
+        service.stockDataOperate(dto, false);
+    }
+
+    private void initMysql57() throws Exception {
+        Class.forName("com.mysql.cj.jdbc.Driver");
+        conn = DriverManager.getConnection("jdbc:mysql://192.168.6.59:3306/zzyTest", "root", "server@2020");
+        //准备表
+        Statement statement = conn.createStatement();
+        statement.execute("DROP TABLE IF EXISTS student");
+        statement.execute("CREATE TABLE IF NOT EXISTS student (id INT primary key, name VARCHAR(50), age INT, phone VARCHAR(20), address VARCHAR(100))");
+        statement.execute("TRUNCATE TABLE student");
+
+        //准备数据
+        conn.setAutoCommit(false);
+        PreparedStatement preparedStatement = conn.prepareStatement("INSERT INTO student (id, name, age, phone, address) VALUES (?,?,?,?,?)");
+        for (int i = 0; i < 10000; i++) {
+            preparedStatement.setInt(1, i);
+            preparedStatement.setString(2, "张三" + i);
+            preparedStatement.setInt(3, i % 55);
+            preparedStatement.setString(4, "13800138000");
+            preparedStatement.setString(5, "北京市朝阳区" + i);
+            preparedStatement.addBatch();
+        }
+        preparedStatement.executeBatch();
+        conn.commit();
+
+        //关闭资源
+        preparedStatement.close();
+        statement.close();
+        conn.close();
     }
 
     @Test
@@ -80,10 +118,10 @@ public class StockDataOperateServiceImplTest {
         PreparedStatement preparedStatement = conn.prepareStatement("INSERT INTO student (id, name, age, phone, address) VALUES (?,?,?,?,?)");
         for (int i = 0; i < 1000; i++) {
             preparedStatement.setLong(1, i);
-            preparedStatement.setString(2, "张三"+i);
-            preparedStatement.setInt(3, i%55);
+            preparedStatement.setString(2, "张三" + i);
+            preparedStatement.setInt(3, i % 55);
             preparedStatement.setString(4, "13800138000");
-            preparedStatement.setString(5, "北京市朝阳区"+i);
+            preparedStatement.setString(5, "北京市朝阳区" + i);
             preparedStatement.addBatch();
         }
         preparedStatement.executeBatch();
@@ -358,6 +396,75 @@ public class StockDataOperateServiceImplTest {
         conn.setAutoCommit(true);
     }
 
+    private static DatabaseDTO getMysql57DTO() throws ZAYKException, SQLException, InterruptedException {
+        ColumnDTO name = new ColumnDTO();
+        name.setId(1L);
+        name.setColumnName("name");
+        name.setColumnDefinition(Collections.singletonMap("type","VARCHAR(50)"));
+        name.setComment("名字");
+        name.setNotNull(true);
+        name.setEncryptAlgorithm("TestAlg");
+        name.setEncryptKeyIndex("1");
+
+        //age
+        ColumnDTO age = new ColumnDTO();
+        age.setId(2L);
+        age.setColumnName("age");
+        age.setColumnDefinition(Collections.singletonMap("type","INT"));
+        age.setComment("年龄");
+        age.setNotNull(false);
+        age.setEncryptAlgorithm("TestAlg");
+        age.setEncryptKeyIndex("1");
+
+        //address
+        ColumnDTO address = new ColumnDTO();
+        address.setColumnDefinition(Collections.singletonMap("type","VARCHAR(100)"));
+        address.setId(3L);
+        address.setColumnName("address");
+        address.setComment("地址");
+        address.setNotNull(false);
+        address.setEncryptAlgorithm("TestAlg");
+        address.setEncryptKeyIndex("1");
+
+        //phone
+        ColumnDTO phone = new ColumnDTO();
+        phone.setId(3L);
+        phone.setColumnName("phone");
+        phone.setColumnDefinition(Collections.singletonMap("type","VARCHAR(20)"));
+        phone.setComment("电话");
+        phone.setNotNull(false);
+        phone.setEncryptAlgorithm("TestAlg");
+        phone.setEncryptKeyIndex("1");
+
+        List<ColumnDTO> columns = Arrays.asList(name, phone);
+
+        TableDTO tableDTO = new TableDTO();
+        tableDTO.setId(1L);
+        tableDTO.setBatchSize(100);
+        tableDTO.setTableName("student");
+        tableDTO.setThreadNum(10);
+        tableDTO.setColumnDTOList(columns);
+
+        List<TableDTO> tables = Collections.singletonList(tableDTO);
+
+
+        DatabaseDTO dto = new DatabaseDTO();
+        dto.setId(10086L);
+        dto.setDatabaseDba("root");
+        dto.setDatabaseIp("192.168.6.59");
+        dto.setDatabasePort("3306");
+        dto.setDatabaseDbaPassword("server@2020");
+        dto.setConnectUrl("jdbc:mysql://192.168.6.59:3306/zzyTest");
+        dto.setDatabaseType("Mysql57");
+        dto.setDatabaseVersion("5.7");
+        dto.setDatabaseName("zzyTest");
+        dto.setInstanceType("SID");
+        dto.setServiceUser("root");
+        dto.setServicePassword("server@2020");
+        dto.setTableDTOList(tables);
+        return dto;
+    }
+
     private static DatabaseDTO getMysqlDTO() throws ZAYKException, SQLException, InterruptedException {
         ColumnDTO name = new ColumnDTO();
         name.setId(1L);
@@ -420,8 +527,6 @@ public class StockDataOperateServiceImplTest {
         dto.setServiceUser("root");
         dto.setServicePassword("123456");
         dto.setTableDTOList(tables);
-
-
         return dto;
     }
 
