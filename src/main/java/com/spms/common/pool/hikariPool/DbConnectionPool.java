@@ -132,7 +132,7 @@ public class DbConnectionPool {
 
         try {
             connection.setAutoCommit(false);
-            for (int i = 7; i < 2000000; i++) {
+            for (int i = 0; i < 2000000; i++) {
                 statement.setInt(1, i);
                 statement.setString(2, "新增数据第：" + i + "条");
                 statement.setInt(3, i + 1);

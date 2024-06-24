@@ -20,7 +20,10 @@ import com.spms.common.DBIpUtil;
 import com.spms.common.HttpClientUtil;
 import com.spms.common.JSONDataUtil;
 import com.spms.common.constant.DbConstants;
-import com.spms.common.dbTool.*;
+import com.spms.common.dbTool.DBUtil;
+import com.spms.common.dbTool.FunctionUtil;
+import com.spms.common.dbTool.TransUtil;
+import com.spms.common.dbTool.ViewUtil;
 import com.spms.common.dbTool.stockDataProcess.mysql.MysqlStock;
 import com.spms.common.dbTool.stockDataProcess.oracle.OraclelStock;
 import com.spms.common.dbTool.stockDataProcess.postgresql.PostgreSQLStock;
@@ -91,18 +94,18 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
 
 
     //@Value("${server.port:10013}")
-    private static int dbhsmPort = 80;
+    public static int dbhsmPort = 80;
 
     private static boolean isThread = true;
 
     private String taskStatus = "Encrypting";
 
     static {
-//            String sysDataToDB = JSONDataUtil.getSysDataToDB(DbConstants.DBENC_WEB_PORT);
-//            if (StringUtils.isNotEmpty(sysDataToDB)){
-//                assert sysDataToDB != null;
-//                dbhsmPort = Integer.parseInt(sysDataToDB);
-//            }
+        String sysDataToDB = JSONDataUtil.getSysDataToDB(DbConstants.DBENC_WEB_PORT);
+        if (StringUtils.isNotEmpty(sysDataToDB)) {
+            assert sysDataToDB != null;
+            dbhsmPort = Integer.parseInt(sysDataToDB);
+        }
     }
 
     /**
@@ -170,7 +173,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             } else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(instance.getDatabaseType())) {
                 tableName = dbUserInfo.getUserName() + ".\"" + columnsDto.getDbTableName() + "\"";
             } else if (DbConstants.DB_TYPE_CLICKHOUSE.equalsIgnoreCase(instance.getDatabaseType())) {
-                tableName = columnsDto.getDbTableName();
+                tableName = instance.getDatabaseServerName() + ":" + columnsDto.getDbTableName();
             } else if (DbConstants.DB_TYPE_KB.equalsIgnoreCase(instance.getDatabaseType())) {
                 tableName = columnsDto.getDbTableName();
             }
@@ -390,9 +393,6 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 dbhsmEncryptColumns.setColumnDefinitions(columnDefinition);
                 dbhsmEncryptColumnsMapper.insertDbhsmEncryptColumns(dbhsmEncryptColumns);
                 return dbhsmEncryptColumnsAdd.getId();
-            } else if (DbConstants.DB_TYPE_HB.equalsIgnoreCase(instance.getDatabaseType())) {
-                //组装hbase XML配置文件
-                HbaseConfigXmlUtil.initHbaseXmlFile(dbhsmEncryptColumnsAdd);
             }
             int ret = dbhsmEncryptColumnsMapper.insertDbhsmEncryptColumns(dbhsmEncryptColumns);
 
@@ -402,20 +402,6 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             boolean viewRet = ViewUtil.operView(conn, dbhsmEncryptColumnsAdd, dbhsmEncryptColumnsMapper, "\"" + user.getDbSchema() + "\"");
             if (viewRet) {
                 conn.commit();
-
-                //存量数据加密
-                //ip = DBIpUtil.getIp(dbhsmEncryptColumnsAdd.getEthernetPort());
-                //dbhsmEncryptColumnsAdd.setIpAndPort(ip + ":" + dbhsmPort);;
-                //if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
-                //
-                //} else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
-                //    SqlServerStock.sqlserverStockEncOrDec(conn, dbhsmEncryptColumnsAdd,DbConstants.ENC_FLAG);
-                //} else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
-                //
-                //}else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
-                //    PostgreSQLStock.postgreSQLStockEncOrDec(conn, dbhsmEncryptColumnsAdd, user, DbConstants.STOCK_DATA_ENCRYPTION);
-                //}
-                //conn.commit();
             } else {
                 log.error("创建视图异常");
                 throw new Exception("创建视图异常");

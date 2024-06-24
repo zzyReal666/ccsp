@@ -55,7 +55,7 @@ public class JSONDataUtil {
                 } catch (InterruptedException ex) {
                 }
                 ++reConnErrNum;
-//                getSysDataToDB(key);
+                getSysDataToDB(key);
             }
         }
         return null;

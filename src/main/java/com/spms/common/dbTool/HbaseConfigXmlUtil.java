@@ -107,7 +107,7 @@ public class HbaseConfigXmlUtil {
 
             Element tableElement = getElementByNodeValue(document, "table", "name", encryptColumns.getDbTable());
             if (null == tableElement) {
-                //如果xml中的表不包含新的加密队列表
+                //如果xml中的没有该表的信息
                 addTable(document, encryptColumns, root);
             } else {
                 //如果节点存在，查看表中的列族是否存在XML文件中
@@ -119,8 +119,12 @@ public class HbaseConfigXmlUtil {
                     //列族不存在新增列族
                     addFamily(document, encryptColumns, tableElement, familyName);
                 } else {
-                    //列族存在，新增加密列节点
-                    addQualifier(document, familyElement, encryptColumns);
+                    Element qualifierElement = getElementByNodeValue(document, "Qualifier", "name", split[1]);
+                    //防止重新添加
+                    if (null == qualifierElement) {
+                        //列族存在，新增加密列节点
+                        addQualifier(document, familyElement, encryptColumns);
+                    }
                 }
             }
 
