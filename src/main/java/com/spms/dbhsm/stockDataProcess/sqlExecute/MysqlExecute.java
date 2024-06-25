@@ -134,7 +134,11 @@ public class MysqlExecute implements SqlExecuteSPI {
     @Override
     public List<Map<String, String>> selectColumn(Connection conn, String table, List<String> columns, int limit, int offset) {
         String columnStr = String.join(",", columns);
-        String sql = new ST(SELECT_COLUMN).add("columns", columnStr).add("id", columns.get(0)).add("table", table).add("limit", limit).add("offset", offset).render();
+        String sql = new ST(SELECT_COLUMN)
+                .add("columns", columnStr)
+                .add("id", columns.get(0))
+                .add("table", table).add("limit", limit)
+                .add("offset", offset).render();
         log.info("selectColumn sql:{}", sql);
         try (Statement statement = conn.createStatement()) {
             List<Map<String, String>> list = new ArrayList<>();
@@ -248,7 +252,6 @@ public class MysqlExecute implements SqlExecuteSPI {
             log.error("dropColumn {} error", columns, e);
             throw new RuntimeException(e);
         }
-
     }
 
     @Override

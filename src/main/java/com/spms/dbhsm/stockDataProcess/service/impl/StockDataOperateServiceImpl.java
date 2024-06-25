@@ -286,7 +286,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
     private static SqlExecuteSPI getSqlExecute(DatabaseDTO databaseDTO) throws ZAYKException {
         Optional<SqlExecuteSPI> registeredService = TypedSPIRegistry.findRegisteredService(SqlExecuteSPI.class, databaseDTO.getDatabaseType());
         if (!registeredService.isPresent()) {
-            throw new ZAYKException("未找到对应的数据库类型");
+            throw new ZAYKException("未找到SPI对应的数据库类型");
         }
         return registeredService.get();
     }
