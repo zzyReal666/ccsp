@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.stringtemplate.v4.ST;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -15,111 +16,103 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author zzypersonally@gmail.com
  * @description
- * @since 2024/6/6 11:08
+ * @since 2024/6/26 16:02
  */
 @Slf4j
-public class KingBaseExecute implements SqlExecuteSPI {
+public class SqlServerExecute implements SqlExecuteSPI {
+
+
+    private static final Map<String, String> schemaMap = new ConcurrentHashMap<>();
 
     //获取主键
-    private static final String GET_PRIMARY_KEY_SQL = "SELECT a.attname AS pk\n" + "FROM pg_constraint AS c\n" + "         JOIN pg_attribute AS a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)\n" + "         JOIN pg_class AS t ON t.oid = c.conrelid\n" + "WHERE c.contype = 'p'\n" + "  AND t.relname = '<tableName>'";
-
-    //临时字段后缀
-    private static final String TEMP_COLUMN_SUFFIX = "_temp$zAyK_dbEnc_KingBase_";
+    private static final String GET_PRIMARY_KEY_SQL = "SELECT KU.COLUMN_NAME " + "FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS TC " + "INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE KU " + "ON TC.CONSTRAINT_NAME = KU.CONSTRAINT_NAME " + "AND TC.TABLE_NAME = KU.TABLE_NAME " + "WHERE TC.CONSTRAINT_TYPE = 'PRIMARY KEY' " + "AND KU.TABLE_NAME = ? " + "AND KU.TABLE_SCHEMA = ?";
 
     //添加字段主句
-    private static final String ADD_COLUMN = "ALTER TABLE <table> ";
+    private static final String ADD_COLUMN = "ALTER TABLE <schema>.<table> ADD ";
 
     //添加字段字句 循环段
-    private static final String ADD_COLUMN_LOOP = "ADD <field> <type> <null> <default>";
+    private static final String ADD_COLUMN_LOOP = " <field> <type> ";
 
     //统计表中数据量语句
-    private static final String COUNT_DATA = "SELECT COUNT(*) FROM <table>";
+    private static final String COUNT_DATA = "SELECT COUNT(*) FROM <schema>.<table>";
 
     //分页查询
-    private static final String SELECT_COLUMN = "SELECT <columns> FROM <table>  ORDER BY <id> LIMIT <limit> OFFSET <offset>";
+    private static final String SELECT_COLUMN = "WITH PagingCTE AS (\n" + "    SELECT\n" + "        ROW_NUMBER() OVER (ORDER BY <id>) AS RowNum,\n" + "        <columns>\n" + "    FROM\n" + "        <schema>.<table>\n" + ")\n" + "SELECT <columns>\n" + "FROM PagingCTE\n" + "WHERE RowNum BETWEEN <begin> AND <end>";
 
     //更新语句
-    private static final String UPDATE = "UPDATE <table> SET <set> WHERE <where>";
+    private static final String UPDATE = "UPDATE <schema>.<table> SET <set> WHERE <where>";
 
     //重命名字段
-    private static final String RENAME_COLUMN = "ALTER TABLE <table> RENAME COLUMN <old> TO <new>";
+    private static final String RENAME_COLUMN = "EXEC sp_rename '<schema>.<table>.<old>', '<new>', 'COLUMN';";
 
     //删除字段
-    private static final String DROP_COLUMN = "ALTER TABLE <table> <drop>";
+    private static final String DROP_COLUMN = "ALTER TABLE <schema>.<table>  DROP COLUMN <drop>";
 
     //删除字段循环段
-    private static final String DROP_COLUMN_LOOP = "DROP COLUMN <column>";
+    private static final String DROP_COLUMN_LOOP = "<column>";
 
 
     @Override
     public String getPrimaryKey(Connection conn, String schema, String table) throws SQLException {
-        String sql = new ST(GET_PRIMARY_KEY_SQL).add("tableName", table).render();
-        log.info("getPrimaryKey sql:{}", sql);
-        try {
-            ResultSet resultSet = conn.createStatement().executeQuery(sql);
+        try (PreparedStatement ps = conn.prepareStatement(GET_PRIMARY_KEY_SQL)) {
+            ps.setString(1, table);
+            ps.setString(2, schemaMap.get(table));
+            ResultSet resultSet = ps.executeQuery();
             resultSet.next();
             return resultSet.getString(1);
-        } catch (SQLException e) {
-            log.error("getPrimaryKey error sql:{}", sql, e);
-            throw e;
+        } catch (Exception e) {
+            log.error("getPrimaryKey error sql:{},schema:{},table:{}", GET_PRIMARY_KEY_SQL, schema, table);
+            throw new RuntimeException();
         }
     }
 
     @Override
     public String getTempColumnSuffix() {
-        return TEMP_COLUMN_SUFFIX;
+        return "Temp";
     }
 
     @Override
     public void addTempColumn(Connection conn, String table, List<AddColumnsDTO> addColumnsDtoList) {
-
-        StringBuilder sql = new StringBuilder().append(new ST(ADD_COLUMN)
-                .add("table", table).render());
+        StringBuilder sql = new StringBuilder().append(new ST(ADD_COLUMN).add("schema", schemaMap.get(table)).add("table", table).render());
         addColumnsDtoList.forEach(addColumnsDTO -> {
             Map<String, String> columnDefinition = addColumnsDTO.getColumnDefinition();
             //加密 新增临时字段，固定text类型
             if (addColumnsDTO.isEncrypt()) {
-                String definitionSql = new ST(ADD_COLUMN_LOOP)
-                        .add("field", addColumnsDTO.getColumnName() + TEMP_COLUMN_SUFFIX)
-                        .add("type", "text")
-                        .add("null", "")
-                        .add("default", "").render();
+                String definitionSql = new ST(ADD_COLUMN_LOOP).add("field", addColumnsDTO.getColumnName() + getTempColumnSuffix()).add("type", "text").render();
                 sql.append(definitionSql).append(",");
             }
             //解密 还原为原始字段
             else {
-                String definitionSql = new ST(ADD_COLUMN_LOOP)
-                        .add("field", addColumnsDTO.getColumnName() + TEMP_COLUMN_SUFFIX)
-                        .add("type", columnDefinition.get("type"))
-                        .add("null", "NO".equals(columnDefinition.get("null")) ? "NOT NULL" : "")
-                        .render();
+                String definitionSql = new ST(ADD_COLUMN_LOOP).add("field", addColumnsDTO.getColumnName() + getTempColumnSuffix()).add("type", columnDefinition.get("type")).render();
                 sql.append(definitionSql).append(",");
             }
         });
         //删除最后一个逗号
         sql.deleteCharAt(sql.length() - 1);
-        try (Statement statement = conn.createStatement()) {
-            statement.execute(sql.toString());
-        } catch (SQLException e) {
-            log.error("addTempColumn error sql:{}", sql, e);
-            throw new RuntimeException(e);
+        try (PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            ps.executeUpdate();
+        } catch (Exception e) {
+            log.error("addTempColumn error sql:{}", sql);
+            throw new RuntimeException();
         }
     }
 
     @Override
     public int count(Connection conn, String table) {
-        String sql = new ST(COUNT_DATA).add("table", table).render();
+        String sql = "";
         try (Statement statement = conn.createStatement()) {
+            sql = new ST(COUNT_DATA).add("schema", schemaMap.get(table)).add("table", table).render();
             ResultSet resultSet = statement.executeQuery(sql);
             resultSet.next();
             return resultSet.getInt(1);
         } catch (SQLException e) {
-            log.error("count error", e);
+            log.error("count error sql:{}", sql);
             throw new RuntimeException(e);
         }
     }
@@ -127,8 +120,7 @@ public class KingBaseExecute implements SqlExecuteSPI {
     @Override
     public List<Map<String, String>> selectColumn(Connection conn, String table, List<String> columns, int limit, int offset) {
         String columnStr = String.join(",", columns);
-        String sql = new ST(SELECT_COLUMN).add("columns", columnStr).add("id", columns.get(0)).add("table", table).add("limit", limit).add("offset", offset).render();
-        log.info("selectColumn sql:{}", sql);
+        String sql = new ST(SELECT_COLUMN).add("columns", columnStr).add("id", columns.get(0)).add("schema", schemaMap.get(table)).add("table", table).add("begin", offset).add("end", offset + limit).render();
         try (Statement statement = conn.createStatement()) {
             List<Map<String, String>> list = new ArrayList<>();
             //结果集
@@ -148,7 +140,7 @@ public class KingBaseExecute implements SqlExecuteSPI {
             }
             return list;
         } catch (SQLException e) {
-            log.error("selectColumn error", e);
+            log.error("selectColumn error sql:{}", sql);
             throw new RuntimeException(e);
         }
     }
@@ -172,16 +164,15 @@ public class KingBaseExecute implements SqlExecuteSPI {
                     if (isFirst.get()) {
                         where.append(k).append(" = ").append(v);
                     } else {
-                        set.append(k).append(TEMP_COLUMN_SUFFIX).append(" = ").append("'").append(v).append("'").append(",");
+                        set.append(k).append(getTempColumnSuffix()).append(" = ").append("'").append(v).append("'").append(",");
                     }
                     isFirst.set(false);
                 });
                 //删除最后一个逗号
                 set.deleteCharAt(set.length() - 1);
-                String sql = new ST(UPDATE).add("table", table).add("set", set).add("where", where).render();
+                String sql = new ST(UPDATE).add("schema", schemaMap.get(table)).add("table", table).add("set", set).add("where", where).render();
                 set.setLength(0);
                 where.setLength(0);
-                log.info("batchUpdate sql {}", sql);
                 try {
                     statement.addBatch(sql);
                 } catch (SQLException e) {
@@ -211,7 +202,7 @@ public class KingBaseExecute implements SqlExecuteSPI {
 
     @Override
     public void renameColumn(Connection conn, String schema, String table, String oldColumn, String newColumn) {
-        String sql = new ST(RENAME_COLUMN).add("table", table).add("old", oldColumn).add("new", newColumn).render();
+        String sql = new ST(RENAME_COLUMN).add("schema", schemaMap.get(table)).add("table", table).add("old", oldColumn).add("new", newColumn).render();
         try (Statement statement = conn.createStatement()) {
             statement.execute(sql);
         } catch (SQLException e) {
@@ -228,27 +219,27 @@ public class KingBaseExecute implements SqlExecuteSPI {
             drop.append(dropLoop).append(",");
         });
         drop.deleteCharAt(drop.length() - 1);
-        String sql = new ST(DROP_COLUMN).add("table", table).add("drop", drop).render();
+        String sql = new ST(DROP_COLUMN).add("schema", schemaMap.get(table)).add("table", table).add("drop", drop).render();
         try (Statement statement = conn.createStatement()) {
             statement.execute(sql);
         } catch (SQLException e) {
-            log.error("dropColumn {} error", columns, e);
+            log.error("dropColumn error sql:{}", sql, e);
             throw new RuntimeException(e);
         }
     }
 
     @Override
     public void connectionOperate(Connection conn, DatabaseDTO databaseDTO) {
-        try (Statement statement = conn.createStatement()) {
-            statement.execute("set search_path to '" + databaseDTO.getTableDTOList().get(0).getSchema() + "'");
-        } catch (SQLException e) {
-            log.error("connectionOperate error", e);
-            throw new RuntimeException(e);
-        }
+        databaseDTO.getTableDTOList().forEach(tableDTO -> {
+            String schema = tableDTO.getSchema();
+            if (!schemaMap.containsKey(schema)) {
+                schemaMap.put(tableDTO.getTableName(), schema);
+            }
+        });
     }
 
     @Override
     public String getType() {
-        return DatabaseTypeEnum.KingBase.name();
+        return DatabaseTypeEnum.SQLServer.name();
     }
 }
