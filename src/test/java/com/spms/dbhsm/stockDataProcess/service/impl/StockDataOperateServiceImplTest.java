@@ -59,6 +59,15 @@ public class StockDataOperateServiceImplTest {
     }
 
     @Test
+    public void sqlServer() throws Exception {
+        initSqlServer();
+        DatabaseDTO dto = getSqlServerDTO();
+        service.stockDataOperate(dto, true);
+        service.stockDataOperate(dto, false);
+    }
+
+
+    @Test
     public void clickHouse() throws Exception {
         initCK();
         DatabaseDTO dto = getCLickHouseDTO();
@@ -81,6 +90,90 @@ public class StockDataOperateServiceImplTest {
         service.stockDataOperate(dto, false);
 
     }
+
+    private void initSqlServer() throws  Exception{
+        Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+        conn = DriverManager.getConnection("jdbc:jtds:sqlserver://192.168.6.59:1433/zzydb;instance=WIN-I287SD6IN93", "sa", "server@2020");
+        //指定schema
+
+        //准备表
+        Statement statement = conn.createStatement();
+        try {
+            statement.execute("DROP TABLE zzytest.student");
+        } catch (SQLException e) {
+            log.info("表不存在，忽略");
+        }
+        statement.execute("CREATE TABLE zzytest.student (id INT PRIMARY KEY, name VARCHAR(50), age INT, phone VARCHAR(20), address VARCHAR(100))");
+        statement.execute("TRUNCATE TABLE zzytest.student");
+
+        //准备数据
+        conn.setAutoCommit(false);
+        PreparedStatement preparedStatement = conn.prepareStatement("INSERT INTO zzytest.student (id, name, age, phone, address) VALUES (?,?,?,?,?)");
+        for (int i = 0; i < 10000; i++) {
+            preparedStatement.setInt(1, i);
+            preparedStatement.setString(2, "张三" + i);
+            preparedStatement.setInt(3, i % 55);
+            preparedStatement.setString(4, "13800138000");
+            preparedStatement.setString(5, "北京市朝阳区" + i);
+            preparedStatement.addBatch();
+        }
+        preparedStatement.executeBatch();
+        conn.commit();
+        conn.setAutoCommit(true);
+        preparedStatement.close();
+        statement.close();
+        conn.close();
+    }
+    private DatabaseDTO getSqlServerDTO() {
+
+        //准备加密函数的入参
+        ColumnDTO name = new ColumnDTO();
+        name.setId(1L);
+        name.setColumnName("name");
+        name.setColumnDefinition(Collections.singletonMap("type","VARCHAR(50)"));  //todo 还原必须要求有这个数据类型
+        name.setComment("名字");
+        name.setNotNull(true);
+        name.setEncryptAlgorithm("TestAlg");
+        name.setEncryptKeyIndex("1");
+
+        ColumnDTO address = new ColumnDTO();
+        address.setId(3L);
+        address.setColumnName("address");
+        address.setColumnDefinition(Collections.singletonMap("type","VARCHAR(100)")); //todo 还原必须要求有这个数据类型
+        address.setComment("地址");
+        address.setNotNull(true);
+        address.setEncryptAlgorithm("TestAlg");
+        address.setEncryptKeyIndex("1");
+
+        List<ColumnDTO> columns = Arrays.asList(name, address);
+
+        TableDTO tableDTO = new TableDTO();
+        tableDTO.setId(1L);
+        tableDTO.setSchema("zzytest");   //todo 注意！！！此处很重要
+        tableDTO.setBatchSize(200);
+        tableDTO.setTableName("student");
+        tableDTO.setThreadNum(10);
+        tableDTO.setColumnDTOList(columns);
+
+        List<TableDTO> tables = Collections.singletonList(tableDTO);
+
+        DatabaseDTO dto = new DatabaseDTO();
+        dto.setId(123456L);
+        dto.setDatabaseDba("sa");
+        dto.setDatabaseIp("192.168.6.59");
+        dto.setDatabasePort("1433");
+        dto.setDatabaseDbaPassword("server@2020");
+        dto.setConnectUrl("jdbc:jtds:sqlserver://192.168.6.59:1433/zzydb;instance=WIN-I287SD6IN93");   //todo 这个url 到现在还没使用过，代理去连数据库需要用
+        dto.setDatabaseType("SQLServer");
+        dto.setDatabaseVersion("11.2");
+        dto.setDatabaseName("zzydb");
+        dto.setInstanceType("");
+        dto.setServiceUser("sa");
+        dto.setServicePassword("server@2020");
+        dto.setTableDTOList(tables);
+        return dto;
+    }
+
 
     private void initpg() throws Exception {
         Class.forName("org.postgresql.Driver");
@@ -348,7 +441,7 @@ public class StockDataOperateServiceImplTest {
         dto.setConnectUrl("jdbc:kingbase8://192.168.7.113:54321/ZZY");
         dto.setDatabaseType("KingBase");
         dto.setDatabaseVersion("8.0");
-        dto.setDatabaseName("ZZY?");
+        dto.setDatabaseName("ZZY");
         dto.setInstanceType("SID");
         dto.setServiceUser("SYSTEM");
         dto.setServicePassword("123456");

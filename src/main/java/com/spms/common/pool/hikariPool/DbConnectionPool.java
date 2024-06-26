@@ -47,7 +47,9 @@ public class DbConnectionPool {
                 }
                 break;
             case DbConstants.DB_TYPE_SQLSERVER:
-                config.setJdbcUrl("jdbc:sqlserver://" + databaseIp + ":" + databasePort + ";DatabaseName=" + databaseServerName + ";encrypt=false;integratedSecurity=false;");
+                config.setJdbcUrl("jdbc:jtds:sqlserver://" + databaseIp + ":" + databasePort + ";DatabaseName=" + databaseServerName + ";encrypt=false;integratedSecurity=false;");
+                config.setDriverClassName("net.sourceforge.jtds.jdbc.Driver");
+                config.setConnectionTestQuery("SELECT 1");
                 break;
             case DbConstants.DB_TYPE_MYSQL:
                 config.setJdbcUrl("jdbc:mysql://" + databaseIp + ":" + databasePort + "/" + databaseServerName);

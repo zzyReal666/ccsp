@@ -486,7 +486,9 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         DbInstanceGetConnDTO dbInstanceGetConnDTO = DatabaseToDbInstanceGetConnDTOAdapter.adapter(databaseDTO, connType);
         DbConnectionPoolFactory factory = new DbConnectionPoolFactory();
         Connection connection = factory.getConnection(dbInstanceGetConnDTO);
-        connection.setSchema(databaseDTO.getDatabaseName());
+        if (!databaseDTO.getDatabaseType().equals(DatabaseTypeEnum.SQLServer.name())) {
+            connection.setSchema(databaseDTO.getDatabaseName());
+        }
         getSqlExecute(databaseDTO).connectionOperate(connection, databaseDTO);
         return connection;
     }

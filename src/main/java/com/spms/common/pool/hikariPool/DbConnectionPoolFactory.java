@@ -127,9 +127,6 @@ public class DbConnectionPoolFactory {
             buildDataSourcePool(instanceGetConnDTO, dbInstancekey);
         }
         Connection connection = DbConnectionPoolFactory.getInstance().getDbConnectionPool(dbInstancekey).getConnection();
-//        if (!databaseType.equals(DbConstants.DB_TYPE_CLICKHOUSE)) {
-//            connection.setAutoCommit(false);
-//        }
         return connection;
     }
 

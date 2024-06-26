@@ -4,3 +4,4 @@ com.spms.dbhsm.stockDataProcess.sqlExecute.OracleExecute
 com.spms.dbhsm.stockDataProcess.sqlExecute.ClickHouseExecute
 com.spms.dbhsm.stockDataProcess.sqlExecute.KingBaseExecute
 com.spms.dbhsm.stockDataProcess.sqlExecute.PostgresExecute
+com.spms.dbhsm.stockDataProcess.sqlExecute.SqlServerExecute
