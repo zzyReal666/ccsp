@@ -11,7 +11,7 @@ import lombok.Getter;
 public enum DatabaseTypeEnum {
     Oracle("0", "Oracle"),
     SQLServer("1", "SQLServer"),
-    MySQL("2", "MySql"),
+//    MySQL("2", "MySql"),
     MySQL57("2", "Mysql57"),
     PostgresSQL("3", "PostgresSQL"),
     ClickHouse("6", "ClickHouse"),
