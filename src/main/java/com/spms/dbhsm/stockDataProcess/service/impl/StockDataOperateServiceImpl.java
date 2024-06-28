@@ -187,7 +187,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         int loop = 1;
         Integer currentOffset = 0;
         try {
-            while (!offsetQueue.isEmpty()  && !paused.get()) {
+            while (!offsetQueue.isEmpty() && !paused.get()) {
                 currentOffset = offsetQueue.poll();
                 if (currentOffset == null) {
                     break;
@@ -242,10 +242,10 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         blockOperate(operateType, sqlExecute, dbaConn, databaseDTO, primaryKey, 0);
 
         //洗数据完成后的操作
-        afterOperate(databaseDTO, tableDTO, sqlExecute, dbaConn);
+        afterOperate(databaseDTO, tableDTO, sqlExecute, dbaConn,operateType);
     }
 
-    private void afterOperate(DatabaseDTO databaseDTO, TableDTO tableDTO, SqlExecuteSPI sqlExecute, Connection dbaConn) throws InterruptedException {
+    private void afterOperate(DatabaseDTO databaseDTO, TableDTO tableDTO, SqlExecuteSPI sqlExecute, Connection dbaConn, boolean operateType) throws InterruptedException {
         //设置进度 注意，执行到这里肯定已经完成，强制设置进度为100
         PROGRESS_MAP.put(String.valueOf(tableDTO.getId()), new AtomicInteger(100));
 
@@ -256,9 +256,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         sqlExecute.dropColumn(dbaConn, tableDTO.getTableName(), tableDTO.getColumnDTOList().stream().map(columnDTO -> sqlExecute.getTempColumnSuffix() + columnDTO.getColumnName()).collect(Collectors.toList()));
 
         // 加密策略写入 zookeeper 前置插件模式才需要 当前仅ck需要
-        if (sqlExecute instanceof ClickHouseExecute) {
-            writeConfigToZookeeper(databaseDTO);
-        }
+        writeConfigToZookeeper(databaseDTO,operateType);
     }
 
     //行式新增临时字段
@@ -298,12 +296,17 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
     }
 
     //写入加密策略到zookeeper
-    private void writeConfigToZookeeper(DatabaseDTO databaseDTO) throws InterruptedException {
-        //开一个线程 写加密策略到zk
-        Thread writeZkthread = new UpdateZookeeperTask(databaseDTO);
-        writeZkthread.start();
-        writeZkthread.join();
+    private void writeConfigToZookeeper(DatabaseDTO databaseDTO, boolean operateType) throws InterruptedException {
 
+        if ("Mysql57".equals(databaseDTO.getDatabaseType()) || "PostgresSQL".equals(databaseDTO.getDatabaseType())) {
+            //开一个线程 写加密策略到zk
+            Thread writeZkthread = new UpdateZookeeperTask(databaseDTO,operateType);
+            writeZkthread.start();
+            writeZkthread.join();
+        } else {
+            //其他数据库不需要写zk
+            log.info("当前数据库类型不支持zk配置，跳过zk配置");
+        }
     }
 
     /**

@@ -29,16 +29,32 @@ import java.util.Map;
 public class UpdateZookeeperTask extends Thread {
 
     private DatabaseDTO databaseDTO;
+    private boolean operateType;
 
     @Override
     public void run() {
+        if (operateType) {
+            addConfig();
+        } else {
+            deleteConfig();
+        }
+        ZookeeperUtils.close();
+    }
+
+    private void deleteConfig() {
+        databaseDTO.getTableDTOList().get(0).getColumnDTOList().forEach(col -> {
+            //删除加密器
+            //删除加密规则
+        });
+    }
+
+    private void addConfig() {
         databaseDTO.getTableDTOList().get(0).getColumnDTOList().forEach(col -> {
             //添加加密器
             addEncryptor(col);
             //添加加密规则
             addEncryptRules(col);
         });
-        ZookeeperUtils.close();
     }
 
     private void addEncryptRules(ColumnDTO col) {
