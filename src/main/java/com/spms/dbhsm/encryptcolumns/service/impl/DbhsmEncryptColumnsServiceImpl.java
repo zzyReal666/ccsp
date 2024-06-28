@@ -165,7 +165,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
             if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(instance.getDatabaseType())) {
                 tableName = dbUserInfo.getUserName() + "." + columnsDto.getDbTableName();
             } else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(instance.getDatabaseType())) {
-                tableName = columnsDto.getDbTableName();
+                tableName = instance.getDatabaseServerName() + ":" + columnsDto.getDbTableName();
             } else if (DbConstants.DB_TYPE_MYSQL.equalsIgnoreCase(instance.getDatabaseType())) {
                 tableName = columnsDto.getDbTableName();
             } else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(instance.getDatabaseType())) {
@@ -770,8 +770,8 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                     user.setId(0L);
                     user.setIsSelfBuilt(0);
                     user.setUserName(instance.getDatabaseDba());
-                    if (DbConstants.DB_TYPE_KB.equals(instance.getDatabaseType())) {
-                        usersList.clear();
+                    if (DbConstants.DB_TYPE_KB.equals(instance.getDatabaseType()) || DbConstants.DB_TYPE_POSTGRESQL.equals(instance.getDatabaseType())) {
+                        usersList = new ArrayList<>();
                         //如果是kingbase数据库多获取一层schema
                         conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
                         Statement stmt = conn.createStatement();
@@ -842,7 +842,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 }
 
             } catch (Exception e) {
-                log.error(e.getMessage());
+                log.error("获取树结构错误：{}", e.getMessage());
             }
         }
 

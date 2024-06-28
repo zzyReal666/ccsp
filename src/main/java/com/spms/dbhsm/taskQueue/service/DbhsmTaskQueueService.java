@@ -19,7 +19,7 @@ import java.util.List;
 public interface DbhsmTaskQueueService {
     AjaxResult insertTask(TaskQueueInsertRequest request);
 
-    List<TaskPolicyDetailsResponse> taskQueueDetails(TaskQueueDetailsRequest request) ;
+    List<TaskPolicyDetailsResponse> taskQueueDetails(TaskQueueDetailsRequest request);
 
     List<TaskQueueListResponse> list(TaskQueueListRequest request);
 
@@ -27,15 +27,15 @@ public interface DbhsmTaskQueueService {
 
     AjaxResult updateDbhsmEncryptColumns(UpEncryptColumnsRequest dbhsmEncryptColumns);
 
-    AjaxResult queryEncryptionProgress(Long taskId) ;
+    AjaxResult queryEncryptionProgress(Long taskId);
 
-    AjaxResult2<List<EncryptColumns>> taskQueueNoEncList(String id, String taskMode);
+    AjaxResult2<List<EncryptColumns>> taskQueueNoEncList(Long id, String taskMode);
 
     AjaxResult deleteEncryptColumns(Long taskId);
 
     List<EncryptColumns> details(Long taskId, String detailsMode);
 
-    AjaxResult2<TaskQueueListResponse> queryDbInstanceInfo(Long dbInstanceId,Long dbUserId, String dbTableName);
+    AjaxResult2<TaskQueueListResponse> queryDbInstanceInfo(Long dbInstanceId, Long dbUserId, String dbTableName);
 
     AjaxResult insertDecColumnsOnEnc(TaskDecColumnsOnEncRequest request);
 }
