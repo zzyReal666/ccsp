@@ -45,7 +45,7 @@ public class TaskQueueListResponse {
     private String databasePort;
 
     @ApiModelProperty(name = "tableId",value = "表ID")
-    private String tableId;
+    private Long tableId;
 
     @ApiModelProperty(name = "tableName",value = "表名")
     private String tableName;

@@ -1,18 +1,15 @@
 package com.spms.common.dbTool;
 
 import com.ccsp.common.core.exception.ZAYKException;
+import com.ccsp.common.core.utils.StringUtils;
 import com.spms.common.ParseCreateSQL;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.pool.hikariPool.DbConnectionPoolFactory;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
 import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsAdd;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.security.UserGroupInformation;
 
 import java.io.IOException;
 import java.sql.*;
@@ -157,12 +154,17 @@ public final class DBUtil {
             } else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(dbType)) {
                 Statement stmt = null;
                 try {
+                    String[] split = tableName.split(":");
                     stmt = conn.createStatement();
-                    ResultSet resultSet = stmt.executeQuery("select column_name,data_type,CHARACTER_MAXIMUM_LENGTH from information_schema.columns where table_name = '" + tableName.toUpperCase() + "'");
+                    //需要加 schema条件 不然有重复字段
+                    String sql = "select column_name,data_type,CHARACTER_MAXIMUM_LENGTH from information_schema.columns where TABLE_SCHEMA= '" + split[0].toUpperCase() + "' and table_name = '" + split[1].toUpperCase() + "'";
+                    ResultSet resultSet = stmt.executeQuery(sql);
+                    log.info("执行SQL："+sql);
                     while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
                         Map<String, String> colMap = new HashMap<>();
                         colMap.put(DbConstants.DB_COLUMN_NAME, resultSet.getString("column_name"));
-                        colMap.put("columnType", resultSet.getString("data_type") + "(" + resultSet.getString("CHARACTER_MAXIMUM_LENGTH") + ")");
+                        //类型长度为空不进行拼装
+                        colMap.put("columnType", resultSet.getString("data_type") + (StringUtils.isBlank(resultSet.getString("CHARACTER_MAXIMUM_LENGTH")) ? "" :"(" + resultSet.getString("CHARACTER_MAXIMUM_LENGTH") + ")") );
                         colList.add(colMap);
                     }
                     resultSet.close();
@@ -193,18 +195,18 @@ public final class DBUtil {
                 Statement stmt = null;
                 try {
                     stmt = conn.createStatement();
-                    //ResultSet resultSet = stmt.executeQuery(
-                    //        "SELECT format_type(a.atttypid,a.atttypmod) as type,a.attname as name " +
-                    //                "FROM pg_class as c,pg_attribute as a where c.relname = '" + tableName +
-                    //                "' and a.attrelid = c.oid and a.attnum>0");
-                    ResultSet resultSet = stmt.executeQuery(
-                            "SELECT data_type as type ,column_name as name ,character_maximum_length as length   \n" +
-                                    "FROM information_schema.columns \n" +
-                                    "WHERE table_name ='" + tableName + "' ORDER BY ordinal_position");
+//                    ResultSet resultSet = stmt.executeQuery("SELECT format_type(a.atttypid,a.atttypmod) as type,a.attname as name " +
+//                                    "FROM pg_class as c,pg_attribute as a where c.relname = '" + tableName + "' and a.attrelid = c.oid and a.attnum>0");
+                    //获取
+                    ResultSet resultSet = stmt.executeQuery("SELECT data_type as type, column_name as name ,character_maximum_length as length , \n" +
+                            "       (SELECT constraint_type FROM information_schema.table_constraints WHERE constraint_type ='PRIMARY KEY' AND table_name = table_name and constraint_name = column_name) as Key\n" +
+                            "FROM information_schema.columns WHERE table_name = '"+tableName+"' ORDER BY ordinal_position;");
                     while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
                         Map<String, String> colMap = new HashMap<>();
                         colMap.put(DbConstants.DB_COLUMN_NAME, resultSet.getString("name"));
-                        colMap.put("columnType", resultSet.getString("type"));
+                        //类型长度为空不进行拼装
+                        colMap.put("columnType", resultSet.getString("type") + (StringUtils.isBlank(resultSet.getString("length")) ? "" :"(" + resultSet.getString("length") + ")"));
+                        colMap.put("Key", resultSet.getString("Key"));
                         colList.add(colMap);
                     }
 
