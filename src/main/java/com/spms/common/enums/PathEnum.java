@@ -15,11 +15,11 @@ public enum PathEnum {
 
 
     //数据源
-    DATA_SOURCE("/ZA-${namespace}/metadata/logic_db/data_sources/units/${dbname}/versions/0"),
+    DATA_SOURCE("/ZA-${namespace}/metadata/${database}/data_sources/units/${dbname}/versions/0"),
     //加密器
-    ENCRYPTOR("/ZA-${namespace}/metadata/logic_db/rules/encrypt/encryptors/${encryptorName}"),
+    ENCRYPTOR("/ZA-${namespace}/metadata/${database}/rules/encrypt/encryptors/${encryptorName}"),
     //新增、修改加密规则
-    RULE("/ZA-${namespace}/metadata/logic_db/rules/encrypt/tables/${tableName}"),
+    RULE("/ZA-${namespace}/metadata/${database}/rules/encrypt/tables/${tableName}"),
     //属性
     PROPERTY("/ZA-${namespace}/props/versions/0"),
     //活跃版本号

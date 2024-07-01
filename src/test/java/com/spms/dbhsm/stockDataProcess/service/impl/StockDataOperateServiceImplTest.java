@@ -177,7 +177,7 @@ public class StockDataOperateServiceImplTest {
 
     private void initpg() throws Exception {
         Class.forName("org.postgresql.Driver");
-        conn = DriverManager.getConnection("jdbc:postgresql://192.168.112.78:15432/zzytestdb?currentSchema=zzytest", "postgres", "123456");
+        conn = DriverManager.getConnection("jdbc:postgresql://192.168.6.158:5432/zzydb?currentSchema=zzyschema", "postgres", "server@2020");
         //准备表
         Statement statement = conn.createStatement();
         statement.execute("DROP TABLE IF EXISTS student");
@@ -224,7 +224,7 @@ public class StockDataOperateServiceImplTest {
 
         TableDTO tableDTO = new TableDTO();
         tableDTO.setId(1L);
-        tableDTO.setSchema("zzytest");   //todo 注意！！！此处很重要
+        tableDTO.setSchema("zzyschema");   //todo 注意！！！此处很重要
         tableDTO.setBatchSize(200);
         tableDTO.setTableName("student");
         tableDTO.setThreadNum(10);
@@ -235,16 +235,16 @@ public class StockDataOperateServiceImplTest {
         DatabaseDTO dto = new DatabaseDTO();
         dto.setId(123456L);
         dto.setDatabaseDba("postgres");
-        dto.setDatabaseIp("192.168.112.78");
-        dto.setDatabasePort("15432");
-        dto.setDatabaseDbaPassword("123456");
-        dto.setConnectUrl("jdbc:postgresql://192.168.112.78:15432/zzytestdb?currentSchema=zzytest");   //todo 这个url 到现在还没使用过，代理去连数据库需要用
+        dto.setDatabaseIp("192.168.6.158");
+        dto.setDatabasePort("5432");
+        dto.setDatabaseDbaPassword("server@2020");
+        dto.setConnectUrl("jdbc:postgresql://192.168.6.158:5432/zzydb?currentSchema=zzyschema");   //todo 这个url 到现在还没使用过，代理去连数据库需要用
         dto.setDatabaseType("PostgresSQL");
         dto.setDatabaseVersion("11.2");
-        dto.setDatabaseName("zzytestdb");
+        dto.setDatabaseName("zzydb");
         dto.setInstanceType("SID");
         dto.setServiceUser("postgres");
-        dto.setServicePassword("123456");
+        dto.setServicePassword("server@2020");
         dto.setTableDTOList(tables);
         return dto;
     }
