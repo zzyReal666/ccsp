@@ -61,6 +61,7 @@ public class UpdateZookeeperTask extends Thread {
         //基础路径
         String path = PathEnum.RULE.getValue()
                 .replace("${namespace}", databaseDTO.getDatabaseIp() + ":" + databaseDTO.getDatabasePort() + "/" + databaseDTO.getDatabaseName())
+                .replace("${database}", databaseDTO.getDatabaseName())
                 .replace("${tableName}", databaseDTO.getTableDTOList().get(0).getTableName());
 
         //新增活跃版本号 active_version:0
@@ -121,6 +122,7 @@ public class UpdateZookeeperTask extends Thread {
         //基础路径
         String path = PathEnum.ENCRYPTOR.getValue()
                 .replace("${namespace}", databaseDTO.getDatabaseIp() + ":" + databaseDTO.getDatabasePort() + "/" + databaseDTO.getDatabaseName())
+                .replace("${database}", databaseDTO.getDatabaseName())
                 .replace("${encryptorName}", col.getColumnName() + "_encryptor");
 
         //新增活跃版本号
