@@ -56,9 +56,7 @@ public class ZookeeperUtils {
     //endregion
 
     public static void updateNode(String data, String nodePath, String url) {
-        if (client == null) {
-            init(url);
-        }
+        init(url);
         //不存在则创建节点并且添加数据 存在则直接添加数据
         try {
             Stat stat = client.checkExists().forPath(nodePath);
@@ -67,31 +65,31 @@ public class ZookeeperUtils {
             } else {
                 client.setData().forPath(nodePath, data.getBytes());
             }
-        } catch (Exception ignore) {
+        } catch (Exception e) {
+            log.error("updateNode error, nodePath:{}, url:{},data:{}", nodePath, url, data);
+            throw new RuntimeException("zookeeper updateNode error", e);
         }
     }
 
     public static void updateNode(String data, String nodePath) {
-        log.info("updateNode nodePath:{}, data:{}", nodePath, data);
         updateNode(data, nodePath, defaultUrl);
     }
 
 
     public static void deleteNode(String nodePath) {
-        log.info("deleteNode nodePath:{}", nodePath);
         deleteNode(nodePath, defaultUrl);
     }
 
     public static void deleteNode(String nodePath, String url) {
         try {
-            if (client == null) {
-                init(url);
-            }
+            init(url);
             Stat stat = client.checkExists().forPath(nodePath);
             if (stat != null) {
                 client.delete().deletingChildrenIfNeeded().forPath(nodePath);
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.error("deleteNode error, nodePath:{}, url:{}", nodePath, url);
+            throw new RuntimeException("zookeeper deleteNode error", e);
         }
     }
 

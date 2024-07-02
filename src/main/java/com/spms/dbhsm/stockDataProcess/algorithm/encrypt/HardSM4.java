@@ -54,9 +54,7 @@ public class HardSM4 implements AlgorithmSPI {
         init(props);
         //加密
         byte[] bytes = SDF.SDF_Encrypt_Ex(Integer.parseInt(key), sm4Mode, new byte[0], sm4Iv, data.getBytes(StandardCharsets.UTF_8), true);
-        String result = Base64.encode(bytes);
-        log.info("encrypt result:{}", result);
-        return result;
+        return Base64.encode(bytes);
     }
 
 
@@ -70,9 +68,7 @@ public class HardSM4 implements AlgorithmSPI {
         //解密
         byte[] decode = Base64.decode(data);
         byte[] bytes = SDF.SDF_Decrypt_Ex(Integer.parseInt(key), sm4Mode, new byte[0], sm4Iv, decode, true);
-        String result = new String(bytes, StandardCharsets.UTF_8);
-        log.info("decrypt result:{}", result);
-        return result;
+        return new String(bytes, StandardCharsets.UTF_8);
     }
 
     @Override
