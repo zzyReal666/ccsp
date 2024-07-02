@@ -5,6 +5,7 @@ import com.spms.dbhsm.stockDataProcess.algorithm.AlgorithmSPI;
 import com.zayk.sdf.api.provider.ZaykJceGlobal;
 import com.zayk.sdf.api.sdk.ZaykSDF;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -17,6 +18,7 @@ import java.util.Set;
  * @description
  * @since 2024/7/1 14:53
  */
+@Slf4j
 public class HardSM4 implements AlgorithmSPI {
     static {
         SDF = ZaykSDF.getInstance("/etc/zayk4j.ini");
@@ -45,18 +47,22 @@ public class HardSM4 implements AlgorithmSPI {
 
     @Override
     public String encrypt(String data, String key, Map<String, String> props) {
+        log.info("encrypt data:{},key:{},props:{}", data, key, props);
         if (data.isEmpty()) {
             return "";
         }
         init(props);
         //加密
         byte[] bytes = SDF.SDF_Encrypt_Ex(Integer.parseInt(key), sm4Mode, new byte[0], sm4Iv, data.getBytes(StandardCharsets.UTF_8), true);
-        return Base64.encode(bytes);
+        String result = Base64.encode(bytes);
+        log.info("encrypt result:{}", result);
+        return result;
     }
 
 
     @Override
     public String decrypt(String data, String key, Map<String, String> props) {
+        log.info("decrypt data:{},key:{},props:{}", data, key, props);
         if (data.isEmpty()) {
             return "";
         }
@@ -64,7 +70,9 @@ public class HardSM4 implements AlgorithmSPI {
         //解密
         byte[] decode = Base64.decode(data);
         byte[] bytes = SDF.SDF_Decrypt_Ex(Integer.parseInt(key), sm4Mode, new byte[0], sm4Iv, decode, true);
-        return new String(bytes, StandardCharsets.UTF_8);
+        String result = new String(bytes, StandardCharsets.UTF_8);
+        log.info("decrypt result:{}", result);
+        return result;
     }
 
     @Override
