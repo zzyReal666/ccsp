@@ -113,7 +113,7 @@ public class MysqlExecute implements SqlExecuteSPI {
         try (Statement statement = conn.createStatement()) {
             statement.execute(sql.toString());
         } catch (SQLException e) {
-            log.error("addTempColumn error", e);
+            log.error("addTempColumn error，sql:{}", sql);
             throw new RuntimeException(e);
         }
     }
