@@ -22,6 +22,6 @@ public class TestAlg implements AlgorithmSPI {
 
     @Override
     public String getType() {
-        return "TestAlg";
+        return "TestAlg1";
     }
 }

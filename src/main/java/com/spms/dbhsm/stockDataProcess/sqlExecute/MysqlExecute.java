@@ -89,14 +89,20 @@ public class MysqlExecute implements SqlExecuteSPI {
             Map<String, String> columnDefinition = addColumnsDTO.getColumnDefinition();
             //加密 全部改成text
             if (addColumnsDTO.isEncrypt()) {
-                String definitionSql = new ST(ADD_COLUMN_LOOP).add("field", addColumnsDTO.getColumnName() + TEMP_COLUMN_SUFFIX).add("type", "text").add("null", "")
+                String definitionSql = new ST(ADD_COLUMN_LOOP)
+                        .add("field", addColumnsDTO.getColumnName() + TEMP_COLUMN_SUFFIX)
+                        .add("type", "text")
+                        .add("null", "")
                         //todo 默认值暂时不设置
                         .add("default", "").add("comment", StringUtils.isBlank(addColumnsDTO.getComment()) ? "" : "COMMENT '" + addColumnsDTO.getComment() + "'").render();
                 sql.append(definitionSql).append(",");
             }
             //解密 还原为原始字段
             else {
-                String definitionSql = new ST(ADD_COLUMN_LOOP).add("field", addColumnsDTO.getColumnName() + TEMP_COLUMN_SUFFIX).add("type", columnDefinition.get("type")).add("null", "NO".equals(columnDefinition.get("null")) ? "NOT NULL" : "")
+                String definitionSql = new ST(ADD_COLUMN_LOOP)
+                        .add("field", addColumnsDTO.getColumnName() + TEMP_COLUMN_SUFFIX)
+                        .add("type", columnDefinition.get("type"))
+                        .add("null", "NO".equals(columnDefinition.get("null")) ? "NOT NULL" : "")
                         //todo 默认值暂时不设置
                         .add("default", columnDefinition.get("default") == null ? "" : columnDefinition.get("default")).add("comment", columnDefinition.get("comment") == null ? "" : "COMMENT '" + addColumnsDTO.getComment() + "'").render();
                 sql.append(definitionSql).append(",");
@@ -104,7 +110,6 @@ public class MysqlExecute implements SqlExecuteSPI {
         });
         //删除最后一个逗号
         sql.deleteCharAt(sql.length() - 1);
-        log.info("addTempColumn sql:{}", sql);
         try (Statement statement = conn.createStatement()) {
             statement.execute(sql.toString());
         } catch (SQLException e) {
