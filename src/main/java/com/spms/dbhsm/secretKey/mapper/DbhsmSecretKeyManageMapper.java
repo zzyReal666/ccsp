@@ -2,6 +2,7 @@ package com.spms.dbhsm.secretKey.mapper;
 
 import com.spms.dbhsm.secretKey.domain.DbhsmSecretKeyManage;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -21,6 +22,15 @@ public interface DbhsmSecretKeyManageMapper
      * @return 数据库密钥
      */
     public DbhsmSecretKeyManage selectDbhsmSecretKeyManageById(Long id);
+
+    /*
+     * @description 根据密钥ID查询密钥
+     * @author wzh [zhwang2012@yeah.net]
+     * @date 10:47 2024/7/2
+     * @param secretKeyId  密钥ID
+     * @return DbhsmSecretKeyManage
+     */
+    public DbhsmSecretKeyManage selectDbhsmSecretKeyId(@Param("secretKeyId") String secretKeyId);
 
     /**
      * 查询数据库密钥列表
