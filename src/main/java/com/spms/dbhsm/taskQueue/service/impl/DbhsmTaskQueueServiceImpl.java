@@ -31,6 +31,8 @@ import com.spms.dbhsm.encryptcolumns.mapper.DbhsmEncryptColumnsMapper;
 import com.spms.dbhsm.encryptcolumns.mapper.DbhsmEncryptTableMapper;
 import com.spms.dbhsm.encryptcolumns.vo.EncryptColumns;
 import com.spms.dbhsm.encryptcolumns.vo.UpEncryptColumnsRequest;
+import com.spms.dbhsm.secretKey.domain.DbhsmSecretKeyManage;
+import com.spms.dbhsm.secretKey.mapper.DbhsmSecretKeyManageMapper;
 import com.spms.dbhsm.stockDataProcess.domain.dto.ColumnDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.DatabaseDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.TableDTO;
@@ -88,6 +90,9 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
 
     @Autowired
     private StockDataOperateService stockDataOperateService;
+
+    @Autowired
+    private DbhsmSecretKeyManageMapper dbhsmSecretKeyManageMapper;
 
     @Autowired
     private DbhsmDbUsersMapper dbUsersMapper;
@@ -220,7 +225,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
      * @throws ZAYKException
      * @throws SQLException
      */
-    public static TableDTO encryptColumnsAll(DbhsmDbInstance dbhsmDbInstance, List<DbhsmEncryptColumns> dbhsmEncryptColumns) {
+    public TableDTO encryptColumnsAll(DbhsmDbInstance dbhsmDbInstance, List<DbhsmEncryptColumns> dbhsmEncryptColumns) {
         TableDTO tableDTO = new TableDTO();
         Connection conn = null;
         try {
@@ -274,7 +279,10 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                         columnDTO.setNotNull(!"YES".equalsIgnoreCase(isNullable));
                         columnDTO.setComment(remarks);
                         columnDTO.setEncryptAlgorithm("TestAlg");
-                        columnDTO.setEncryptKeyIndex(dbhsmEncryptColumn.getSecretKeyId());
+                        DbhsmSecretKeyManage dbhsmSecretKeyManage = dbhsmSecretKeyManageMapper.selectDbhsmSecretKeyId(dbhsmEncryptColumn.getSecretKeyId());
+                        if (null != dbhsmSecretKeyManage) {
+                            columnDTO.setEncryptKeyIndex(Long.toString(dbhsmSecretKeyManage.getSecretKeyIndex()));
+                        }
                         list.add(columnDTO);
                     }
                 }
@@ -1097,7 +1105,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
 
 
     //组装Hbase加密数据
-    public static TableDTO encryptHbaseColumnsInfo(DbhsmDbInstance dbhsmDbInstance, List<DbhsmEncryptColumns> dbhsmEncryptColumns) {
+    public TableDTO encryptHbaseColumnsInfo(DbhsmDbInstance dbhsmDbInstance, List<DbhsmEncryptColumns> dbhsmEncryptColumns) {
         TableDTO tableDTO = new TableDTO();
         try {
             tableDTO.setSchema(dbhsmDbInstance.getDatabaseServerName());
@@ -1145,7 +1153,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         return tableDTO;
     }
 
-    private static List<ColumnDTO> getColumnDTOS(List<DbhsmEncryptColumns> dbhsmEncryptColumns, Map<String, Set<String>> columnFamilyColumns) {
+    private List<ColumnDTO> getColumnDTOS(List<DbhsmEncryptColumns> dbhsmEncryptColumns, Map<String, Set<String>> columnFamilyColumns) {
         List<ColumnDTO> list = new ArrayList<>();
         for (DbhsmEncryptColumns dbhsmEncryptColumn : dbhsmEncryptColumns) {
             ColumnDTO columnDTO = new ColumnDTO();
@@ -1157,7 +1165,11 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                     }
                     columnDTO.setColumnName(entry.getKey() + ":" + column);
                     columnDTO.setEncryptAlgorithm("TestAlg");
-                    columnDTO.setEncryptKeyIndex(dbhsmEncryptColumn.getSecretKeyId());
+                    DbhsmSecretKeyManage dbhsmSecretKeyManage = dbhsmSecretKeyManageMapper.selectDbhsmSecretKeyId(dbhsmEncryptColumn.getSecretKeyId());
+                    if (null != dbhsmSecretKeyManage) {
+                        columnDTO.setEncryptKeyIndex(Long.toString(dbhsmSecretKeyManage.getSecretKeyIndex()));
+                    }
+
                     list.add(columnDTO);
                 }
             }
