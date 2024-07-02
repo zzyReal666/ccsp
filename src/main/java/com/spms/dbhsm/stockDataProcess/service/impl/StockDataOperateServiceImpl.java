@@ -95,128 +95,8 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
      */
     @Override
     public void stockDataOperate(DatabaseDTO databaseDTO, boolean operateType) throws ZAYKException, SQLException, InterruptedException {
-        //todo 参数检查
-        if (databaseDTO.getDbStorageMode() == DatabaseDTO.DbStorageMode.COLUMN) {
-            columnDatabase(databaseDTO, operateType);
-        } else {
-            // 行式数据库 todo ClickHouse从这个里面拿出来，放到列式数据库
-            rowDatabase(databaseDTO, operateType);
-        }
+        rowDatabase(databaseDTO, operateType);
     }
-
-    //列式数据库
-    private void columnDatabase(DatabaseDTO databaseDTO, boolean operateType) throws ZAYKException {
-        //表对象
-        TableDTO tableDTO = databaseDTO.getTableDTOList().get(0);
-        //初始化暂停标志和进度
-        initPauseAndProcess(tableDTO);
-        //获取SQL执行器
-        Optional<SqlExecuteForColSPI> registeredService = TypedSPIRegistry.findRegisteredService(SqlExecuteForColSPI.class, databaseDTO.getDatabaseType());
-        if (!registeredService.isPresent()) {
-            throw new ZAYKException("未找到对应的数据库类型");
-        }
-        SqlExecuteForColSPI sqlExecute = registeredService.get();
-        //获取连接
-        org.apache.hadoop.hbase.client.Connection dbaConn = (org.apache.hadoop.hbase.client.Connection) sqlExecute.getConnection(databaseDTO.getDatabaseIp(), databaseDTO.getDatabasePort(), databaseDTO.getDatabaseName(), databaseDTO.getDatabaseDba(), databaseDTO.getDatabaseDbaPassword());
-        //新建临时表
-        sqlExecute.createTable(dbaConn, tableDTO.getTableName());
-        //分块 加/解密
-        blockOperateForCol(operateType, sqlExecute, dbaConn, databaseDTO);
-        //进度强制置为100
-        PROGRESS_MAP.put(String.valueOf(tableDTO.getId()), new AtomicInteger(100));
-        //删除旧表
-        sqlExecute.dropTable(dbaConn, tableDTO.getTableName());
-        //临时表改名字
-        sqlExecute.renameTable(dbaConn, tableDTO.getTableName() + sqlExecute.getPrefixOrSuffix(), tableDTO.getTableName());
-    }
-
-    //列式数据库的分块加密
-    private void blockOperateForCol(boolean operateType, SqlExecuteForColSPI sqlExecute, org.apache.hadoop.hbase.client.Connection dbaConn, DatabaseDTO databaseDTO) {
-        TableDTO tableDTO = databaseDTO.getTableDTOList().get(0);
-        int offset = 0;
-        //总条数
-        int count = sqlExecute.count(dbaConn, tableDTO.getTableName());
-        //块大小，每个线程每次执行的条数
-        int limit = tableDTO.getBatchSize();
-        //线程数
-        int threadNum = tableDTO.getThreadNum();
-        //从offset开始，总块数 不能整除要加1
-        int blockCount = (count - offset) % limit == 0 ? ((count - offset) / limit) : (count - offset) / limit + 1;
-
-        //多线程执行
-        ExecutorService executor = Executors.newFixedThreadPool(threadNum);
-
-        //块的开始
-        LinkedBlockingQueue<Integer> offsetQueue = new LinkedBlockingQueue<>();
-
-        for (int i = 0; i < blockCount; i++) {
-            offsetQueue.add(offset);
-            offset += limit;
-        }
-        log.info("分块成功，共{}块", offsetQueue.size());
-        AtomicInteger progress = PROGRESS_MAP.get(String.valueOf(tableDTO.getId()));
-        AtomicBoolean paused = PAUSED_MAP.get(String.valueOf(tableDTO.getId()));
-        org.apache.hadoop.hbase.client.Connection connection = getConnection(sqlExecute, databaseDTO);
-        for (int i = 0; i < threadNum; i++) {
-            executor.execute(() -> {
-                processForCol(operateType, sqlExecute, offsetQueue, paused, databaseDTO, limit, progress, count, connection);
-            });
-        }
-        //关闭线程池
-        executor.shutdown();
-        try {
-            // 等待所有任务完成，最多等待5小时
-            if (!executor.awaitTermination(5, TimeUnit.HOURS)) {
-                executor.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            executor.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
-    }
-
-    //hbase
-    private static org.apache.hadoop.hbase.client.Connection getConnection(SqlExecuteForColSPI sqlExecute, DatabaseDTO databaseDTO) {
-        return (org.apache.hadoop.hbase.client.Connection) sqlExecute.getConnection(databaseDTO.getDatabaseIp(), databaseDTO.getDatabasePort(), databaseDTO.getDatabaseName(), databaseDTO.getServiceUser(), databaseDTO.getServicePassword());
-    }
-
-    //列式数据库的线程任务
-    private void processForCol(boolean operateType, SqlExecuteForColSPI sqlExecute, LinkedBlockingQueue<Integer> offsetQueue, AtomicBoolean paused, DatabaseDTO databaseDTO, int limit, AtomicInteger progress, int count, org.apache.hadoop.hbase.client.Connection connection) {
-        TableDTO tableDTO = databaseDTO.getTableDTOList().get(0);
-        //循环次数
-        int loop = 1;
-        Integer currentOffset = 0;
-        try {
-            while (!offsetQueue.isEmpty() && !paused.get()) {
-                currentOffset = offsetQueue.poll();
-                if (currentOffset == null) {
-                    break;
-                }
-                log.info("线程:{} 第{}轮开始执行第{}块数据，offset:{}", Thread.currentThread().getName(), loop, currentOffset / limit, currentOffset);
-                //查询数据
-                List<Map<String, String>> data = (List<Map<String, String>>) sqlExecute.selectData(connection, tableDTO, currentOffset, limit, operateType);
-                //加密数据
-                data.forEach(map -> map.entrySet().forEach(entry -> entry.setValue(encryptOrDecrypt(entry.getKey(), entry.getValue(), tableDTO, operateType))));
-                //存储数据
-                sqlExecute.insertData(connection, tableDTO.getTableName() + sqlExecute.getPrefixOrSuffix(), data);
-
-                int processed = currentOffset + limit;
-                progress.set((int) (((double) processed / count) * 100));
-                PROGRESS_MAP.put(String.valueOf(tableDTO.getId()), progress);
-                // 检查暂停标志
-                if (paused.get()) {
-                    STOP_POSITION.put(tableDTO.getId(), currentOffset);
-                    break;
-                }
-                log.info("线程:{} 第{}轮执行完成，offset:{}", Thread.currentThread().getName(), loop, currentOffset);
-                loop++;
-            }
-        } catch (Exception e) {
-            log.error("线程:{} 第{}轮执行第{}块数据错误，offset:{}", Thread.currentThread().getName(), loop, currentOffset / limit, currentOffset, e);
-            throw new RuntimeException(e);
-        }
-    }
-
     //行数数据库
     private void rowDatabase(DatabaseDTO databaseDTO, boolean operateType) throws ZAYKException, SQLException, InterruptedException {
         //表对象
@@ -242,7 +122,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         blockOperate(operateType, sqlExecute, dbaConn, databaseDTO, primaryKey, 0);
 
         //洗数据完成后的操作
-        afterOperate(databaseDTO, tableDTO, sqlExecute, dbaConn,operateType);
+        afterOperate(databaseDTO, tableDTO, sqlExecute, dbaConn, operateType);
     }
 
     private void afterOperate(DatabaseDTO databaseDTO, TableDTO tableDTO, SqlExecuteSPI sqlExecute, Connection dbaConn, boolean operateType) throws InterruptedException {
@@ -256,7 +136,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
         sqlExecute.dropColumn(dbaConn, tableDTO.getTableName(), tableDTO.getColumnDTOList().stream().map(columnDTO -> sqlExecute.getTempColumnSuffix() + columnDTO.getColumnName()).collect(Collectors.toList()));
 
         // 加密策略写入 zookeeper 前置插件模式才需要 当前仅ck需要
-        writeConfigToZookeeper(databaseDTO,operateType);
+        writeConfigToZookeeper(databaseDTO, operateType);
     }
 
     //行式新增临时字段
@@ -300,7 +180,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
 
         if ("Mysql57".equals(databaseDTO.getDatabaseType()) || "PostgresSQL".equals(databaseDTO.getDatabaseType())) {
             //开一个线程 写加密策略到zk
-            Thread writeZkthread = new UpdateZookeeperTask(databaseDTO,operateType);
+            Thread writeZkthread = new UpdateZookeeperTask(databaseDTO, operateType);
             writeZkthread.start();
             writeZkthread.join();
         } else {
