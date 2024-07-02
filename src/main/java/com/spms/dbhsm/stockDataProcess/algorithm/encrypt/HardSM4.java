@@ -69,7 +69,7 @@ public class HardSM4 implements AlgorithmSPI {
 
     @Override
     public String getType() {
-        return "HardSM4";
+        return "TestAlg1";
     }
 
     //private=====

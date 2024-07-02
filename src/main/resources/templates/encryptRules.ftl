@@ -1,10 +1,10 @@
 columns:
 <#list columns as column>
- ${column.name}:
-  cipher:
-   encryptorName: ${column.cipher.encryptorName}
-   name: ${column.cipher.name}
-  name: ${column.name}
+  ${column.name}:
+    cipher:
+      encryptorName: ${column.cipher.encryptorName}
+      name: ${column.cipher.name}
+    name: ${column.name}
 </#list>
 name: ${tableName}
 

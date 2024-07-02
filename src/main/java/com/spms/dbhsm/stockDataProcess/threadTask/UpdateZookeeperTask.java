@@ -44,7 +44,17 @@ public class UpdateZookeeperTask extends Thread {
     private void deleteConfig() {
         databaseDTO.getTableDTOList().get(0).getColumnDTOList().forEach(col -> {
             //删除加密器
+            String path = PathEnum.ENCRYPTOR.getValue()
+                    .replace("${namespace}", databaseDTO.getDatabaseIp() + ":" + databaseDTO.getDatabasePort())
+                    .replace("${database}", databaseDTO.getDatabaseName())
+                    .replace("${encryptorName}", col.getColumnName() + "_encryptor");
+            ZookeeperUtils.deleteNode(path);
             //删除加密规则
+            path = PathEnum.RULE.getValue()
+                    .replace("${namespace}", databaseDTO.getDatabaseIp() + ":" + databaseDTO.getDatabasePort())
+                    .replace("${database}", databaseDTO.getDatabaseName())
+                    .replace("${tableName}", databaseDTO.getTableDTOList().get(0).getTableName());
+            ZookeeperUtils.deleteNode(path);
         });
     }
 
@@ -60,7 +70,7 @@ public class UpdateZookeeperTask extends Thread {
     private void addEncryptRules(ColumnDTO col) {
         //基础路径
         String path = PathEnum.RULE.getValue()
-                .replace("${namespace}", databaseDTO.getDatabaseIp() + ":" + databaseDTO.getDatabasePort() + "/" + databaseDTO.getDatabaseName())
+                .replace("${namespace}", databaseDTO.getDatabaseIp() + ":" + databaseDTO.getDatabasePort())
                 .replace("${database}", databaseDTO.getDatabaseName())
                 .replace("${tableName}", databaseDTO.getTableDTOList().get(0).getTableName());
 
@@ -121,7 +131,7 @@ public class UpdateZookeeperTask extends Thread {
     private void addEncryptor(ColumnDTO col) {
         //基础路径
         String path = PathEnum.ENCRYPTOR.getValue()
-                .replace("${namespace}", databaseDTO.getDatabaseIp() + ":" + databaseDTO.getDatabasePort() + "/" + databaseDTO.getDatabaseName())
+                .replace("${namespace}", databaseDTO.getDatabaseIp() + ":" + databaseDTO.getDatabasePort())
                 .replace("${database}", databaseDTO.getDatabaseName())
                 .replace("${encryptorName}", col.getColumnName() + "_encryptor");
 

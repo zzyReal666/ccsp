@@ -1,6 +1,7 @@
 package com.spms.common.zookeeperUtils;
 
 import io.netty.util.internal.StringUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryOneTime;
@@ -11,6 +12,7 @@ import org.apache.zookeeper.data.Stat;
  * @description zookeeper工具
  * @since 2024/5/20 14:50
  */
+@Slf4j
 public class ZookeeperUtils {
 
     public static CuratorFramework client;
@@ -53,14 +55,6 @@ public class ZookeeperUtils {
 
     //endregion
 
-
-    /**
-     * 更新 节点
-     *
-     * @param data     最新的数据
-     * @param nodePath 要更新的路径
-     * @param url      zookeeper地址
-     */
     public static void updateNode(String data, String nodePath, String url) {
         if (client == null) {
             init(url);
@@ -78,16 +72,16 @@ public class ZookeeperUtils {
     }
 
     public static void updateNode(String data, String nodePath) {
+        log.info("updateNode nodePath:{}, data:{}", nodePath, data);
         updateNode(data, nodePath, defaultUrl);
     }
 
 
-    /**
-     * 删除节点
-     *
-     * @param nodePath 要删除的节点路径
-     * @param url      zookeeper地址
-     */
+    public static void deleteNode(String nodePath) {
+        log.info("deleteNode nodePath:{}", nodePath);
+        deleteNode(nodePath, defaultUrl);
+    }
+
     public static void deleteNode(String nodePath, String url) {
         try {
             if (client == null) {
