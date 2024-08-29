@@ -564,9 +564,8 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
         if (null == dbhsmDbInstance) {
             return AjaxResult.error("实例信息错误！");
         }
-        //创建启动代理所需要的文件夹 conf ext-lib，以及内部文件
+        //执行脚本
 
-        //启动代理
 
 
         return null;

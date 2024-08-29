@@ -21,7 +21,7 @@ public class ShellScriptExecutorTest {
         String parameter = "World";
 
         // 执行脚本
-        ShellScriptExecutor.ExecutionResult result = ShellScriptExecutor.executeScript(SCRIPT_PATH, parameter);
+        ShellScriptExecutor.ExecutionResult result = ShellScriptExecutor.executeScript(SCRIPT_PATH, 30, parameter);
 
         // 验证脚本执行结果
         assertEquals(0, result.getExitCode(), "The script should exit with code 0.");
@@ -34,18 +34,17 @@ public class ShellScriptExecutorTest {
         String invalidScriptPath = "/invalid/path/to/script.sh";
 
         // 执行脚本
-        ShellScriptExecutor.ExecutionResult result = ShellScriptExecutor.executeScript(invalidScriptPath);
+        ShellScriptExecutor.ExecutionResult result = ShellScriptExecutor.executeScript(invalidScriptPath, 30);
 
         // 验证脚本执行结果
         assertNotEquals(0, result.getExitCode(), "The script should not exit with code 0 for an invalid path.");
-        assertTrue(result.getOutput().contains("No such file or directory") || result.getOutput().contains("error"),
-                "The output should indicate that the script was not found.");
+        assertTrue(result.getOutput().contains("No such file or directory") || result.getOutput().contains("error"), "The output should indicate that the script was not found.");
     }
 
     @Test
     public void testExecuteScriptWithoutArguments() {
         // 执行不需要参数的脚本
-        ShellScriptExecutor.ExecutionResult result = ShellScriptExecutor.executeScript(SCRIPT_PATH);
+        ShellScriptExecutor.ExecutionResult result = ShellScriptExecutor.executeScript(SCRIPT_PATH, 30);
 
         // 验证脚本执行结果
         assertEquals(0, result.getExitCode(), "The script should exit with code 0 when no arguments are provided.");
