@@ -142,6 +142,7 @@ public class DbhsmDbInstanceController extends BaseController {
     public AjaxResult2<Boolean> connectionTest(@RequestBody DbhsmDbInstance instance) {
         return dbhsmDbInstanceService.connectionTest(instance);
     }
+
     @ApiOperation(value = "测试加密")
     @GetMapping("/connectionEncrypt")
     public AjaxResult2<Boolean> connectionEncrypt(Long id) {
@@ -152,7 +153,7 @@ public class DbhsmDbInstanceController extends BaseController {
     @ApiOperation(value = "开启代理")
     @GetMapping("/openProxy")
     public AjaxResult openProxy(Long id) {
-        if(null == id){
+        if (null == id) {
             return AjaxResult.error("id不能为空");
         }
         try {
@@ -166,7 +167,7 @@ public class DbhsmDbInstanceController extends BaseController {
     @ApiOperation(value = "测试连接代理")
     @GetMapping("/proxyTest")
     public AjaxResult proxyTest(Long id) {
-        if(null == id){
+        if (null == id) {
             return AjaxResult.error("id不能为空");
         }
         try {
@@ -177,3 +178,4 @@ public class DbhsmDbInstanceController extends BaseController {
         }
 
     }
+}
