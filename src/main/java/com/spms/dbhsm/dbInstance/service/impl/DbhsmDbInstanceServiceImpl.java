@@ -561,6 +561,14 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
     @Override
     public AjaxResult openProxy(Long id) {
         DbhsmDbInstance dbhsmDbInstance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
+        if (null == dbhsmDbInstance) {
+            return AjaxResult.error("实例信息错误！");
+        }
+        //创建启动代理所需要的文件夹 conf ext-lib，以及内部文件
+
+        //启动代理
+
+
         return null;
     }
 

@@ -155,7 +155,12 @@ public class DbhsmDbInstanceController extends BaseController {
         if(null == id){
             return AjaxResult.error("id不能为空");
         }
-        return dbhsmDbInstanceService.openProxy(id);
+        try {
+            return dbhsmDbInstanceService.openProxy(id);
+        } catch (Exception e) {
+            log.error("开启代理失败！数据库实例id:{}", id, e);
+            return AjaxResult.error("未知错误，请联系管理员");
+        }
     }
 
     @ApiOperation(value = "测试连接代理")
@@ -164,6 +169,12 @@ public class DbhsmDbInstanceController extends BaseController {
         if(null == id){
             return AjaxResult.error("id不能为空");
         }
-        return dbhsmDbInstanceService.proxyTest(id);
+        try {
+            return dbhsmDbInstanceService.proxyTest(id);
+        } catch (Exception e) {
+            log.error("测试连接代理失败！数据库实例id:{}", id, e);
+            return AjaxResult.error("未知错误，请联系管理员");
+        }
+
     }
 }
