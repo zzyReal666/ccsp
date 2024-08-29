@@ -11,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 
-import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -103,7 +102,7 @@ public final class DBUtil {
 
             admin.close();
             connection.close();
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error("查询Hbase表列表Error:{}", e.getMessage());
         }
         return list;
@@ -139,32 +138,41 @@ public final class DBUtil {
         List<Map<String, String>> colList = new ArrayList<>();
         PreparedStatement ps = null;
         ResultSet rs = null;
-        ResultSetMetaData rsmd = null;
         try {
             if (DbConstants.DB_TYPE_ORACLE.equalsIgnoreCase(dbType)) {
-                ps = conn.prepareStatement("select * from " + tableName.toUpperCase() + " limit 1");
+                ps = conn.prepareStatement("SELECT data_type || CASE WHEN data_type IN ('VARCHAR2', 'CHAR', 'NUMBER') THEN '(' || data_length || ')' ELSE '' END AS \"data_type\",column_name FROM all_tab_columns WHERE table_name = '" + tableName.toUpperCase() + "'");
                 rs = ps.executeQuery();
-                rsmd = rs.getMetaData();
-                for (int i = 1; i <= rsmd.getColumnCount(); i++) {
+                Map<String, String> columnPAMKey = getColumnPAMKey(conn, tableName, dbType);
+                while (rs.next()) {
                     Map<String, String> colMap = new HashMap<>();
-                    colMap.put(DbConstants.DB_COLUMN_NAME, rsmd.getColumnName(i));
-                    colMap.put("columnType", rsmd.getColumnTypeName(i));
+                    String columName = rs.getString("column_name");
+                    colMap.put(DbConstants.DB_COLUMN_NAME, columName);
+                    colMap.put(DbConstants.DB_COLUMN_TYPE, rs.getString("data_type"));
+                    //主键信息
+                    if (!columnPAMKey.isEmpty() && columnPAMKey.containsKey(columName)) {
+                        colMap.put(DbConstants.DB_COLUMN_KEY, columnPAMKey.get(columName));
+                    }
                     colList.add(colMap);
                 }
             } else if (DbConstants.DB_TYPE_SQLSERVER.equalsIgnoreCase(dbType)) {
-                Statement stmt = null;
+                Statement stmt;
                 try {
                     String[] split = tableName.split(":");
                     stmt = conn.createStatement();
                     //需要加 schema条件 不然有重复字段
                     String sql = "select column_name,data_type,CHARACTER_MAXIMUM_LENGTH from information_schema.columns where TABLE_SCHEMA= '" + split[0].toUpperCase() + "' and table_name = '" + split[1].toUpperCase() + "'";
                     ResultSet resultSet = stmt.executeQuery(sql);
-                    log.info("执行SQL："+sql);
+                    Map<String, String> columnPAMKey = getColumnPAMKey(conn, split[1], dbType);
                     while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
                         Map<String, String> colMap = new HashMap<>();
-                        colMap.put(DbConstants.DB_COLUMN_NAME, resultSet.getString("column_name"));
+                        String columName = resultSet.getString("column_name");
+                        colMap.put(DbConstants.DB_COLUMN_NAME, columName);
                         //类型长度为空不进行拼装
-                        colMap.put("columnType", resultSet.getString("data_type") + (StringUtils.isBlank(resultSet.getString("CHARACTER_MAXIMUM_LENGTH")) ? "" :"(" + resultSet.getString("CHARACTER_MAXIMUM_LENGTH") + ")") );
+                        colMap.put(DbConstants.DB_COLUMN_TYPE, resultSet.getString("data_type") + (StringUtils.isBlank(resultSet.getString("CHARACTER_MAXIMUM_LENGTH")) ? "" : "(" + resultSet.getString("CHARACTER_MAXIMUM_LENGTH") + ")"));
+                        //主键信息
+                        if (!columnPAMKey.isEmpty() && columnPAMKey.containsKey(columName)) {
+                            colMap.put(DbConstants.DB_COLUMN_KEY, columnPAMKey.get(columName));
+                        }
                         colList.add(colMap);
                     }
                     resultSet.close();
@@ -181,8 +189,8 @@ public final class DBUtil {
                     while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
                         Map<String, String> colMap = new HashMap<>();
                         colMap.put(DbConstants.DB_COLUMN_NAME, resultSet.getString("Field"));
-                        colMap.put("columnType", resultSet.getString("Type"));
-                        colMap.put("Key", resultSet.getString("Key"));
+                        colMap.put(DbConstants.DB_COLUMN_TYPE, resultSet.getString("Type"));
+                        colMap.put(DbConstants.DB_COLUMN_KEY, resultSet.getString(DbConstants.DB_COLUMN_KEY));
                         colList.add(colMap);
                     }
                     resultSet.close();
@@ -192,21 +200,18 @@ public final class DBUtil {
                     e.printStackTrace();
                 }
             } else if (DbConstants.DB_TYPE_POSTGRESQL.equalsIgnoreCase(dbType)) {
-                Statement stmt = null;
+                Statement stmt;
                 try {
                     stmt = conn.createStatement();
-//                    ResultSet resultSet = stmt.executeQuery("SELECT format_type(a.atttypid,a.atttypmod) as type,a.attname as name " +
-//                                    "FROM pg_class as c,pg_attribute as a where c.relname = '" + tableName + "' and a.attrelid = c.oid and a.attnum>0");
                     //获取
-                    ResultSet resultSet = stmt.executeQuery("SELECT data_type as type, column_name as name ,character_maximum_length as length , \n" +
-                            "       (SELECT constraint_type FROM information_schema.table_constraints WHERE constraint_type ='PRIMARY KEY' AND table_name = table_name and constraint_name = column_name) as Key\n" +
-                            "FROM information_schema.columns WHERE table_name = '"+tableName+"' ORDER BY ordinal_position;");
+                    ResultSet resultSet = stmt.executeQuery("SELECT data_type as type, column_name as name ,character_maximum_length as length , (SELECT constraint_type FROM information_schema.table_constraints WHERE constraint_type ='PRIMARY KEY' AND table_name = table_name and constraint_name = column_name) as Key\n" +
+                            "FROM information_schema.columns WHERE table_name = '" + tableName + "' ORDER BY ordinal_position;");
                     while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
                         Map<String, String> colMap = new HashMap<>();
                         colMap.put(DbConstants.DB_COLUMN_NAME, resultSet.getString("name"));
                         //类型长度为空不进行拼装
-                        colMap.put("columnType", resultSet.getString("type") + (StringUtils.isBlank(resultSet.getString("length")) ? "" :"(" + resultSet.getString("length") + ")"));
-                        colMap.put("Key", resultSet.getString("Key"));
+                        colMap.put(DbConstants.DB_COLUMN_TYPE, resultSet.getString("type") + (StringUtils.isBlank(resultSet.getString("length")) ? "" : "(" + resultSet.getString("length") + ")"));
+                        colMap.put(DbConstants.DB_COLUMN_KEY, resultSet.getString(DbConstants.DB_COLUMN_KEY));
                         colList.add(colMap);
                     }
 
@@ -217,26 +222,37 @@ public final class DBUtil {
                     e.printStackTrace();
                 }
             } else if (DbConstants.DB_TYPE_DM.equalsIgnoreCase(dbType)) {
-                ps = conn.prepareStatement("select * from " + tableName + " limit 1");
+                ps = conn.prepareStatement("SELECT column_name,data_type || CASE WHEN data_type !='TEXT' THEN '(' || data_length || ')' ELSE '' END AS data_type FROM USER_TAB_COLUMNS WHERE TABLE_NAME = '" + tableName.toUpperCase() + "'");
                 rs = ps.executeQuery();
-                rsmd = rs.getMetaData();
-                for (int i = 1; i <= rsmd.getColumnCount(); i++) {
+                //获取主键信息
+                Map<String, String> columnPAMKey = getColumnPAMKey(conn, tableName, dbType);
+                while (rs.next()) {
                     Map<String, String> colMap = new HashMap<>();
-                    colMap.put(DbConstants.DB_COLUMN_NAME, rsmd.getColumnName(i));
-                    colMap.put("columnType", rsmd.getColumnTypeName(i));
+                    String columnName = rs.getString("column_name");
+                    colMap.put(DbConstants.DB_COLUMN_NAME, columnName);
+                    colMap.put(DbConstants.DB_COLUMN_TYPE, rs.getString("data_type"));
+                    //主键信息
+                    if (!columnPAMKey.isEmpty() && columnPAMKey.containsKey(columnName)) {
+                        colMap.put(DbConstants.DB_COLUMN_KEY, columnPAMKey.get(columnName));
+                    }
                     colList.add(colMap);
                 }
             } else if (DbConstants.DB_TYPE_KB.equalsIgnoreCase(dbType)) {
-                ps = conn.prepareStatement("SELECT column_name, data_type, \n" +
-                        "CASE WHEN (column_name = (SELECT a.attname AS pk_column_name\n" +
-                        "FROM pg_class t,pg_attribute a,pg_constraint c WHERE c.contype = 'p'AND c.conrelid = t.oid AND a.attrelid = t.oid AND a.attnum = ANY(c.conkey) AND t.relkind = 'r' AND t.relname = '" + tableName + "'))THEN  'PRI' ELSE  '' END  as key\n" +
-                        "FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" + tableName + "';");
+                String[] split = tableName.split(":");
+                //查询V8R3版本列信息
+                String sql = "SELECT column_name, CASE WHEN data_type = 'USER-DEFINED' THEN udt_name ELSE data_type END AS data_type FROM information_schema.columns WHERE table_name = '" + split[1] + "' AND table_schema='" + split[0] + "'";
+                ps = conn.prepareStatement(sql);
                 rs = ps.executeQuery();
+                //获取主键信息
+                Map<String, String> columnPAMKey = getColumnPAMKey(conn, tableName, dbType);
                 while (rs.next()) {
                     Map<String, String> colMap = new HashMap<>();
-                    colMap.put(DbConstants.DB_COLUMN_NAME, rs.getString("column_name"));
-                    colMap.put("columnType", rs.getString("data_type"));
-                    colMap.put("Key", rs.getString("Key"));
+                    String columnName = rs.getString("column_name");
+                    colMap.put(DbConstants.DB_COLUMN_NAME, columnName);
+                    colMap.put(DbConstants.DB_COLUMN_TYPE, rs.getString("data_type"));
+                    if (!columnPAMKey.isEmpty() && columnPAMKey.containsKey(columnName)) {
+                        colMap.put(DbConstants.DB_COLUMN_KEY, columnPAMKey.get(columnName));
+                    }
                     colList.add(colMap);
                 }
             } else if (DbConstants.DB_TYPE_CLICKHOUSE.equalsIgnoreCase(dbType)) {
@@ -246,8 +262,8 @@ public final class DBUtil {
                 while (rs.next()) {
                     Map<String, String> colMap = new HashMap<>();
                     colMap.put(DbConstants.DB_COLUMN_NAME, rs.getString("name"));
-                    colMap.put("columnType", rs.getString("type"));
-                    colMap.put("Key", rs.getString("Key"));
+                    colMap.put(DbConstants.DB_COLUMN_TYPE, rs.getString("type"));
+                    colMap.put(DbConstants.DB_COLUMN_KEY, rs.getString(DbConstants.DB_COLUMN_KEY));
                     colList.add(colMap);
                 }
             }
@@ -264,6 +280,74 @@ public final class DBUtil {
 
         }
         return colList;
+    }
+
+    /**
+     * 获取列的主键信息以及外键信息
+     *
+     * @return Map<列, 主键或外键>
+     */
+    public static Map<String, String> getColumnPAMKey(Connection conn, String table, String databaseType) {
+        Map<String, String> map = new HashMap<>();
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            switch (databaseType) {
+                case DbConstants.DB_TYPE_SQLSERVER:
+                    ps = conn.prepareStatement("SELECT c.COLUMN_NAME,tc.CONSTRAINT_TYPE as 'Key' FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE ccu ON tc.CONSTRAINT_NAME = ccu.CONSTRAINT_NAME JOIN INFORMATION_SCHEMA.COLUMNS c ON c.TABLE_NAME = ccu.TABLE_NAME AND c.COLUMN_NAME = ccu.COLUMN_NAME\n" +
+                            "WHERE tc.TABLE_NAME = '" + table + "' AND tc.CONSTRAINT_TYPE = 'PRIMARY KEY';\n");
+                    rs = ps.executeQuery();
+                    while (rs.next()) {
+                        if (StringUtils.isNotBlank(rs.getString("Key"))) {
+                            map.put(rs.getString("column_name"), rs.getString("Key"));
+                        }
+                    }
+                    break;
+                case DbConstants.DB_TYPE_ORACLE:
+                    ps = conn.prepareStatement("SELECT cols.column_name,CASE WHEN cons.CONSTRAINT_TYPE='P' then 'PRI' else 'MUL' END as Key FROM all_constraints cons JOIN all_cons_columns cols ON cons.constraint_name = cols.constraint_name WHERE cons.table_name = '" + table.toUpperCase() + "'");
+                    rs = ps.executeQuery();
+                    while (rs.next()) {
+                        if (StringUtils.isNotBlank(rs.getString("Key"))) {
+                            map.put(rs.getString("column_name"), rs.getString("Key"));
+                        }
+                    }
+                    break;
+                case DbConstants.DB_TYPE_DM:
+                    ps = conn.prepareStatement("SELECT b.column_name,CASE WHEN a.CONSTRAINT_TYPE='P' then 'PRI' else 'MUL' END as Key FROM USER_CONSTRAINTS a JOIN USER_CONS_COLUMNS b ON a.constraint_name = b.constraint_name WHERE b.table_name = '" + table.toUpperCase() + "'");
+                    rs = ps.executeQuery();
+                    while (rs.next()) {
+                        if (StringUtils.isNotBlank(rs.getString("Key"))) {
+                            map.put(rs.getString("column_name"), rs.getString("Key"));
+                        }
+                    }
+                    break;
+                case DbConstants.DB_TYPE_KB:
+                    String[] split = table.split(":");
+                    ps = conn.prepareStatement("SELECT distinct kcu.column_name, kcu.table_name, CASE WHEN tc.constraint_type='PRIMARY KEY' THEN 'PRI' ELSE 'MUL' END as Key FROM information_schema.key_column_usage kcu JOIN information_schema.table_constraints tc ON kcu.constraint_name = tc.constraint_name " +
+                            "WHERE tc.constraint_type in ('PRIMARY KEY','FOREIGN KEY')  and kcu.table_schema ='" + split[0] + "' and kcu.table_name ='" + split[1] + "'");
+                    rs = ps.executeQuery();
+                    while (rs.next()) {
+                        if (StringUtils.isNotBlank(rs.getString("Key"))) {
+                            map.put(rs.getString("column_name"), rs.getString("Key"));
+                        }
+                    }
+                    break;
+            }
+        } catch (Exception e) {
+            log.info("获取主键信息失败：{}", e.getMessage());
+        } finally {
+            try {
+                ps.close();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            try {
+                rs.close();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+        return map;
     }
 
     //获取用户表空间
@@ -355,3 +439,4 @@ public final class DBUtil {
         System.out.println(i);
     }
 }
+

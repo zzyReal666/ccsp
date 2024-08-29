@@ -105,11 +105,11 @@ public class    DbhsmSecretServiceServiceImpl implements IDbhsmSecretServiceServ
 
         //        校验sm2密钥是否存在
         Long secretKeyIndex = dbhsmSecretService.getSecretKeyIndex();
-        //根据密钥索引获取sm2密钥
-        R<HsmSm2SecretKey> hsmSm2SecretKeyR = remoteSecretKeyService.selectSm2SecretKeyInfo(Math.toIntExact(secretKeyIndex), DbConstants.SECRET_KEY_USAGE_ENC);
-        HsmSm2SecretKey sm2SecretKey = hsmSm2SecretKeyR.getData();
-        if (sm2SecretKey == null) {
-            throw new ZAYKException("获取SM2加密密钥异常，请检查sm2 "+ secretKeyIndex + "号加密密钥是否存在！");
+        R<List<Integer>> listR = remoteSecretKeyService.selectHsmSm2SecretKeyListByType(DbConstants.SECRET_KEY_USAGE_ENC);
+        if (null != listR && !CollectionUtils.isEmpty(listR.getData())) {
+            if (!listR.getData().contains(Math.toIntExact(secretKeyIndex))) {
+                throw new ZAYKException("获取SM2加密密钥异常，请检查sm2 " + secretKeyIndex + "号加密密钥是否存在！");
+            }
         }
         dbhsmSecretService.setCreateTime(DateUtils.getNowDate());
     if(DbConstants.SECRET_SERVICE_TYPE_KMIP.equals(dbhsmSecretService.getSecretServiceType())) {

@@ -25,6 +25,7 @@
         <result property="userCreateMode" column="user_create_mode"/>
         <result property="encLibapiPath" column="enc_libapi_path"/>
         <result property="plugMode" column="plug_mode"/>
+        <result property="proxyPort" column="proxy_port"/>
     </resultMap>
     <resultMap id="InstanceServerNameResultVO" type="com.spms.dbhsm.dbInstance.domain.VO.InstanceServerNameVO">
         <result column="id" property="id"/>
@@ -51,7 +52,8 @@
                enc_libapi_path,
                service_user,
                service_password,
-               plug_mode
+               plug_mode,
+               proxy_port
         from dbhsm_db_instance
     </sql>
 
@@ -142,6 +144,7 @@
             <if test="userCreateMode != null">user_create_mode,</if>
             <if test="encLibapiPath != null">enc_libapi_path,</if>
             <if test="plugMode != null">plug_mode,</if>
+            <if test="proxyPort != null">proxy_port,</if>
         </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="databaseCapitalName != null">#{databaseCapitalName},</if>
@@ -163,6 +166,7 @@
             <if test="userCreateMode != null">#{userCreateMode},</if>
             <if test="encLibapiPath != null">#{encLibapiPath},</if>
             <if test="plugMode != null">#{plugMode},</if>
+            <if test="proxyPort != null">#{proxyPort},</if>
         </trim>
     </insert>
 

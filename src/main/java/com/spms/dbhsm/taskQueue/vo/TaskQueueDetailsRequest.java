@@ -24,5 +24,8 @@ public class TaskQueueDetailsRequest {
     @ApiModelProperty(value = "状态", name = "status",example = "0:已配置 1:未配置")
     private String status;
 
+    @ApiModelProperty(value = "schema", name = "schema")
+    private String schema;
+
 
 }

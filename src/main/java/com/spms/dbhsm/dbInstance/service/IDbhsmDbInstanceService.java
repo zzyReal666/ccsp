@@ -80,9 +80,6 @@ public interface IDbhsmDbInstanceService {
     public int getPwdPolicyToDM(Long id);
 
     public int getPwdMinLenToDM(Long id);
-
-    AjaxResult2<Boolean> connectionTest(Long id);
-
     /**
      * 开启代理
      *
@@ -98,4 +95,5 @@ public interface IDbhsmDbInstanceService {
      * @return AjaxResult success ｜ error（错误原因）
      */
     AjaxResult proxyTest(Long id);
+    AjaxResult2<Boolean> connectionTest(DbhsmDbInstance instance);
 }

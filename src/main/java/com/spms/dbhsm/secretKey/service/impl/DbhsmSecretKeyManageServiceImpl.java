@@ -116,11 +116,12 @@ public class DbhsmSecretKeyManageServiceImpl implements IDbhsmSecretKeyManageSer
                 throw new ZAYKException("密码服务不存在！");
             }
             //根据密钥索引获取sm2密钥
-            Long secretKeyIndex = serviceList.get(0).getSecretKeyIndex();
-            R<HsmSm2SecretKey> hsmSm2SecretKeyR = remoteSecretKeyService.selectSm2SecretKeyInfo(Math.toIntExact(secretKeyIndex), DbConstants.SECRET_KEY_USAGE_ENC);
-            HsmSm2SecretKey sm2SecretKey = hsmSm2SecretKeyR.getData();
-            if (sm2SecretKey == null) {
-                throw new ZAYKException("获取SM2加密密钥异常，请检查索引号为" + secretKeyIndex + "的SM2加密密钥是否存在！");
+            Long secretKeyIndex = dbhsmSecretKeyManage.getSecretKeyIndex();
+            R<List<Integer>> listR = remoteSecretKeyService.selectHsmSm2SecretKeyListByType(DbConstants.SECRET_KEY_USAGE_ENC);
+            if (null != listR && !CollectionUtils.isEmpty(listR.getData())) {
+                if (!listR.getData().contains(Math.toIntExact(secretKeyIndex))) {
+                    throw new ZAYKException("获取SM2加密密钥异常，请检查sm2 " + secretKeyIndex + "号加密密钥是否存在！");
+                }
             }
         }
         //密钥类型为对称密钥

@@ -35,6 +35,9 @@ public class TaskQueueInsertRequest {
     @ApiModelProperty(name = "tableId",value = "表ID",notes = "新增解密队列使用")
     private String tableId;
 
+    @ApiModelProperty(name = "userName", value = "用户名称")
+    private String userName;
+
     @ApiModelProperty(name = "encryptedLists", value = "加密列数据")
     private List<EncryptColumns> encryptedLists;
 

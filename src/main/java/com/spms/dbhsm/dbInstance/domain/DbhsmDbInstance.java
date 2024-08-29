@@ -2,6 +2,8 @@ package com.spms.dbhsm.dbInstance.domain;
 
 import com.ccsp.common.core.annotation.Excel;
 import com.ccsp.common.core.web.domain.BaseEntity;
+import io.swagger.annotations.ApiModelProperty;
+import io.swagger.models.auth.In;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
@@ -95,7 +97,8 @@ public class DbhsmDbInstance extends BaseEntity
     @Excel(name = "用户创建模式：0：创建CDB容器中的公共用户 1：创建无容器数据库用户")
     private Integer userCreateMode;
 
-
+    @ApiModelProperty(name = "proxyPort",value = "代理端口")
+    private Integer proxyPort;
 
     public void setId(Long id)
     {
@@ -254,6 +257,14 @@ public class DbhsmDbInstance extends BaseEntity
 
     public void setPlugMode(Integer plugMode) {
         this.plugMode = plugMode;
+    }
+
+    public Integer getProxyPort() {
+        return proxyPort;
+    }
+
+    public void setProxyPort(Integer proxyPort) {
+        this.proxyPort = proxyPort;
     }
 
     @Override

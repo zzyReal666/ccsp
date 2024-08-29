@@ -1,9 +1,7 @@
 package com.spms.dbhsm.taskQueue.vo;
 
-import com.ccsp.common.core.web.domain.PageRequest;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
-import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * <p> description: TODO the method is used to </p>
