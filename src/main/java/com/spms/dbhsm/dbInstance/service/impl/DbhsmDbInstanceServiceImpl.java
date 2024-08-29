@@ -12,6 +12,7 @@ import com.spms.common.constant.DbConstants;
 import com.spms.common.dbTool.FunctionUtil;
 import com.spms.common.pool.hikariPool.DbConnectionPool;
 import com.spms.common.pool.hikariPool.DbConnectionPoolFactory;
+import com.spms.common.shell.ShellScriptExecutor;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstancePoolKeyDTO;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
@@ -29,11 +30,15 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
 import javax.annotation.PostConstruct;
+import java.net.URL;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -274,7 +279,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
             }
         }
         DbhsmDbInstance instanceById = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(dbhsmDbInstance.getId());
-        if (null != instanceById.getProxyPort() &&!instanceById.getProxyPort().equals(dbhsmDbInstance.getProxyPort())) {
+        if (null != instanceById.getProxyPort() && !instanceById.getProxyPort().equals(dbhsmDbInstance.getProxyPort())) {
             //修改端口
             addProxyPort(instanceById.getProxyPort(), dbhsmDbInstance.getProxyPort());
         }
@@ -353,11 +358,11 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
                 DbConnectionPoolFactory.getInstance().unbind(DbConnectionPoolFactory.instanceConventKey(instanceById));
             } catch (Exception e) {
                 e.printStackTrace();
-                log.error("删除数据库失败失败：{}",e.getMessage());
+                log.error("删除数据库失败失败：{}", e.getMessage());
             }
         }
         //删除端口
-        log.info("需要删掉的端口信息：{}",ports.stream().toString());
+        log.info("需要删掉的端口信息：{}", ports.stream().toString());
         closePortOfDelete(ports);
         return !CollectionUtils.isEmpty(isUsedInstances) ? AjaxResult.error("实例：" + StringUtils.join(isUsedInstances, ",") + "已从管理端创建过用户，无法删除！") : AjaxResult.success();
     }
@@ -616,10 +621,18 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
             return AjaxResult.error("实例信息错误！");
         }
         //执行脚本
-
-
-
-        return null;
+        URL resource = getClass().getClassLoader().getResource("open_proxy.sh");
+        if (null == resource) {
+            return AjaxResult.error("脚本文件不存在！");
+        }
+        ShellScriptExecutor.ExecutionResult executionResult = ShellScriptExecutor.executeScript(resource.getPath(), 180);
+        if (executionResult.getExitCode() != 0) {
+            log.error("执行脚本失败：{}", executionResult.getOutput());
+            return AjaxResult.error("执行脚本失败：" + executionResult.getOutput());
+        } else {
+            log.info("执行脚本成功：{}", executionResult.getOutput());
+            return AjaxResult.success();
+        }
     }
 
     @Override

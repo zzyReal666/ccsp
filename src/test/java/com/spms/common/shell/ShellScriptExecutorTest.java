@@ -3,6 +3,7 @@ package com.spms.common.shell;
 
 import org.junit.Test;
 
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -13,15 +14,24 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ShellScriptExecutorTest {
 
     // 定义脚本路径
-    private static final String SCRIPT_PATH = "/Users/zhangzhongyuan/IdeaProjects/ccsp/ccsp-modules/spms-dbhsm-manager/src/test/resources/test_script.sh";  // 替换为实际路径
+    private static final String SCRIPT_PATH = "test_script.sh";  // 替换为实际路径
+
+
 
     @Test
     public void testExecuteScriptSuccess() {
+        // 获取脚本路径（从 resources 目录中）
+        URL resource = getClass().getClassLoader().getResource("test_script.sh");
+        if (resource == null) {
+            throw new IllegalArgumentException("Script file not found in resources");
+        }
+        String scriptPath = resource.getPath();
+
         // 准备测试参数
         String parameter = "World";
 
         // 执行脚本
-        ShellScriptExecutor.ExecutionResult result = ShellScriptExecutor.executeScript(SCRIPT_PATH, 30, parameter);
+        ShellScriptExecutor.ExecutionResult result = ShellScriptExecutor.executeScript(scriptPath, 30, parameter);
 
         // 验证脚本执行结果
         assertEquals(0, result.getExitCode(), "The script should exit with code 0.");
