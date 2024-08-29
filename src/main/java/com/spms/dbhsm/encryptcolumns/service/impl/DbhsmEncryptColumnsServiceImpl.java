@@ -765,7 +765,7 @@ public class DbhsmEncryptColumnsServiceImpl implements IDbhsmEncryptColumnsServi
                 }
 
                 //如果是前端插件模式手动挂载用户
-                if (DbConstants.CREATED_ON_WEB_SEDE.equals(instance.getPlugMode())) {
+                if (!DbConstants.BE_PLUG.equals(instance.getPlugMode())) {
                     user = new DbhsmDbUser();
                     user.setId(0L);
                     user.setIsSelfBuilt(0);

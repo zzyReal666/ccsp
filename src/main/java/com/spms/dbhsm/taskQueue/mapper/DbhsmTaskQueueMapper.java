@@ -1,7 +1,6 @@
 package com.spms.dbhsm.taskQueue.mapper;
 
 import com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns;
-import com.spms.dbhsm.encryptcolumns.vo.EncryptColumns;
 import com.spms.dbhsm.taskQueue.domain.DbhsmTaskQueue;
 import com.spms.dbhsm.taskQueue.vo.TaskQueueListRequest;
 import com.spms.dbhsm.taskQueue.vo.TaskQueueListResponse;

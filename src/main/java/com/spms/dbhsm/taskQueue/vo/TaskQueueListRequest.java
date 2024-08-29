@@ -1,6 +1,5 @@
 package com.spms.dbhsm.taskQueue.vo;
 
-import com.ccsp.common.core.web.domain.BaseEntity;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
@@ -28,4 +27,7 @@ public class TaskQueueListRequest {
     private String status;
 
     private String taskMode;
+
+    //租户模式
+    private String createBy;
 }

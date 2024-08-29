@@ -81,5 +81,5 @@ public interface IDbhsmDbInstanceService
     public int getPwdPolicyToDM(Long id);
     public int getPwdMinLenToDM(Long id);
 
-    AjaxResult2<Boolean> connectionTest(Long id);
+    AjaxResult2<Boolean> connectionTest(DbhsmDbInstance instance);
 }

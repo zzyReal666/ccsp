@@ -125,7 +125,8 @@ public class DbConstants {
     public static final String DB_TYPE_HB = "8";
     public static final String DB_TYPE_HBASE_DESC = "Hbase";
     public static final String DB_COLUMN_NAME = "columnName";
-
+    public static final String DB_COLUMN_TYPE = "columnType";
+    public static final String DB_COLUMN_KEY = "Key";
     /**
      * 加密状态  1未加密 2已加密 3加密中
      */

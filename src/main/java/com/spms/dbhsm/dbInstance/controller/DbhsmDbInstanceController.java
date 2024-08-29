@@ -138,14 +138,25 @@ public class DbhsmDbInstanceController extends BaseController {
     }
 
     @ApiOperation(value = "测试连接")
-    @GetMapping("/connectionTest")
-    public AjaxResult2<Boolean> connectionTest(Long id) {
-        return dbhsmDbInstanceService.connectionTest(id);
+    @PostMapping("/connectionTest")
+    public AjaxResult2<Boolean> connectionTest(@RequestBody DbhsmDbInstance instance) {
+        return dbhsmDbInstanceService.connectionTest(instance);
     }
-
     @ApiOperation(value = "测试加密")
     @GetMapping("/connectionEncrypt")
     public AjaxResult2<Boolean> connectionEncrypt(Long id) {
+        return AjaxResult2.success(true);
+    }
+
+    @ApiOperation(value = "打开代理")
+    @GetMapping("/openProxy")
+    public AjaxResult2<Boolean> openProxy(Long id){
+        return AjaxResult2.success(true);
+    }
+
+    @ApiOperation(value = "测试代理连接")
+    @GetMapping("/testProxyConn")
+    public AjaxResult2<Boolean> testProxyConn(Long id){
         return AjaxResult2.success(true);
     }
 }

@@ -1,13 +1,16 @@
 package com.spms.dbhsm.dbInstance.service.impl;
 
+import cn.hutool.core.util.RuntimeUtil;
 import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.DateUtils;
 import com.ccsp.common.core.utils.StringUtils;
+import com.ccsp.common.core.utils.bean.BeanConvertUtils;
 import com.ccsp.common.core.web.domain.AjaxResult;
 import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.spms.common.SelectOption;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.dbTool.FunctionUtil;
+import com.spms.common.pool.hikariPool.DbConnectionPool;
 import com.spms.common.pool.hikariPool.DbConnectionPoolFactory;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstancePoolKeyDTO;
@@ -26,11 +29,11 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
 import javax.annotation.PostConstruct;
-import java.sql.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -157,7 +160,6 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
     @Transactional(rollbackFor = Exception.class)
     public int insertDbhsmDbInstance(DbhsmDbInstance dbhsmDbInstance) throws ZAYKException, SQLException {
         int i = 0;
-        CallableStatement cstmt = null;
         //数据类型为oracle
         if (DbConstants.DB_TYPE_ORACLE.equals(dbhsmDbInstance.getDatabaseType())) {
             //数据库实例唯一性判断
@@ -178,20 +180,52 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
         BeanUtils.copyProperties(dbhsmDbInstance, dbInstanceGetConnDTO);
         DbConnectionPoolFactory.buildDataSourcePool(dbInstanceGetConnDTO);
         DbConnectionPoolFactory.queryPool();
-        if (DbConstants.DB_TYPE_DM.equals(dbhsmDbInstance.getDatabaseType())) {
-            Connection connection = DbConnectionPoolFactory.getInstance().getConnection(dbhsmDbInstance);
-            try {
-                cstmt = connection.prepareCall("{call SP_SET_PARA_STRING_VALUE(2,'COMM_ENCRYPT_NAME','DES_OFB');}");
-                cstmt.execute();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            } finally {
-                cstmt.close();
-                connection.close();
-            }
-        }
+
+        //代理端口
+        Integer proxyPort = dbhsmDbInstance.getProxyPort();
+        addProxyPort(proxyPort, proxyPort);
+
         return i;
     }
+
+    public static void addProxyPort(int port, int newProxyPort) {
+        String firewallStatus = RuntimeUtil.execForStr("firewall-cmd --state");
+        if (firewallStatus.contains("not running")) {
+            return;
+        }
+        String execForStr = RuntimeUtil.execForStr("firewall-cmd --query-port=" + newProxyPort + "/tcp");
+        if (port != newProxyPort) {
+            if (execForStr.contains("no")) {
+                //开通端口号
+                RuntimeUtil.execForStr("firewall-cmd --permanent --remove-port=" + port + "/tcp");
+                RuntimeUtil.execForStr("firewall-cmd --zone=public --add-port=" + newProxyPort + "/tcp --permanent");
+                RuntimeUtil.execForStr("firewall-cmd --reload");
+            }
+            log.info("Nginx Firewall Port Add Successful! ");
+
+        } else {
+            if (execForStr.contains("no")) {
+                RuntimeUtil.execForStr("firewall-cmd --zone=public --add-port=" + newProxyPort + "/tcp --permanent");
+                RuntimeUtil.execForStr("firewall-cmd --reload");
+            }
+            log.info("ServerPortUtil.openPortOfUpdate()=============> oldPort：[" + port + "], latestPort：[" + newProxyPort + "]");
+        }
+    }
+
+    public static void closePortOfDelete(List<String> ports) {
+        // 对比端口是否开放
+        if (!CollectionUtils.isEmpty(ports)) {
+            String firewallStatus = RuntimeUtil.execForStr("firewall-cmd --state");
+            if (!firewallStatus.contains("not running")) {
+                ports.stream().distinct().forEach((port) -> RuntimeUtil.execForStr("firewall-cmd --permanent --remove-port=" + port + "/tcp"));
+                RuntimeUtil.execForStr("firewall-cmd --reload");
+                log.info("Nginx Firewall Port Close Successful! ");
+            } else {
+                log.info("ServerPortUtil.closePortOfDelete()=============> 防火墙未启动");
+            }
+        }
+    }
+
 
     public String checkDBOracleInstanceUnique(DbhsmDbInstance dbhsmDbInstance) {
         DbhsmDbInstance instance = new DbhsmDbInstance();
@@ -240,6 +274,11 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
             }
         }
         DbhsmDbInstance instanceById = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(dbhsmDbInstance.getId());
+        if (null != instanceById.getProxyPort() &&!instanceById.getProxyPort().equals(dbhsmDbInstance.getProxyPort())) {
+            //修改端口
+            addProxyPort(instanceById.getProxyPort(), dbhsmDbInstance.getProxyPort());
+        }
+
         dbhsmDbInstance.setUpdateTime(DateUtils.getNowDate());
         int i = dbhsmDbInstanceMapper.updateDbhsmDbInstance(dbhsmDbInstance);
         //如果创建连接池需要的数据数据未做修改，不需要重新建链接，否则需要在修改时先销毁之前的池，再生成新连接池
@@ -297,6 +336,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
     public AjaxResult deleteDbhsmDbInstanceByIds(Long[] ids) {
         int i = 0;
         List<String> isUsedInstances = new ArrayList<String>();
+        List<String> ports = new ArrayList<>();
         for (Long id : ids) {
             //删除之前先销毁之前的池
             DbhsmDbInstance instanceById = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
@@ -307,15 +347,19 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
             }
             i = dbhsmDbInstanceMapper.deleteDbhsmDbInstanceById(id);
             try {
-                //删除加解密函数
-                delEncDecFunction(instanceById);
+                //添加端口信息，统一删除
+                ports.add(instanceById.getProxyPort().toString());
                 //删除连接池
                 DbConnectionPoolFactory.getInstance().unbind(DbConnectionPoolFactory.instanceConventKey(instanceById));
             } catch (Exception e) {
                 e.printStackTrace();
+                log.error("删除数据库失败失败：{}",e.getMessage());
             }
         }
-        return isUsedInstances.size() > 0 ? AjaxResult.error("实例：" + StringUtils.join(isUsedInstances, ",") + "已从管理端创建过用户，无法删除！") : AjaxResult.success();
+        //删除端口
+        log.info("需要删掉的端口信息：{}",ports.stream().toString());
+        closePortOfDelete(ports);
+        return !CollectionUtils.isEmpty(isUsedInstances) ? AjaxResult.error("实例：" + StringUtils.join(isUsedInstances, ",") + "已从管理端创建过用户，无法删除！") : AjaxResult.success();
     }
 
     private void delEncDecFunction(DbhsmDbInstance instanceById) {
@@ -539,21 +583,28 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
 
 
     @Override
-    public AjaxResult2<Boolean> connectionTest(Long id) {
-        DbhsmDbInstance dbhsmDbInstance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
-        if (null == dbhsmDbInstance) {
-            return AjaxResult2.error("实例信息错误！");
+    public AjaxResult2<Boolean> connectionTest(DbhsmDbInstance instance) {
+        DbInstanceGetConnDTO dto = BeanConvertUtils.beanToBean(instance, DbInstanceGetConnDTO.class);
+        if (null != instance.getId()) {
+            DbhsmDbInstance dbhsmDbInstance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(instance.getId());
+            if (null == dbhsmDbInstance) {
+                return AjaxResult2.success(false);
+            }
+            dto = BeanConvertUtils.beanToBean(dbhsmDbInstance, DbInstanceGetConnDTO.class);
         }
-        DbInstancePoolKeyDTO instanceKey = new DbInstancePoolKeyDTO();
-        BeanUtils.copyProperties(dbhsmDbInstance, instanceKey);
-        DbInstanceGetConnDTO instanceGetConnDTO = new DbInstanceGetConnDTO();
-        BeanUtils.copyProperties(dbhsmDbInstance, instanceGetConnDTO);
+
+        // 创建数据库连接
         try {
-            DbConnectionPoolFactory.queryPool();
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.info("初始化数据库连接池失败:{}", e.getMessage());
-            return AjaxResult2.error("测试连接失败，请稍后重试！");
+            javax.sql.DataSource dataSourcePool = DbConnectionPool.initialize(dto);
+            Connection connection = dataSourcePool.getConnection();
+            if (null != connection && !connection.isClosed()) {
+                log.info("数据库测试连接成功！");
+                // 关闭连接
+                connection.close();
+            }
+        } catch (SQLException e) {
+            log.error("数据库连接失败：{}", e.getMessage());
+            return AjaxResult2.success(false);
         }
         return AjaxResult2.success(true);
     }
