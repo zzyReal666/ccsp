@@ -13,7 +13,6 @@ import com.spms.dbhsm.stockDataProcess.domain.dto.DatabaseDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.TableDTO;
 import com.spms.dbhsm.stockDataProcess.service.OperateContext;
 import com.spms.dbhsm.stockDataProcess.service.StockDataOperateService;
-import com.spms.dbhsm.stockDataProcess.sqlExecute.ClickHouseExecute;
 import com.spms.dbhsm.stockDataProcess.sqlExecute.SqlExecuteSPI;
 import com.spms.dbhsm.stockDataProcess.threadTask.UpdateZookeeperTask;
 import lombok.extern.slf4j.Slf4j;
@@ -96,6 +95,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
     public void stockDataOperate(DatabaseDTO databaseDTO, boolean operateType) throws ZAYKException, SQLException, InterruptedException {
         rowDatabase(databaseDTO, operateType);
     }
+
     //行数数据库
     private void rowDatabase(DatabaseDTO databaseDTO, boolean operateType) throws ZAYKException, SQLException, InterruptedException {
         //表对象
@@ -147,16 +147,12 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
 
     //行式交换字段名字
     private static void exchangeColumnName(DatabaseDTO databaseDTO, TableDTO tableDTO, SqlExecuteSPI sqlExecute, Connection dbaConn) {
-        if (sqlExecute instanceof ClickHouseExecute) {
-            sqlExecute.renameColumn(dbaConn, databaseDTO.getDatabaseName(), tableDTO.getTableName(), null, null);
-        } else {
-            tableDTO.getColumnDTOList().forEach(columnDTO -> {
-                //原始字段更名为前缀+字段名字
-                sqlExecute.renameColumn(dbaConn, databaseDTO.getDatabaseName(), tableDTO.getTableName(), columnDTO.getColumnName(), sqlExecute.getTempColumnSuffix() + columnDTO.getColumnName());
-                //临时字段（cipher）由字段名+后缀更改为字段名
-                sqlExecute.renameColumn(dbaConn, databaseDTO.getDatabaseName(), tableDTO.getTableName(), columnDTO.getColumnName() + sqlExecute.getTempColumnSuffix(), columnDTO.getColumnName());
-            });
-        }
+        tableDTO.getColumnDTOList().forEach(columnDTO -> {
+            //原始字段更名为前缀+字段名字
+            sqlExecute.renameColumn(dbaConn, databaseDTO.getDatabaseName(), tableDTO.getTableName(), columnDTO.getColumnName(), sqlExecute.getTempColumnSuffix() + columnDTO.getColumnName());
+            //临时字段（cipher）由字段名+后缀更改为字段名
+            sqlExecute.renameColumn(dbaConn, databaseDTO.getDatabaseName(), tableDTO.getTableName(), columnDTO.getColumnName() + sqlExecute.getTempColumnSuffix(), columnDTO.getColumnName());
+        });
     }
 
     //行式获取sql执行器

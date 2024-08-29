@@ -569,7 +569,7 @@ public class StockDataOperateServiceImplTest {
 
     private void initMysql57() throws Exception {
         Class.forName("com.mysql.cj.jdbc.Driver");
-        conn = DriverManager.getConnection("jdbc:mysql://192.168.6.59:3306/zzyTest", "root", "server@2020");
+        conn = DriverManager.getConnection("jdbc:mysql://192.168.6.64:3306/zzyTest", "root", "server@2020");
         //准备表
         Statement statement = conn.createStatement();
         statement.execute("DROP TABLE IF EXISTS student");
@@ -650,10 +650,10 @@ public class StockDataOperateServiceImplTest {
         DatabaseDTO dto = new DatabaseDTO();
         dto.setId(10086L);
         dto.setDatabaseDba("root");
-        dto.setDatabaseIp("192.168.6.59");
+        dto.setDatabaseIp("192.168.6.64");
         dto.setDatabasePort("3306");
         dto.setDatabaseDbaPassword("server@2020");
-        dto.setConnectUrl("jdbc:mysql://192.168.6.59:3306/zzyTest");
+        dto.setConnectUrl("jdbc:mysql://192.168.6.64:3306/zzyTest");
         dto.setDatabaseType("Mysql57");
         dto.setDatabaseVersion("5.7");
         dto.setDatabaseName("zzyTest");
