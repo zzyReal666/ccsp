@@ -152,29 +152,29 @@ public class DbhsmDbInstanceController extends BaseController {
 
     @ApiOperation(value = "开启代理")
     @GetMapping("/openProxy")
-    public AjaxResult openProxy(Long id) {
+    public AjaxResult2<Boolean> openProxy(Long id) {
         if (null == id) {
-            return AjaxResult.error("id不能为空");
+            return AjaxResult2.success("id不能为空",false);
         }
         try {
             return dbhsmDbInstanceService.openProxy(id);
         } catch (Exception e) {
             log.error("开启代理失败！数据库实例id:{}", id, e);
-            return AjaxResult.error("未知错误，请联系管理员");
+            return AjaxResult2.success("未知错误，请联系管理员",false);
         }
     }
 
     @ApiOperation(value = "测试连接代理")
     @GetMapping("/proxyTest")
-    public AjaxResult proxyTest(Long id) {
+    public AjaxResult2<Boolean> proxyTest(Long id) {
         if (null == id) {
-            return AjaxResult.error("id不能为空");
+            return AjaxResult2.success("id不能为空",false);
         }
         try {
             return dbhsmDbInstanceService.proxyTest(id);
         } catch (Exception e) {
             log.error("测试连接代理失败！数据库实例id:{}", id, e);
-            return AjaxResult.error("未知错误，请联系管理员");
+            return AjaxResult2.success("未知错误，请联系管理员",false);
         }
 
     }

@@ -86,7 +86,7 @@ public interface IDbhsmDbInstanceService {
      * @param id 数据库实例主键
      * @return AjaxResult success ｜ error（错误原因）
      */
-    AjaxResult openProxy(Long id);
+    AjaxResult2<Boolean> openProxy(Long id);
 
     /**
      * 测试连接代理
@@ -94,6 +94,6 @@ public interface IDbhsmDbInstanceService {
      * @param id 数据库实例主键
      * @return AjaxResult success ｜ error（错误原因）
      */
-    AjaxResult proxyTest(Long id);
+    AjaxResult2<Boolean> proxyTest(Long id);
     AjaxResult2<Boolean> connectionTest(DbhsmDbInstance instance);
 }

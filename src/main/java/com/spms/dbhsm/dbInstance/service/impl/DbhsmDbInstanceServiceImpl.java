@@ -610,21 +610,24 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
     }
 
     @Override
-    public AjaxResult openProxy(Long id) {
+    public AjaxResult2<Boolean> openProxy(Long id) {
         DbhsmDbInstance dbhsmDbInstance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
         if (null == dbhsmDbInstance) {
-            return AjaxResult.error("实例信息错误！");
+            return AjaxResult2.success("实例信息错误！",false);
         }
         //执行脚本
 
 
 
-        return null;
+        return AjaxResult2.success(true);
     }
 
     @Override
-    public AjaxResult proxyTest(Long id) {
+    public AjaxResult2<Boolean> proxyTest(Long id) {
         DbhsmDbInstance dbhsmDbInstance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
-        return null;
+        if (null == dbhsmDbInstance) {
+            return AjaxResult2.success("测试连接失败，实例信息错误！",false);
+        }
+        return AjaxResult2.success(true);
     }
 }
