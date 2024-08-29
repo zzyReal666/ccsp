@@ -47,7 +47,6 @@ public class HardSM4 implements AlgorithmSPI {
 
     @Override
     public String encrypt(String data, String key, Map<String, String> props) {
-        log.info("encrypt data:{},key:{},props:{}", data, key, props);
         if (data.isEmpty()) {
             return "";
         }
@@ -60,7 +59,6 @@ public class HardSM4 implements AlgorithmSPI {
 
     @Override
     public String decrypt(String data, String key, Map<String, String> props) {
-        log.info("decrypt data:{},key:{},props:{}", data, key, props);
         if (data.isEmpty()) {
             return "";
         }
@@ -127,7 +125,7 @@ public class HardSM4 implements AlgorithmSPI {
 //            default:
 //                return ZaykJceGlobal.SGD_SMS4_ECB;
 //        }
-        return ZaykJceGlobal.SGD_SMS4_OFB;
+        return ZaykJceGlobal.SGD_SMS4_ECB;
     }
 
 }
