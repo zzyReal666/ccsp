@@ -16,8 +16,7 @@ import java.util.List;
  * @author spms
  * @date 2023-09-19
  */
-public interface IDbhsmDbInstanceService
-{
+public interface IDbhsmDbInstanceService {
     /**
      * 查询数据库实例
      *
@@ -74,12 +73,29 @@ public interface IDbhsmDbInstanceService
      */
     public int deleteDbhsmDbInstanceById(Long id);
 
-    List<SelectOption>  getDbTablespace(Long id);
+    List<SelectOption> getDbTablespace(Long id);
 
     List<SelectOption> getDbSchema(Long id);
 
     public int getPwdPolicyToDM(Long id);
+
     public int getPwdMinLenToDM(Long id);
 
     AjaxResult2<Boolean> connectionTest(Long id);
+
+    /**
+     * 开启代理
+     *
+     * @param id 数据库实例主键
+     * @return AjaxResult success ｜ error（错误原因）
+     */
+    AjaxResult openProxy(Long id);
+
+    /**
+     * 测试连接代理
+     *
+     * @param id 数据库实例主键
+     * @return AjaxResult success ｜ error（错误原因）
+     */
+    AjaxResult proxyTest(Long id);
 }

@@ -557,4 +557,16 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
         }
         return AjaxResult2.success(true);
     }
+
+    @Override
+    public AjaxResult openProxy(Long id) {
+        DbhsmDbInstance dbhsmDbInstance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
+        return null;
+    }
+
+    @Override
+    public AjaxResult proxyTest(Long id) {
+        DbhsmDbInstance dbhsmDbInstance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
+        return null;
+    }
 }

@@ -148,4 +148,22 @@ public class DbhsmDbInstanceController extends BaseController {
     public AjaxResult2<Boolean> connectionEncrypt(Long id) {
         return AjaxResult2.success(true);
     }
+
+    @ApiOperation(value = "开启代理")
+    @GetMapping("/openProxy")
+    public AjaxResult openProxy(Long id) {
+        if(null == id){
+            return AjaxResult.error("id不能为空");
+        }
+        return dbhsmDbInstanceService.openProxy(id);
+    }
+
+    @ApiOperation(value = "测试连接代理")
+    @GetMapping("/proxyTest")
+    public AjaxResult proxyTest(Long id) {
+        if(null == id){
+            return AjaxResult.error("id不能为空");
+        }
+        return dbhsmDbInstanceService.proxyTest(id);
+    }
 }
