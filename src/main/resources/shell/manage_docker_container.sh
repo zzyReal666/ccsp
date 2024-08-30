@@ -2,87 +2,77 @@
 
 # 定义错误码
 ERR_MISSING_PARAMS=1
-ERR_INVALID_ACTION=2
-ERR_DOCKER_COMMAND=3
-ERR_FIREWALLD=4
-
-# 日志文件
-LOG_FILE="/var/log/manage_docker_container.log"
-
-# 函数: 输出日志信息
-log_message() {
-    echo "$(date +'%Y-%m-%d %H:%M:%S') - $1" >> "${LOG_FILE}"
-}
+ERR_INVALID_ACTION=4
+ERR_DOCKER_COMMAND=5
+ERR_FIREWALLD=6
 
 # 函数: 输出错误信息并退出
 error_exit() {
     local err_msg="$1"
     local err_code="$2"
-    log_message "ERROR: ${err_msg}"
-    echo "${err_msg}" 1>&2
+    echo "ERROR: ${err_msg}" 1>&2
     exit "${err_code}"
 }
 
 # 检查参数数量
 if [ "$#" -lt 2 ]; then
-    error_exit "Usage: $0 <start|stop|restart|remove|status> <container_name> [<param1> <port>]" "${ERR_MISSING_PARAMS}"
+    error_exit "Usage: $0 <start|stop|restart|remove|status> <database_id> [<port>]" "${ERR_MISSING_PARAMS}"
 fi
 
 # 参数
-ACTION="$1"
-CONTAINER_NAME="$2"
-PARAM1="$3"
-PORT="$4"
+ACTION="$1"          # 操作类型: start, stop, restart, remove, status
+DATABASE_ID="$2"    # 数据库实例ID, 用于生成容器名字和目录
+PORT="$3"           # 端口号，仅在start操作时需要
 
 # Docker 镜像名称
-IMAGE_NAME="apache/shardingsphere-proxy:5.4.1"
-BASE_DIR="/opt/dbenc/docker_v"
-PROXY_DIR="${BASE_DIR}/proxy_${PARAM1}"
+IMAGE_NAME="proxy:5.5.0"
+BASE_DIR="/opt/db_enc/docker_v"
+PROXY_DIR="${BASE_DIR}/proxy_${DATABASE_ID}"
 CONF_DIR="${PROXY_DIR}/conf"
 EXT_LIB_DIR="${PROXY_DIR}/ext-lib"
+CONTAINER_NAME="proxy_${DATABASE_ID}"
 
 # 执行操作
 case "${ACTION}" in
     start)
-        if [ -z "${PARAM1}" ] || [ -z "${PORT}" ]; then
-            error_exit "Missing param1 or port for start action" "${ERR_MISSING_PARAMS}"
+        if [ -z "${PORT}" ]; then
+            error_exit "Missing port for start action" "${ERR_MISSING_PARAMS}"
         fi
-        log_message "Starting Docker container ${CONTAINER_NAME}..."
+        echo "Starting Docker container ${CONTAINER_NAME}..."
         docker run -d \
             --name "${CONTAINER_NAME}" \
             -v "${CONF_DIR}:/opt/shardingsphere-proxy/conf" \
             -v "${EXT_LIB_DIR}:/opt/shardingsphere-proxy/ext-lib" \
-            -e PORT="${PORT}" \
+            -e PORT="3308" \
             -p "${PORT}:3308" \
+            --restart always \
             "${IMAGE_NAME}" || error_exit "Failed to start Docker container ${CONTAINER_NAME}" "${ERR_DOCKER_COMMAND}"
-        log_message "Configuring Docker container to restart unless stopped..."
-        docker update --restart unless-stopped "${CONTAINER_NAME}" || error_exit "Failed to set container ${CONTAINER_NAME} to restart unless stopped" "${ERR_DOCKER_COMMAND}"
-        log_message "Configuring firewall rules..."
+        echo "Configuring firewall rules..."
         firewall-cmd --zone=public --add-port="${PORT}/tcp" --permanent || error_exit "Failed to add port ${PORT} to firewalld" "${ERR_FIREWALLD}"
         firewall-cmd --reload || error_exit "Failed to reload firewalld" "${ERR_FIREWALLD}"
-        log_message "Container ${CONTAINER_NAME} started and configured successfully."
+        echo "Container ${CONTAINER_NAME} started and configured successfully."
         ;;
 
     stop)
-        log_message "Stopping Docker container ${CONTAINER_NAME}..."
+        echo "Stopping Docker container ${CONTAINER_NAME}..."
         docker stop "${CONTAINER_NAME}" || error_exit "Failed to stop Docker container ${CONTAINER_NAME}" "${ERR_DOCKER_COMMAND}"
-        log_message "Container ${CONTAINER_NAME} stopped successfully."
+        echo "Container ${CONTAINER_NAME} stopped successfully."
         ;;
 
     restart)
-        log_message "Restarting Docker container ${CONTAINER_NAME}..."
+        echo "Restarting Docker container ${CONTAINER_NAME}..."
         docker restart "${CONTAINER_NAME}" || error_exit "Failed to restart Docker container ${CONTAINER_NAME}" "${ERR_DOCKER_COMMAND}"
-        log_message "Container ${CONTAINER_NAME} restarted successfully."
+        echo "Container ${CONTAINER_NAME} restarted successfully."
         ;;
 
     remove)
-        log_message "Removing Docker container ${CONTAINER_NAME}..."
+        echo "Removing Docker container ${CONTAINER_NAME}..."
         docker rm -f "${CONTAINER_NAME}" || error_exit "Failed to remove Docker container ${CONTAINER_NAME}" "${ERR_DOCKER_COMMAND}"
-        log_message "Container ${CONTAINER_NAME} removed successfully."
+        echo "Container ${CONTAINER_NAME} removed successfully."
         ;;
 
     status)
-        log_message "Checking status of Docker container ${CONTAINER_NAME}..."
+        echo "Checking status of Docker container ${CONTAINER_NAME}..."
         docker ps -a --filter "name=${CONTAINER_NAME}" --format "table {{.Names}}\t{{.Status}}" || error_exit "Failed to get status of Docker container ${CONTAINER_NAME}" "${ERR_DOCKER_COMMAND}"
         ;;
 

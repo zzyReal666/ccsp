@@ -1,5 +1,6 @@
 package com.spms.dbhsm.dbInstance.service.impl;
 
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RuntimeUtil;
 import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.DateUtils;
@@ -8,6 +9,9 @@ import com.ccsp.common.core.utils.bean.BeanConvertUtils;
 import com.ccsp.common.core.web.domain.AjaxResult;
 import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.spms.common.SelectOption;
+import com.spms.common.Template.FreeMarkerTemplateEngine;
+import com.spms.common.Template.TemplateEngine;
+import com.spms.common.Template.TemplateEngineException;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.dbTool.FunctionUtil;
 import com.spms.common.pool.hikariPool.DbConnectionPool;
@@ -37,7 +41,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -614,30 +620,135 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
         return AjaxResult2.success(true);
     }
 
+
+    private static final Map<Integer, String> CODE_MESSAGE = new HashMap<>();
+
+    static {
+        CODE_MESSAGE.put(0, "成功");
+        CODE_MESSAGE.put(1, "缺少参数：实例ID！");
+        CODE_MESSAGE.put(2, "创建目录失败！");
+        CODE_MESSAGE.put(3, "复制ext-lib文件失败");
+        CODE_MESSAGE.put(4, "docker 开启失败！");
+    }
+
     @Override
     public AjaxResult openProxy(Long id) {
         DbhsmDbInstance dbhsmDbInstance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
         if (null == dbhsmDbInstance) {
             return AjaxResult.error("实例信息错误！");
         }
-        //执行脚本
-        URL resource = getClass().getClassLoader().getResource("open_proxy.sh");
-        if (null == resource) {
-            return AjaxResult.error("脚本文件不存在！");
+        if (!"2".equals(dbhsmDbInstance.getDatabaseType()) && !"3".equals(dbhsmDbInstance.getDatabaseType())) {
+            return AjaxResult.error("不支持的数据库类型！");
         }
-        ShellScriptExecutor.ExecutionResult executionResult = ShellScriptExecutor.executeScript(resource.getPath(), 180);
+        AjaxResult error;
+
+        //创建 conf 目录，复制ext-lib下的文件
+//        error = mkdir(id);
+//        if (error != null) return error;
+
+        //上传配置文件
+        error = uploadConfigFile(dbhsmDbInstance);
+        if (error != null) return error;
+
+        //启动docker
+        return startUpDocker(id,dbhsmDbInstance.getProxyPort());
+    }
+
+    private AjaxResult startUpDocker(Long id, Integer proxyPort) {
+        URL startUpDocker = getClass().getClassLoader().getResource("shell/shell/manage_docker_container.sh");
+        if (null == startUpDocker) {
+            return AjaxResult.error("manage_docker_container.sh脚本文件不存在！");
+        }
+        ShellScriptExecutor.ExecutionResult executionResult = ShellScriptExecutor.executeScript(startUpDocker.getPath(), 60, "start",String.valueOf(id),String.valueOf(proxyPort));
         if (executionResult.getExitCode() != 0) {
-            log.error("执行脚本失败：{}", executionResult.getOutput());
-            return AjaxResult.error("执行脚本失败：" + executionResult.getOutput());
+            String errorMessage = CODE_MESSAGE.getOrDefault(executionResult.getExitCode(), "未知错误！");
+            log.error("执行manage_docker_container.sh失败，错误码:{},错误信息：{},echo内容:{}", executionResult.getExitCode(), errorMessage, executionResult.getOutput());
+            return AjaxResult.error(errorMessage);
         } else {
-            log.info("执行脚本成功：{}", executionResult.getOutput());
+            log.info("执行manage_docker_container.sh成功，echo内容:{}", executionResult.getOutput());
             return AjaxResult.success();
         }
     }
 
-    @Override
-    public AjaxResult proxyTest(Long id) {
-        DbhsmDbInstance dbhsmDbInstance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
+    public  AjaxResult uploadConfigFile(DbhsmDbInstance dbhsmDbInstance) {
+        //服务器下载文件到conf目录
+
+        try {
+            //写入/opt/db_enc/docker_v/proxy_${db_id}/conf/global.yaml
+            String globalConfigPath = "/opt/db_enc/docker_v/proxy_" + dbhsmDbInstance.getId() + "/conf/global.yaml";
+            String globalConfig = generateGlobalConfigFile(dbhsmDbInstance);
+            log.info("globalConfigPath:{},globalConfig:{}", globalConfigPath, globalConfig);
+            FileUtil.writeUtf8String(globalConfig, globalConfigPath);
+
+            //写入/opt/db_enc/docker_v/proxy_${db_id}/conf/database-encrypt.yaml
+            String encryptConfigPath = "/opt/db_enc/docker_v/proxy_" + dbhsmDbInstance.getId() + "/conf/database-encrypt.yaml";
+            String encryptConfig = generateEncryptConfigFile(dbhsmDbInstance);
+            log.info("encryptConfigPath:{},encryptConfig:{}", encryptConfigPath, encryptConfig);
+            FileUtil.writeUtf8String(encryptConfig, encryptConfigPath);
+        } catch (Exception e) {
+            return AjaxResult.error("配置文件生成失败：" + e.getMessage());
+        }
         return null;
+    }
+
+    public String generateEncryptConfigFile(DbhsmDbInstance dbhsmDbInstance) throws TemplateEngineException {
+        TemplateEngine templateEngine = new FreeMarkerTemplateEngine();
+        templateEngine.setTemplateFromFile("database-encrypt.ftl");
+        Map<String, Object> dataModel = new HashMap<>();
+        dataModel.put("databaseName", dbhsmDbInstance.getDatabaseServerName());
+        dataModel.put("username", dbhsmDbInstance.getServiceUser());
+        dataModel.put("password", dbhsmDbInstance.getServicePassword());
+        //mysql "*.*"  pg ds.*
+        if ("2".equals(dbhsmDbInstance.getDatabaseType())) {
+            dataModel.put("url", "jdbc:mysql://" + dbhsmDbInstance.getDatabaseIp() + ":" + dbhsmDbInstance.getDatabasePort() + "/" + dbhsmDbInstance.getDatabaseServerName());
+            dataModel.put("singleTable", "\"*.*\"");
+        } else if ("3".equals(dbhsmDbInstance.getDatabaseType())) {
+            dataModel.put("url", "jdbc:postgresql://" + dbhsmDbInstance.getDatabaseIp() + ":" + dbhsmDbInstance.getDatabasePort() + "/" + dbhsmDbInstance.getDatabaseServerName());
+            dataModel.put("singleTable", "ds_0.*");
+        }
+        templateEngine.setDataModel(dataModel);
+        return templateEngine.process();
+    }
+
+    public String generateGlobalConfigFile(DbhsmDbInstance dbhsmDbInstance) throws TemplateEngineException {
+        TemplateEngine templateEngine = new FreeMarkerTemplateEngine();
+        templateEngine.setTemplateFromFile("global.ftl");
+        Map<String, Object> dataModel = new HashMap<>();
+        dataModel.put("ip", dbhsmDbInstance.getDatabaseIp());
+        dataModel.put("port", dbhsmDbInstance.getDatabasePort());
+        dataModel.put("username", dbhsmDbInstance.getServiceUser());
+        dataModel.put("password", dbhsmDbInstance.getServicePassword());
+        templateEngine.setDataModel(dataModel);
+        return templateEngine.process();
+    }
+
+    private AjaxResult mkdir(Long id) {
+        URL mkdir = getClass().getClassLoader().getResource("shell/mkdir.sh");
+        if (null == mkdir) {
+            return AjaxResult.error("mkdir.sh脚本文件不存在！");
+        }
+        ShellScriptExecutor.ExecutionResult mkdirResult = ShellScriptExecutor.executeScript(mkdir.getPath(), 30, String.valueOf(id));
+        if (mkdirResult.getExitCode() != 0) {
+            String errorMessage = CODE_MESSAGE.getOrDefault(mkdirResult.getExitCode(), "未知错误！");
+            log.error("执行mkdir.sh失败，错误码:{},错误信息：{},echo内容:{}", mkdirResult.getExitCode(), errorMessage, mkdirResult.getOutput());
+            return AjaxResult.error(errorMessage);
+        }
+        log.info("执行mkdir.sh成功，echo内容:{}", mkdirResult.getOutput());
+        return null;
+    }
+
+    @Override
+    public AjaxResult proxyTest(Long id) throws ZAYKException, SQLException {
+        DbhsmDbInstance db = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
+        //JDBC连接测试
+        int timeout = 10;
+        Connection connection = DbConnectionPoolFactory.getInstance().getConnection(db);
+        if (connection != null && connection.isValid(timeout)) {
+            log.info("数据库连接测试成功！");
+            return AjaxResult.success();
+        } else {
+            log.error("数据库连接测试失败！");
+            return AjaxResult.error("数据库连接测试失败！");
+        }
     }
 }

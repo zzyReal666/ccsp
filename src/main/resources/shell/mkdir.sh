@@ -22,15 +22,19 @@ fi
 DATABASE_ID="$1"
 
 # 目录路径
-BASE_DIR="/opt/dbenc/docker_v"
+BASE_DIR="/opt/db_enc/docker_v"
 PROXY_DIR="${BASE_DIR}/proxy_${DATABASE_ID}"
 CONF_DIR="${PROXY_DIR}/conf"
-EXT_LIB_SRC="/opt/dbenc/ext-lib"
+EXT_LIB_SRC="/opt/db_enc/ext-lib"
 
 # 创建目录及子目录
 echo "Creating directories..."
 mkdir -p "${CONF_DIR}" || error_exit "Failed to create directory ${CONF_DIR}" "${ERR_CREATE_DIR}"
+echo "Directory ${CONF_DIR} created successfully."
 
 # 复制 ext-lib 目录
 echo "Copying ext-lib directory..."
-cp -r "${EXT_LIB_SRC}" "${PROXY_DIR}/" || error_exit "Failed to copy ${EXT_LIB_SRC}​⬤
+cp -r "${EXT_LIB_SRC}" "${PROXY_DIR}/" || error_exit "Failed to copy ${EXT_LIB_SRC} to ${PROXY_DIR}" "${ERR_COPY_FILES}"
+echo "Directory ${EXT_LIB_SRC} copied successfully."
+
+exit 0

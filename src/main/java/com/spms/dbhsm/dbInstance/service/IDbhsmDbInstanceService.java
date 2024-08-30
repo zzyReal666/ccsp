@@ -94,6 +94,6 @@ public interface IDbhsmDbInstanceService {
      * @param id 数据库实例主键
      * @return AjaxResult success ｜ error（错误原因）
      */
-    AjaxResult proxyTest(Long id);
+    AjaxResult proxyTest(Long id) throws ZAYKException, SQLException;
     AjaxResult2<Boolean> connectionTest(DbhsmDbInstance instance);
 }

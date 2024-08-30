@@ -29,6 +29,7 @@ public class ShellScriptExecutor {
      * @return 执行结果，包括输出和退出状态
      */
     public static ExecutionResult executeScript(String scriptPath, int timeout,  String... args) {
+        log.info("执行Shell脚本,脚本路径:{},参数:{}", scriptPath, Arrays.toString(args));
         List<String> command = new ArrayList<>();
         command.add("bash");
         command.add(scriptPath);
