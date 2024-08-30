@@ -105,8 +105,7 @@ public class HardSM4 implements AlgorithmSPI {
 //            throw new RuntimeException("iv length must be " + IV_LENGTH);
 //        }
 //        return result;
-        //todo  iV
-        return new byte[0];
+        return new byte[16];
     }
 
     private int createSm4Key(Map<String, String> props) {
@@ -133,7 +132,7 @@ public class HardSM4 implements AlgorithmSPI {
 //            default:
 //                return ZaykJceGlobal.SGD_SMS4_ECB;
 //        }
-        return ZaykJceGlobal.SGD_SMS4_ECB;
+        return ZaykJceGlobal.SGD_SMS4_OFB;
     }
 
 }

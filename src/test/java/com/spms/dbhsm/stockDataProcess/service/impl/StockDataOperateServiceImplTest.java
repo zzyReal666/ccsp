@@ -32,7 +32,8 @@ import java.util.Collections;
 import java.util.List;
 
 @Slf4j
-public class StockDataOperateServiceImplTest {
+public class
+StockDataOperateServiceImplTest {
 
     static final StockDataOperateServiceImpl service = new StockDataOperateServiceImpl();
     static Connection conn = null;

@@ -36,7 +36,6 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
 import javax.annotation.PostConstruct;
-import java.net.URL;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -67,8 +66,19 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
     @Autowired
     private DbhsmDbUsersMapper dbhsmDbUsersMapper;
 
+    /**
+     * zk地址
+     */
     @Value("${encrypt.zookeeper.url:localhost:2181}")
     private String zkAddress;
+
+    /**
+     * shell 的存放路径
+     */
+    @Value("${encrypt.shell.path:/opt/spms/spms/spms-dbenc-manager/}")
+    private String shellPath;
+
+
 
     @Autowired
     private DbhsmEncryptColumnsMapper encryptColumnsMapper;
@@ -702,11 +712,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
     }
 
     private AjaxResult2<Boolean> startUpDocker(Long id, Integer proxyPort) {
-        URL startUpDocker = getClass().getClassLoader().getResource("shell/shell/manage_docker_container.sh");
-        if (null == startUpDocker) {
-            return AjaxResult2.error("manage_docker_container.sh脚本文件不存在！");
-        }
-        ShellScriptExecutor.ExecutionResult executionResult = ShellScriptExecutor.executeScript(startUpDocker.getPath(), 60, "start", String.valueOf(id), String.valueOf(proxyPort));
+        ShellScriptExecutor.ExecutionResult executionResult = ShellScriptExecutor.executeScript(shellPath+"docker.sh", 60, "start", String.valueOf(id), String.valueOf(proxyPort));
         if (executionResult.getExitCode() != 0) {
             String errorMessage = CODE_MESSAGE.getOrDefault(executionResult.getExitCode(), "未知错误！");
             log.error("执行manage_docker_container.sh失败，错误码:{},错误信息：{},echo内容:{}", executionResult.getExitCode(), errorMessage, executionResult.getOutput());
@@ -770,11 +776,11 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
     }
 
     private AjaxResult2<Boolean> mkdir(Long id) {
-        URL mkdir = getClass().getClassLoader().getResource("shell/mkdir.sh");
-        if (null == mkdir) {
-            return AjaxResult2.error("mkdir.sh脚本文件不存在！");
-        }
-        ShellScriptExecutor.ExecutionResult mkdirResult = ShellScriptExecutor.executeScript(mkdir.getPath(), 30, String.valueOf(id));
+//        URL mkdir = getClass().getClassLoader().getResource("shell/mkdir.sh");
+//        if (null == mkdir) {
+//            return AjaxResult2.error("mkdir.sh脚本文件不存在！");
+//        }
+        ShellScriptExecutor.ExecutionResult mkdirResult = ShellScriptExecutor.executeScript(shellPath+"mkdir.sh", 30, String.valueOf(id));
         if (mkdirResult.getExitCode() != 0) {
             String errorMessage = CODE_MESSAGE.getOrDefault(mkdirResult.getExitCode(), "未知错误！");
             log.error("执行mkdir.sh失败，错误码:{},错误信息：{},echo内容:{}", mkdirResult.getExitCode(), errorMessage, mkdirResult.getOutput());

@@ -5,6 +5,9 @@ ERR_MISSING_PARAMS=1
 ERR_INVALID_ACTION=4
 ERR_DOCKER_COMMAND=5
 ERR_FIREWALLD=6
+ERR_CONTAINER_NOT_FOUND=7
+ERR_CONTAINER_STOPPED=8
+ERR_CONTAINER_RUNNING=0
 
 # 函数: 输出错误信息并退出
 error_exit() {
@@ -73,7 +76,24 @@ case "${ACTION}" in
 
     status)
         echo "Checking status of Docker container ${CONTAINER_NAME}..."
-        docker ps -a --filter "name=${CONTAINER_NAME}" --format "table {{.Names}}\t{{.Status}}" || error_exit "Failed to get status of Docker container ${CONTAINER_NAME}" "${ERR_DOCKER_COMMAND}"
+        STATUS=$(docker inspect -f '{{.State.Status}}' "${CONTAINER_NAME}" 2>/dev/null)
+        if [ "$?" -ne 0 ]; then
+            error_exit "Container ${CONTAINER_NAME} not found." "${ERR_CONTAINER_NOT_FOUND}"
+        fi
+        case "${STATUS}" in
+            "running")
+                echo "Container ${CONTAINER_NAME} is running."
+                exit "${ERR_CONTAINER_RUNNING}" # 返回码 0 表示运行中
+                ;;
+            "exited")
+                echo "Container ${CONTAINER_NAME} is stopped."
+                exit "${ERR_CONTAINER_STOPPED}" # 返回码 8 表示已停止
+                ;;
+            *)
+                echo "Container ${CONTAINER_NAME} is in an unknown state: ${STATUS}."
+                exit "${ERR_DOCKER_COMMAND}" # 返回码 5 表示未知状态或其他错误
+                ;;
+        esac
         ;;
 
     *)
