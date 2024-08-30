@@ -308,10 +308,6 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
     @Transactional(rollbackFor = Exception.class)
     public int updateDbhsmDbInstance(DbhsmDbInstance dbhsmDbInstance) throws ZAYKException, SQLException {
         paramCheck(dbhsmDbInstance);
-        boolean b1 = checkCapitalName(dbhsmDbInstance.getDatabaseCapitalName());
-        if (!b1) {
-            throw new ZAYKException("资产名称为：" + dbhsmDbInstance.getDatabaseCapitalName() + ",已被占用");
-        }
         if (DbConstants.DB_TYPE_ORACLE.equals(dbhsmDbInstance.getDatabaseType())) {
             if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(editCheckDBOracleInstanceUnique(dbhsmDbInstance))) {
                 throw new ZAYKException("修改失败，数据库实例" + dbhsmDbInstance.getDatabaseIp() + ":" + dbhsmDbInstance.getDatabasePort() + dbhsmDbInstance.getDatabaseServerName() + "已存在");
@@ -323,6 +319,12 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
             }
         }
         DbhsmDbInstance instanceById = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(dbhsmDbInstance.getId());
+        if (!instanceById.getDatabaseCapitalName().equals(dbhsmDbInstance.getDatabaseCapitalName())) {
+            boolean b1 = checkCapitalName(dbhsmDbInstance.getDatabaseCapitalName());
+            if (!b1) {
+                throw new ZAYKException("资产名称为：" + dbhsmDbInstance.getDatabaseCapitalName() + ",已被占用");
+            }
+        }
         if (DbConstants.DL_PLUG.equals(instanceById.getPlugMode()) && null != instanceById.getProxyPort() && !instanceById.getProxyPort().equals(dbhsmDbInstance.getProxyPort())) {
             //修改端口
             boolean b = addProxyPort(instanceById.getProxyPort(), dbhsmDbInstance.getProxyPort());
