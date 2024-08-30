@@ -6,7 +6,6 @@ import com.ccsp.common.core.exception.ZAYKException;
 import com.ccsp.common.core.utils.DateUtils;
 import com.ccsp.common.core.utils.StringUtils;
 import com.ccsp.common.core.utils.bean.BeanConvertUtils;
-import com.ccsp.common.core.web.domain.AjaxResult;
 import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.spms.common.SelectOption;
 import com.spms.common.Template.FreeMarkerTemplateEngine;
@@ -47,10 +46,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -390,7 +385,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public AjaxResult deleteDbhsmDbInstanceByIds(Long[] ids) {
+    public AjaxResult2 deleteDbhsmDbInstanceByIds(Long[] ids) {
         int i = 0;
         List<String> isUsedInstances = new ArrayList<String>();
         for (Long id : ids) {
@@ -404,7 +399,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
             //查询该实例下是否有加密列
             List<DbhsmEncryptColumns> dbhsmEncryptColumns = encryptColumnsMapper.queryEncryptColumnsByInstanceId(id);
             if (!CollectionUtils.isEmpty(dbhsmEncryptColumns)) {
-                return AjaxResult.error("数据库资产为：" + instanceById.getDatabaseCapitalName() + "，存在加密列配置信息，无法进行删除操作");
+                return AjaxResult2.error("数据库资产为：" + instanceById.getDatabaseCapitalName() + "，存在加密列配置信息，无法进行删除操作");
             }
 
             i = dbhsmDbInstanceMapper.deleteDbhsmDbInstanceById(id);
@@ -421,7 +416,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
                 log.error("删除数据库失败失败：{}", e.getMessage());
             }
         }
-        return !CollectionUtils.isEmpty(isUsedInstances) ? AjaxResult.error("实例：" + StringUtils.join(isUsedInstances, ",") + "已从管理端创建过用户，无法删除！") : AjaxResult.success();
+        return !CollectionUtils.isEmpty(isUsedInstances) ? AjaxResult2.error("实例：" + StringUtils.join(isUsedInstances, ",") + "已从管理端创建过用户，无法删除！") : AjaxResult2.success();
     }
 
     private void delEncDecFunction(DbhsmDbInstance instanceById) {
@@ -686,12 +681,12 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
     public AjaxResult2<Boolean> openProxy(Long id) {
         DbhsmDbInstance dbhsmDbInstance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
         if (null == dbhsmDbInstance) {
-            return AjaxResult.error("实例信息错误！");
+            return AjaxResult2.error("实例信息错误！");
         }
         if (!"2".equals(dbhsmDbInstance.getDatabaseType()) && !"3".equals(dbhsmDbInstance.getDatabaseType())) {
-            return AjaxResult.error("不支持的数据库类型！");
+            return AjaxResult2.error("不支持的数据库类型！");
         }
-        AjaxResult error;
+        AjaxResult2<Boolean> error;
 
         //创建 conf 目录，复制ext-lib下的文件
         error = mkdir(id);
@@ -705,23 +700,23 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
         return startUpDocker(id,dbhsmDbInstance.getProxyPort());
     }
 
-    private AjaxResult startUpDocker(Long id, Integer proxyPort) {
+    private AjaxResult2 startUpDocker(Long id, Integer proxyPort) {
         URL startUpDocker = getClass().getClassLoader().getResource("shell/shell/manage_docker_container.sh");
         if (null == startUpDocker) {
-            return AjaxResult.error("manage_docker_container.sh脚本文件不存在！");
+            return AjaxResult2.error("manage_docker_container.sh脚本文件不存在！");
         }
         ShellScriptExecutor.ExecutionResult executionResult = ShellScriptExecutor.executeScript(startUpDocker.getPath(), 60, "start",String.valueOf(id),String.valueOf(proxyPort));
         if (executionResult.getExitCode() != 0) {
             String errorMessage = CODE_MESSAGE.getOrDefault(executionResult.getExitCode(), "未知错误！");
             log.error("执行manage_docker_container.sh失败，错误码:{},错误信息：{},echo内容:{}", executionResult.getExitCode(), errorMessage, executionResult.getOutput());
-            return AjaxResult.error(errorMessage);
+            return AjaxResult2.error(errorMessage);
         } else {
             log.info("执行manage_docker_container.sh成功，echo内容:{}", executionResult.getOutput());
-            return AjaxResult.success();
+            return AjaxResult2.success();
         }
     }
 
-    public  AjaxResult uploadConfigFile(DbhsmDbInstance dbhsmDbInstance) {
+    public  AjaxResult2 uploadConfigFile(DbhsmDbInstance dbhsmDbInstance) {
         //服务器下载文件到conf目录
 
         try {
@@ -737,7 +732,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
             log.info("encryptConfigPath:{},encryptConfig:{}", encryptConfigPath, encryptConfig);
             FileUtil.writeUtf8String(encryptConfig, encryptConfigPath);
         } catch (Exception e) {
-            return AjaxResult.error("配置文件生成失败：" + e.getMessage());
+            return AjaxResult2.error("配置文件生成失败：" + e.getMessage());
         }
         return null;
     }
@@ -774,33 +769,33 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
         return templateEngine.process();
     }
 
-    private AjaxResult mkdir(Long id) {
+    private AjaxResult2<Boolean> mkdir(Long id) {
         URL mkdir = getClass().getClassLoader().getResource("shell/mkdir.sh");
         if (null == mkdir) {
-            return AjaxResult.error("mkdir.sh脚本文件不存在！");
+            return AjaxResult2.error("mkdir.sh脚本文件不存在！");
         }
         ShellScriptExecutor.ExecutionResult mkdirResult = ShellScriptExecutor.executeScript(mkdir.getPath(), 30, String.valueOf(id));
         if (mkdirResult.getExitCode() != 0) {
             String errorMessage = CODE_MESSAGE.getOrDefault(mkdirResult.getExitCode(), "未知错误！");
             log.error("执行mkdir.sh失败，错误码:{},错误信息：{},echo内容:{}", mkdirResult.getExitCode(), errorMessage, mkdirResult.getOutput());
-            return AjaxResult.error(errorMessage);
+            return AjaxResult2.error(errorMessage);
         }
         log.info("执行mkdir.sh成功，echo内容:{}", mkdirResult.getOutput());
         return null;
     }
 
     @Override
-    public AjaxResult proxyTest(Long id) throws ZAYKException, SQLException {
+    public AjaxResult2<Boolean> proxyTest(Long id) throws ZAYKException, SQLException {
         DbhsmDbInstance db = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
         //JDBC连接测试
         int timeout = 10;
         Connection connection = DbConnectionPoolFactory.getInstance().getConnection(db);
         if (connection != null && connection.isValid(timeout)) {
             log.info("数据库连接测试成功！");
-            return AjaxResult.success();
+            return AjaxResult2.success();
         } else {
             log.error("数据库连接测试失败！");
-            return AjaxResult.error("数据库连接测试失败！");
+            return AjaxResult2.error("数据库连接测试失败！");
         }
     }
 }

@@ -133,7 +133,7 @@ public class DbhsmDbInstanceController extends BaseController {
     @RequiresPermissions("dbhsm:dbInstance:remove")
     @Log(title = "数据库实例", businessType = BusinessType.DELETE)
     @DeleteMapping("/{ids}")
-    public AjaxResult remove(@PathVariable Long[] ids) {
+    public AjaxResult2 remove(@PathVariable Long[] ids) {
         return dbhsmDbInstanceService.deleteDbhsmDbInstanceByIds(ids);
     }
 

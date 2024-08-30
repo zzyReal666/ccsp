@@ -1,7 +1,6 @@
 package com.spms.dbhsm.dbInstance.service;
 
 import com.ccsp.common.core.exception.ZAYKException;
-import com.ccsp.common.core.web.domain.AjaxResult;
 import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.spms.common.SelectOption;
 import com.spms.dbhsm.dbInstance.domain.DbhsmDbInstance;
@@ -63,7 +62,7 @@ public interface IDbhsmDbInstanceService {
      * @param ids 需要删除的数据库实例主键集合
      * @return 结果
      */
-    public AjaxResult deleteDbhsmDbInstanceByIds(Long[] ids);
+    public AjaxResult2 deleteDbhsmDbInstanceByIds(Long[] ids);
 
     /**
      * 删除数据库实例信息
@@ -94,6 +93,6 @@ public interface IDbhsmDbInstanceService {
      * @param id 数据库实例主键
      * @return AjaxResult success ｜ error（错误原因）
      */
-    AjaxResult2<Boolean> proxyTest(Long id);
+    AjaxResult2<Boolean> proxyTest(Long id) throws ZAYKException, SQLException;
     AjaxResult2<Boolean> connectionTest(DbhsmDbInstance instance);
 }
