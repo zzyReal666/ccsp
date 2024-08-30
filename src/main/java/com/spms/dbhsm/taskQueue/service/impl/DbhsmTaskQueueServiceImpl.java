@@ -198,13 +198,13 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                     throw new RuntimeException(encryptTable.getTableName() + "加密失败！");
                 }
             }).start();
-//            taskQueue.setEncStatus(1);
-//            //修改加密列状态
-//            updateEncrypt(1, columnsList);
-//            dbhsmTaskQueueMapper.updateRecord(taskQueue);
-//            //表状态修改为加密中
-//            encryptTable.setTableStatus(DbConstants.ENC_FLAG);
-//            dbhsmEncryptTableMapper.updateRecord(encryptTable);
+            taskQueue.setEncStatus(1);
+            //修改加密列状态
+            updateEncrypt(1, columnsList);
+            dbhsmTaskQueueMapper.updateRecord(taskQueue);
+            //表状态修改为加密中
+            encryptTable.setTableStatus(DbConstants.ENC_FLAG);
+            dbhsmEncryptTableMapper.updateRecord(encryptTable);
         } else {
             //解密
             new Thread(() -> {
@@ -215,10 +215,9 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                     throw new RuntimeException(encryptTable.getTableName() + "解密失败！");
                 }
             }).start();
-//
-//            taskQueue.setDecStatus(1);
-//            updateEncrypt(4, columnsList);
-//            dbhsmTaskQueueMapper.updateRecord(taskQueue);
+            taskQueue.setDecStatus(1);
+            updateEncrypt(4, columnsList);
+            dbhsmTaskQueueMapper.updateRecord(taskQueue);
         }
 
         return AjaxResult.success();

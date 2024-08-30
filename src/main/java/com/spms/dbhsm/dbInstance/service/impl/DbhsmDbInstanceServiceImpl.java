@@ -42,6 +42,7 @@ import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * 数据库实例Service业务层处理
@@ -169,6 +170,10 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
     @Transactional(rollbackFor = Exception.class)
     public int insertDbhsmDbInstance(DbhsmDbInstance dbhsmDbInstance) throws ZAYKException, SQLException {
         paramCheck(dbhsmDbInstance);
+        boolean b1 = checkCapitalName(dbhsmDbInstance.getDatabaseCapitalName());
+        if (!b1) {
+            throw new ZAYKException("资产名称为：" + dbhsmDbInstance.getDatabaseCapitalName() + ",已被占用");
+        }
 
         dbhsmDbInstance.setCreateTime(com.zayk.util.DateUtils.getNowDate());
         int i = dbhsmDbInstanceMapper.insertDbhsmDbInstance(dbhsmDbInstance);
@@ -178,21 +183,32 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
         DbConnectionPoolFactory.buildDataSourcePool(dbInstanceGetConnDTO);
         DbConnectionPoolFactory.queryPool();
 
-        //代理端口
-        Integer proxyPort = dbhsmDbInstance.getProxyPort();
+        if (DbConstants.DL_PLUG.equals(dbhsmDbInstance.getPlugMode())) {
+            //代理端口
+            Integer proxyPort = dbhsmDbInstance.getProxyPort();
 
-        String patten = "1400[0-9]|140[12][0-9]|14030|14031";
-        boolean matches = Pattern.matches(patten, proxyPort.toString());
-        if (!matches) {
-            throw new ZAYKException("代理端口范围为：14000-14031");
-        }
+            String patten = "1400[0-9]|140[12][0-9]|14030|14031";
+            boolean matches = Pattern.matches(patten, proxyPort.toString());
+            if (!matches) {
+                throw new ZAYKException("代理端口范围为：14000-14031");
+            }
 
-        boolean b = addProxyPort(proxyPort, proxyPort);
-        if (!b) {
-            throw new ZAYKException("该端口已被使用：" + proxyPort);
+            boolean b = addProxyPort(proxyPort, proxyPort);
+            if (!b) {
+                throw new ZAYKException("该端口已被使用：" + proxyPort);
+            }
         }
 
         return i;
+    }
+
+    public boolean checkCapitalName(String name) {
+        List<DbhsmDbInstance> dbhsmDbInstances = dbhsmDbInstanceMapper.selectDbhsmDbInstanceList(new DbhsmDbInstance());
+        if (CollectionUtils.isEmpty(dbhsmDbInstances)) {
+            return true;
+        }
+        List<String> collect = dbhsmDbInstances.stream().map(DbhsmDbInstance::getDatabaseCapitalName).collect(Collectors.toList());
+        return !collect.contains(name);
     }
 
     public static boolean addProxyPort(int port, int newProxyPort) {
@@ -223,12 +239,12 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
         return false;
     }
 
-    public static void closePortOfDelete(List<String> ports) {
+    public static void closePortOfDelete(String ports) {
         // 对比端口是否开放
-        if (!CollectionUtils.isEmpty(ports)) {
+        if (StringUtils.isNotBlank(ports)) {
             String firewallStatus = RuntimeUtil.execForStr("firewall-cmd --state");
             if (!firewallStatus.contains("not running")) {
-                ports.stream().distinct().forEach((port) -> RuntimeUtil.execForStr("firewall-cmd --permanent --remove-port=" + port + "/tcp"));
+                RuntimeUtil.execForStr("firewall-cmd --permanent --remove-port=" + ports + "/tcp");
                 RuntimeUtil.execForStr("firewall-cmd --reload");
                 log.info("Nginx Firewall Port Close Successful! ");
             } else {
@@ -281,6 +297,10 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
     @Transactional(rollbackFor = Exception.class)
     public int updateDbhsmDbInstance(DbhsmDbInstance dbhsmDbInstance) throws ZAYKException, SQLException {
         paramCheck(dbhsmDbInstance);
+        boolean b1 = checkCapitalName(dbhsmDbInstance.getDatabaseCapitalName());
+        if (!b1) {
+            throw new ZAYKException("资产名称为：" + dbhsmDbInstance.getDatabaseCapitalName() + ",已被占用");
+        }
         if (DbConstants.DB_TYPE_ORACLE.equals(dbhsmDbInstance.getDatabaseType())) {
             if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(editCheckDBOracleInstanceUnique(dbhsmDbInstance))) {
                 throw new ZAYKException("修改失败，数据库实例" + dbhsmDbInstance.getDatabaseIp() + ":" + dbhsmDbInstance.getDatabasePort() + dbhsmDbInstance.getDatabaseServerName() + "已存在");
@@ -292,7 +312,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
             }
         }
         DbhsmDbInstance instanceById = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(dbhsmDbInstance.getId());
-        if (null != instanceById.getProxyPort() && !instanceById.getProxyPort().equals(dbhsmDbInstance.getProxyPort())) {
+        if (DbConstants.DL_PLUG.equals(instanceById.getPlugMode()) && null != instanceById.getProxyPort() && !instanceById.getProxyPort().equals(dbhsmDbInstance.getProxyPort())) {
             //修改端口
             boolean b = addProxyPort(instanceById.getProxyPort(), dbhsmDbInstance.getProxyPort());
             if (!b) {
@@ -357,7 +377,6 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
     public AjaxResult deleteDbhsmDbInstanceByIds(Long[] ids) {
         int i = 0;
         List<String> isUsedInstances = new ArrayList<String>();
-        List<String> ports = new ArrayList<>();
         for (Long id : ids) {
             //删除之前先销毁之前的池
             DbhsmDbInstance instanceById = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
@@ -375,7 +394,10 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
             i = dbhsmDbInstanceMapper.deleteDbhsmDbInstanceById(id);
             try {
                 //添加端口信息，统一删除
-                ports.add(instanceById.getProxyPort().toString());
+                if (DbConstants.DL_PLUG.equals(instanceById.getPlugMode())) {
+                    log.info("需要删掉的端口信息：{}", instanceById.getProxyPort().toString());
+                    closePortOfDelete(instanceById.getProxyPort().toString());
+                }
                 //删除连接池
                 DbConnectionPoolFactory.getInstance().unbind(DbConnectionPoolFactory.instanceConventKey(instanceById));
             } catch (Exception e) {
@@ -383,9 +405,6 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
                 log.error("删除数据库失败失败：{}", e.getMessage());
             }
         }
-        //删除端口
-        log.info("需要删掉的端口信息：{}", ports.stream().toString());
-        closePortOfDelete(ports);
         return !CollectionUtils.isEmpty(isUsedInstances) ? AjaxResult.error("实例：" + StringUtils.join(isUsedInstances, ",") + "已从管理端创建过用户，无法删除！") : AjaxResult.success();
     }
 
