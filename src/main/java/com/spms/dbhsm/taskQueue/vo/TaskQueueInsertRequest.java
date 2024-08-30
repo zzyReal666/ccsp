@@ -17,22 +17,22 @@ import java.util.List;
 @Data
 public class TaskQueueInsertRequest {
 
-    @ApiModelProperty(name = "instanceId",value = "数据库实例ID")
+    @ApiModelProperty(name = "instanceId", value = "数据库实例ID")
     private Long instanceId;
 
-    @ApiModelProperty(name = "databaseServerName",value = "数据库名")
+    @ApiModelProperty(name = "databaseServerName", value = "数据库名")
     private String databaseServerName;
 
-    @ApiModelProperty(name = "tableName",value = "表名")
+    @ApiModelProperty(name = "tableName", value = "表名")
     private String tableName;
 
-    @ApiModelProperty(name = "batchCount",value = "批次条数")
+    @ApiModelProperty(name = "batchCount", value = "批次条数")
     private Integer batchCount;
 
-    @ApiModelProperty(name = "threadCount",value = "线程数")
+    @ApiModelProperty(name = "threadCount", value = "线程数")
     private Integer threadCount;
 
-    @ApiModelProperty(name = "tableId",value = "表ID",notes = "新增解密队列使用")
+    @ApiModelProperty(name = "tableId", value = "表ID", notes = "新增解密队列使用")
     private String tableId;
 
     @ApiModelProperty(name = "userName", value = "用户名称")

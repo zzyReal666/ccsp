@@ -141,6 +141,8 @@ public class DbConstants {
     public static final Integer FG_PLUG = 0;
 
     public static final Integer BE_PLUG = 1;
+
+    public static final Integer DL_PLUG = 2;
     /**
      * 是否唯一返回码
      */

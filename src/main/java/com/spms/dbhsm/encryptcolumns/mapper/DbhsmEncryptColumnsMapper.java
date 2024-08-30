@@ -74,4 +74,7 @@ public interface DbhsmEncryptColumnsMapper
     List<DbhsmEncryptColumns> selectDbhsmEncryptByTableId(@Param("tableId") String tableId);
 
     void deleteByEncryptColumnsOnTable(@Param("tableId") String tableId);
+
+    List<DbhsmEncryptColumns> queryEncryptColumnsByInstanceId(@Param("instanceId") Long instanceId);
+
 }

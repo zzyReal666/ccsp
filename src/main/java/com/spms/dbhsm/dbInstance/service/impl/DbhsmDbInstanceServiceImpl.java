@@ -25,6 +25,8 @@ import com.spms.dbhsm.dbInstance.mapper.DbhsmDbInstanceMapper;
 import com.spms.dbhsm.dbInstance.service.IDbhsmDbInstanceService;
 import com.spms.dbhsm.dbUser.domain.DbhsmDbUser;
 import com.spms.dbhsm.dbUser.mapper.DbhsmDbUsersMapper;
+import com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns;
+import com.spms.dbhsm.encryptcolumns.mapper.DbhsmEncryptColumnsMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,8 +48,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * 数据库实例Service业务层处理
@@ -66,6 +74,9 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
 
     @Value("${encrypt.zookeeper.url:localhost:2181}")
     private String zkAddress;
+
+    @Autowired
+    private DbhsmEncryptColumnsMapper encryptColumnsMapper;
 
     @PostConstruct
     public void init() {
@@ -174,39 +185,54 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int insertDbhsmDbInstance(DbhsmDbInstance dbhsmDbInstance) throws ZAYKException, SQLException {
-        int i = 0;
-        //数据类型为oracle
-        if (DbConstants.DB_TYPE_ORACLE.equals(dbhsmDbInstance.getDatabaseType())) {
-            //数据库实例唯一性判断
-            if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(checkDBOracleInstanceUnique(dbhsmDbInstance))) {
-                throw new ZAYKException("数据库实例已存在");
-            }
-        } else {
-            //数据库实例唯一性判断
-            if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(checkOtherDBUnique(dbhsmDbInstance))) {
-                throw new ZAYKException("数据库实例已存在");
-            }
-            dbhsmDbInstance.setDatabaseExampleType("-");
+        paramCheck(dbhsmDbInstance);
+        boolean b1 = checkCapitalName(dbhsmDbInstance.getDatabaseCapitalName());
+        if (!b1) {
+            throw new ZAYKException("资产名称为：" + dbhsmDbInstance.getDatabaseCapitalName() + ",已被占用");
         }
+
         dbhsmDbInstance.setCreateTime(com.zayk.util.DateUtils.getNowDate());
-        i = dbhsmDbInstanceMapper.insertDbhsmDbInstance(dbhsmDbInstance);
+        int i = dbhsmDbInstanceMapper.insertDbhsmDbInstance(dbhsmDbInstance);
         //创建连接池
         DbInstanceGetConnDTO dbInstanceGetConnDTO = new DbInstanceGetConnDTO();
         BeanUtils.copyProperties(dbhsmDbInstance, dbInstanceGetConnDTO);
         DbConnectionPoolFactory.buildDataSourcePool(dbInstanceGetConnDTO);
         DbConnectionPoolFactory.queryPool();
 
-        //代理端口
-        Integer proxyPort = dbhsmDbInstance.getProxyPort();
-        addProxyPort(proxyPort, proxyPort);
+        if (DbConstants.DL_PLUG.equals(dbhsmDbInstance.getPlugMode())) {
+            //代理端口
+            Integer proxyPort = dbhsmDbInstance.getProxyPort();
+
+            String patten = "1400[0-9]|140[12][0-9]|14030|14031";
+            boolean matches = Pattern.matches(patten, proxyPort.toString());
+            if (!matches) {
+                throw new ZAYKException("代理端口范围为：14000-14031");
+            }
+
+            boolean b = addProxyPort(proxyPort, proxyPort);
+            if (!b) {
+                throw new ZAYKException("该端口已被使用：" + proxyPort);
+            }
+        }
 
         return i;
     }
 
-    public static void addProxyPort(int port, int newProxyPort) {
+    public boolean checkCapitalName(String name) {
+        List<DbhsmDbInstance> dbhsmDbInstances = dbhsmDbInstanceMapper.selectDbhsmDbInstanceList(new DbhsmDbInstance());
+        if (CollectionUtils.isEmpty(dbhsmDbInstances)) {
+            return true;
+        }
+        List<String> collect = dbhsmDbInstances.stream().map(DbhsmDbInstance::getDatabaseCapitalName).collect(Collectors.toList());
+        return !collect.contains(name);
+    }
+
+    public static boolean addProxyPort(int port, int newProxyPort) {
         String firewallStatus = RuntimeUtil.execForStr("firewall-cmd --state");
         if (firewallStatus.contains("not running")) {
-            return;
+            //防火墙未开启，跳过添加端口步骤
+            log.error("防火墙未开启.............");
+            return true;
         }
         String execForStr = RuntimeUtil.execForStr("firewall-cmd --query-port=" + newProxyPort + "/tcp");
         if (port != newProxyPort) {
@@ -215,24 +241,26 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
                 RuntimeUtil.execForStr("firewall-cmd --permanent --remove-port=" + port + "/tcp");
                 RuntimeUtil.execForStr("firewall-cmd --zone=public --add-port=" + newProxyPort + "/tcp --permanent");
                 RuntimeUtil.execForStr("firewall-cmd --reload");
+                log.info("Nginx Firewall Port Add Successful! ");
+                return true;
             }
-            log.info("Nginx Firewall Port Add Successful! ");
-
         } else {
             if (execForStr.contains("no")) {
                 RuntimeUtil.execForStr("firewall-cmd --zone=public --add-port=" + newProxyPort + "/tcp --permanent");
                 RuntimeUtil.execForStr("firewall-cmd --reload");
+                log.info("ServerPortUtil.openPortOfUpdate()=============> oldPort：[" + port + "], latestPort：[" + newProxyPort + "]");
+                return true;
             }
-            log.info("ServerPortUtil.openPortOfUpdate()=============> oldPort：[" + port + "], latestPort：[" + newProxyPort + "]");
         }
+        return false;
     }
 
-    public static void closePortOfDelete(List<String> ports) {
+    public static void closePortOfDelete(String ports) {
         // 对比端口是否开放
-        if (!CollectionUtils.isEmpty(ports)) {
+        if (StringUtils.isNotBlank(ports)) {
             String firewallStatus = RuntimeUtil.execForStr("firewall-cmd --state");
             if (!firewallStatus.contains("not running")) {
-                ports.stream().distinct().forEach((port) -> RuntimeUtil.execForStr("firewall-cmd --permanent --remove-port=" + port + "/tcp"));
+                RuntimeUtil.execForStr("firewall-cmd --permanent --remove-port=" + ports + "/tcp");
                 RuntimeUtil.execForStr("firewall-cmd --reload");
                 log.info("Nginx Firewall Port Close Successful! ");
             } else {
@@ -241,32 +269,38 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
         }
     }
 
-
-    public String checkDBOracleInstanceUnique(DbhsmDbInstance dbhsmDbInstance) {
-        DbhsmDbInstance instance = new DbhsmDbInstance();
-        instance.setDatabaseIp(dbhsmDbInstance.getDatabaseIp());
-        instance.setDatabasePort(dbhsmDbInstance.getDatabasePort());
-        instance.setDatabaseServerName(dbhsmDbInstance.getDatabaseServerName());
-        instance.setDatabaseExampleType(dbhsmDbInstance.getDatabaseExampleType());
-        instance.setDatabaseType(dbhsmDbInstance.getDatabaseType());
-        List<DbhsmDbInstance> infoList = dbhsmDbInstanceMapper.selectDbhsmDbInstanceList(instance);
-        if (CollectionUtils.isEmpty(infoList)) {
-            return DbConstants.DBHSM_GLOBLE_UNIQUE;
+    public void paramCheck(DbhsmDbInstance dbhsmDbInstance) throws ZAYKException {
+        if (DbConstants.DB_TYPE_MYSQL.equals(dbhsmDbInstance.getDatabaseType())) {
+            if (dbhsmDbInstance.getDatabaseDba().length() > 32 || dbhsmDbInstance.getServiceUser().length() > 32) {
+                throw new ZAYKException("数据库类型为：mysql，用户名最长为32字符");
+            }
+            if (dbhsmDbInstance.getDatabaseDbaPassword().length() > 256 || dbhsmDbInstance.getServicePassword().length() > 256) {
+                throw new ZAYKException("数据库类型为：mysql，密码最长为256字符");
+            }
+            if (dbhsmDbInstance.getDatabaseServerName().length() > 64) {
+                throw new ZAYKException("数据库类型为：mysql，数据库名称最长为64字符");
+            }
+        } else if (DbConstants.DB_TYPE_POSTGRESQL.equals(dbhsmDbInstance.getDatabaseType())) {
+            if (dbhsmDbInstance.getDatabaseDba().length() > 64 || dbhsmDbInstance.getServiceUser().length() > 64) {
+                throw new ZAYKException("数据库类型为：PostgreSQL，用户名最长为64字符");
+            }
+            if (dbhsmDbInstance.getDatabaseDbaPassword().length() > 128 || dbhsmDbInstance.getServicePassword().length() > 128) {
+                throw new ZAYKException("数据库类型为：PostgreSQL，密码最长为256字符");
+            }
+            if (dbhsmDbInstance.getDatabaseServerName().length() > 64) {
+                throw new ZAYKException("数据库类型为：PostgreSQL，数据库名称最长为64字符");
+            }
+        } else if (DbConstants.DB_TYPE_SQLSERVER.equals(dbhsmDbInstance.getDatabaseType())) {
+            if (dbhsmDbInstance.getDatabaseDba().length() > 128 || dbhsmDbInstance.getServiceUser().length() > 128) {
+                throw new ZAYKException("SQL Server用户名最长128字符");
+            }
+            if (dbhsmDbInstance.getDatabaseDbaPassword().length() > 128 || dbhsmDbInstance.getServicePassword().length() > 128) {
+                throw new ZAYKException("SQL Server密码最长为128字符");
+            }
+            if (dbhsmDbInstance.getDatabaseServerName().length() > 128) {
+                throw new ZAYKException("数据库类型为：SQL Server，数据库名称最长为128字符");
+            }
         }
-        return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
-    }
-
-    public String checkOtherDBUnique(DbhsmDbInstance dbhsmDbInstance) {
-        DbhsmDbInstance instance = new DbhsmDbInstance();
-        instance.setDatabaseIp(dbhsmDbInstance.getDatabaseIp());
-        instance.setDatabasePort(dbhsmDbInstance.getDatabasePort());
-        instance.setDatabaseServerName(dbhsmDbInstance.getDatabaseServerName());
-        instance.setDatabaseType(dbhsmDbInstance.getDatabaseType());
-        List<DbhsmDbInstance> sqlServerList = dbhsmDbInstanceMapper.selectDbhsmDbInstanceList(instance);
-        if (sqlServerList.size() > 0) {
-            return DbConstants.DBHSM_GLOBLE_NOT_UNIQUE;
-        }
-        return DbConstants.DBHSM_GLOBLE_UNIQUE;
     }
 
     /**
@@ -278,6 +312,11 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int updateDbhsmDbInstance(DbhsmDbInstance dbhsmDbInstance) throws ZAYKException, SQLException {
+        paramCheck(dbhsmDbInstance);
+        boolean b1 = checkCapitalName(dbhsmDbInstance.getDatabaseCapitalName());
+        if (!b1) {
+            throw new ZAYKException("资产名称为：" + dbhsmDbInstance.getDatabaseCapitalName() + ",已被占用");
+        }
         if (DbConstants.DB_TYPE_ORACLE.equals(dbhsmDbInstance.getDatabaseType())) {
             if (DbConstants.DBHSM_GLOBLE_NOT_UNIQUE.equals(editCheckDBOracleInstanceUnique(dbhsmDbInstance))) {
                 throw new ZAYKException("修改失败，数据库实例" + dbhsmDbInstance.getDatabaseIp() + ":" + dbhsmDbInstance.getDatabasePort() + dbhsmDbInstance.getDatabaseServerName() + "已存在");
@@ -289,9 +328,12 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
             }
         }
         DbhsmDbInstance instanceById = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(dbhsmDbInstance.getId());
-        if (null != instanceById.getProxyPort() && !instanceById.getProxyPort().equals(dbhsmDbInstance.getProxyPort())) {
+        if (DbConstants.DL_PLUG.equals(instanceById.getPlugMode()) && null != instanceById.getProxyPort() && !instanceById.getProxyPort().equals(dbhsmDbInstance.getProxyPort())) {
             //修改端口
-            addProxyPort(instanceById.getProxyPort(), dbhsmDbInstance.getProxyPort());
+            boolean b = addProxyPort(instanceById.getProxyPort(), dbhsmDbInstance.getProxyPort());
+            if (!b) {
+                throw new ZAYKException("该端口已被使用：" + instanceById.getProxyPort());
+            }
         }
 
         dbhsmDbInstance.setUpdateTime(DateUtils.getNowDate());
@@ -351,7 +393,6 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
     public AjaxResult deleteDbhsmDbInstanceByIds(Long[] ids) {
         int i = 0;
         List<String> isUsedInstances = new ArrayList<String>();
-        List<String> ports = new ArrayList<>();
         for (Long id : ids) {
             //删除之前先销毁之前的池
             DbhsmDbInstance instanceById = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
@@ -360,10 +401,19 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
                 isUsedInstances.add(getInstance(instanceById));
                 continue;
             }
+            //查询该实例下是否有加密列
+            List<DbhsmEncryptColumns> dbhsmEncryptColumns = encryptColumnsMapper.queryEncryptColumnsByInstanceId(id);
+            if (!CollectionUtils.isEmpty(dbhsmEncryptColumns)) {
+                return AjaxResult.error("数据库资产为：" + instanceById.getDatabaseCapitalName() + "，存在加密列配置信息，无法进行删除操作");
+            }
+
             i = dbhsmDbInstanceMapper.deleteDbhsmDbInstanceById(id);
             try {
                 //添加端口信息，统一删除
-                ports.add(instanceById.getProxyPort().toString());
+                if (DbConstants.DL_PLUG.equals(instanceById.getPlugMode())) {
+                    log.info("需要删掉的端口信息：{}", instanceById.getProxyPort().toString());
+                    closePortOfDelete(instanceById.getProxyPort().toString());
+                }
                 //删除连接池
                 DbConnectionPoolFactory.getInstance().unbind(DbConnectionPoolFactory.instanceConventKey(instanceById));
             } catch (Exception e) {
@@ -371,9 +421,6 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
                 log.error("删除数据库失败失败：{}", e.getMessage());
             }
         }
-        //删除端口
-        log.info("需要删掉的端口信息：{}", ports.stream().toString());
-        closePortOfDelete(ports);
         return !CollectionUtils.isEmpty(isUsedInstances) ? AjaxResult.error("实例：" + StringUtils.join(isUsedInstances, ",") + "已从管理端创建过用户，无法删除！") : AjaxResult.success();
     }
 
@@ -636,7 +683,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
     }
 
     @Override
-    public AjaxResult openProxy(Long id) {
+    public AjaxResult2<Boolean> openProxy(Long id) {
         DbhsmDbInstance dbhsmDbInstance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(id);
         if (null == dbhsmDbInstance) {
             return AjaxResult.error("实例信息错误！");
