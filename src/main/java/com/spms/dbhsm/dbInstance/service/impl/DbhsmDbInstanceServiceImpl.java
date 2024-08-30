@@ -687,25 +687,26 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
             return AjaxResult2.error("不支持的数据库类型！");
         }
         AjaxResult2<Boolean> error;
-
         //创建 conf 目录，复制ext-lib下的文件
         error = mkdir(id);
-        if (error != null) return error;
-
+        if (error != null) {
+            return error;
+        }
         //上传配置文件
         error = uploadConfigFile(dbhsmDbInstance);
-        if (error != null) return error;
-
+        if (error != null) {
+            return error;
+        }
         //启动docker
-        return startUpDocker(id,dbhsmDbInstance.getProxyPort());
+        return startUpDocker(id, dbhsmDbInstance.getProxyPort());
     }
 
-    private AjaxResult2 startUpDocker(Long id, Integer proxyPort) {
+    private AjaxResult2<Boolean> startUpDocker(Long id, Integer proxyPort) {
         URL startUpDocker = getClass().getClassLoader().getResource("shell/shell/manage_docker_container.sh");
         if (null == startUpDocker) {
             return AjaxResult2.error("manage_docker_container.sh脚本文件不存在！");
         }
-        ShellScriptExecutor.ExecutionResult executionResult = ShellScriptExecutor.executeScript(startUpDocker.getPath(), 60, "start",String.valueOf(id),String.valueOf(proxyPort));
+        ShellScriptExecutor.ExecutionResult executionResult = ShellScriptExecutor.executeScript(startUpDocker.getPath(), 60, "start", String.valueOf(id), String.valueOf(proxyPort));
         if (executionResult.getExitCode() != 0) {
             String errorMessage = CODE_MESSAGE.getOrDefault(executionResult.getExitCode(), "未知错误！");
             log.error("执行manage_docker_container.sh失败，错误码:{},错误信息：{},echo内容:{}", executionResult.getExitCode(), errorMessage, executionResult.getOutput());
@@ -716,9 +717,8 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
         }
     }
 
-    public  AjaxResult2 uploadConfigFile(DbhsmDbInstance dbhsmDbInstance) {
+    private AjaxResult2<Boolean> uploadConfigFile(DbhsmDbInstance dbhsmDbInstance) {
         //服务器下载文件到conf目录
-
         try {
             //写入/opt/db_enc/docker_v/proxy_${db_id}/conf/global.yaml
             String globalConfigPath = "/opt/db_enc/docker_v/proxy_" + dbhsmDbInstance.getId() + "/conf/global.yaml";

@@ -93,22 +93,22 @@ public class StockDataOperateServiceImplTest {
 
     private void initSqlServer() throws  Exception{
         Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-        conn = DriverManager.getConnection("jdbc:jtds:sqlserver://192.168.6.59:1433/zzydb;instance=WIN-I287SD6IN93", "sa", "server@2020");
+        conn = DriverManager.getConnection("jdbc:jtds:sqlserver://192.168.6.64:1433/wzhtest;instance=WIN-I287SD6IN93", "sa", "server@2020");
         //指定schema
 
         //准备表
         Statement statement = conn.createStatement();
         try {
-            statement.execute("DROP TABLE zzytest.student");
+            statement.execute("DROP TABLE dbo.student");
         } catch (SQLException e) {
             log.info("表不存在，忽略");
         }
-        statement.execute("CREATE TABLE zzytest.student (id INT PRIMARY KEY, name VARCHAR(50), age INT, phone VARCHAR(20), address VARCHAR(100))");
-        statement.execute("TRUNCATE TABLE zzytest.student");
+        statement.execute("CREATE TABLE dbo.student (id INT PRIMARY KEY, name VARCHAR(50), age INT, phone VARCHAR(20), address VARCHAR(100))");
+        statement.execute("TRUNCATE TABLE dbo.student");
 
         //准备数据
         conn.setAutoCommit(false);
-        PreparedStatement preparedStatement = conn.prepareStatement("INSERT INTO zzytest.student (id, name, age, phone, address) VALUES (?,?,?,?,?)");
+        PreparedStatement preparedStatement = conn.prepareStatement("INSERT INTO dbo.student (id, name, age, phone, address) VALUES (?,?,?,?,?)");
         for (int i = 0; i < 10000; i++) {
             preparedStatement.setInt(1, i);
             preparedStatement.setString(2, "张三" + i);
@@ -149,7 +149,7 @@ public class StockDataOperateServiceImplTest {
 
         TableDTO tableDTO = new TableDTO();
         tableDTO.setId(1L);
-        tableDTO.setSchema("zzytest");   //todo 注意！！！此处很重要
+        tableDTO.setSchema("dbo");   //todo 注意！！！此处很重要
         tableDTO.setBatchSize(200);
         tableDTO.setTableName("student");
         tableDTO.setThreadNum(10);
@@ -160,13 +160,13 @@ public class StockDataOperateServiceImplTest {
         DatabaseDTO dto = new DatabaseDTO();
         dto.setId(123456L);
         dto.setDatabaseDba("sa");
-        dto.setDatabaseIp("192.168.6.59");
+        dto.setDatabaseIp("192.168.6.64");
         dto.setDatabasePort("1433");
         dto.setDatabaseDbaPassword("server@2020");
-        dto.setConnectUrl("jdbc:jtds:sqlserver://192.168.6.59:1433/zzydb;instance=WIN-I287SD6IN93");   //todo 这个url 到现在还没使用过，代理去连数据库需要用
+        dto.setConnectUrl("jdbc:jtds:sqlserver://192.168.6.64:1433/wzhtest;instance=WIN-I287SD6IN93");   //todo 这个url 到现在还没使用过，代理去连数据库需要用
         dto.setDatabaseType("SQLServer");
         dto.setDatabaseVersion("11.2");
-        dto.setDatabaseName("zzydb");
+        dto.setDatabaseName("wzhtest");
         dto.setInstanceType("");
         dto.setServiceUser("sa");
         dto.setServicePassword("server@2020");
