@@ -207,4 +207,9 @@
         delete from dbhsm_encrypt_columns where table_id=#{tableId}
     </delete>
 
+    <select id="queryEncryptColumnsByInstanceId" resultMap="DbhsmEncryptColumnsResult" parameterType="java.lang.Long">
+        <include refid="selectDbhsmEncryptColumnsVo"/>
+        where db_instance_id=#{instanceId}
+    </select>
+
 </mapper>

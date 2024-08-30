@@ -21,7 +21,6 @@ import com.spms.dbhsm.dbUser.domain.DbhsmDbUser;
 import com.spms.dbhsm.dbUser.mapper.DbhsmDbUsersMapper;
 import com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns;
 import com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptTable;
-import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsAdd;
 import com.spms.dbhsm.encryptcolumns.mapper.DbhsmEncryptColumnsMapper;
 import com.spms.dbhsm.encryptcolumns.mapper.DbhsmEncryptTableMapper;
 import com.spms.dbhsm.encryptcolumns.service.IDbhsmEncryptColumnsService;
@@ -453,6 +452,15 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
     @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRED)
     public AjaxResult insertTask(TaskQueueInsertRequest request) {
 
+        if (request.getBatchCount() > 3500 || request.getBatchCount() < 100) {
+            return AjaxResult.error("每批条数限制为：100-3500");
+        }
+
+        if (request.getThreadCount() > 16 || request.getThreadCount() < 1) {
+            return AjaxResult.error("线程数限制为：1-16");
+        }
+
+
         //数据库实例信息
         DbhsmDbInstance dbhsmDbInstance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(request.getInstanceId());
 
@@ -849,10 +857,6 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         }
 
         return list;
-    }
-
-    public static void main(String[] args) throws SQLException, ClassNotFoundException {
-        initKingBase();
     }
 
     private static void initKingBase() throws ClassNotFoundException, SQLException {
