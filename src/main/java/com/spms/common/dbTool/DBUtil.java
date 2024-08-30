@@ -206,12 +206,18 @@ public final class DBUtil {
                     //获取
                     ResultSet resultSet = stmt.executeQuery("SELECT data_type as type, column_name as name ,character_maximum_length as length , (SELECT constraint_type FROM information_schema.table_constraints WHERE constraint_type ='PRIMARY KEY' AND table_name = table_name and constraint_name = column_name) as Key\n" +
                             "FROM information_schema.columns WHERE table_name = '" + tableName + "' ORDER BY ordinal_position;");
+                    Map<String, String> columnPAMKey = getColumnPAMKey(conn, tableName, dbType);
                     while (resultSet.next()) {//如果对象中有数据，就会循环打印出来
                         Map<String, String> colMap = new HashMap<>();
-                        colMap.put(DbConstants.DB_COLUMN_NAME, resultSet.getString("name"));
+                        String columName = resultSet.getString("name");
+                        colMap.put(DbConstants.DB_COLUMN_NAME, columName);
                         //类型长度为空不进行拼装
                         colMap.put(DbConstants.DB_COLUMN_TYPE, resultSet.getString("type") + (StringUtils.isBlank(resultSet.getString("length")) ? "" : "(" + resultSet.getString("length") + ")"));
                         colMap.put(DbConstants.DB_COLUMN_KEY, resultSet.getString(DbConstants.DB_COLUMN_KEY));
+                        //主键信息
+                        if (!columnPAMKey.isEmpty() && columnPAMKey.containsKey(columName)) {
+                            colMap.put(DbConstants.DB_COLUMN_KEY, columnPAMKey.get(columName));
+                        }
                         colList.add(colMap);
                     }
 
@@ -325,6 +331,17 @@ public final class DBUtil {
                     String[] split = table.split(":");
                     ps = conn.prepareStatement("SELECT distinct kcu.column_name, kcu.table_name, CASE WHEN tc.constraint_type='PRIMARY KEY' THEN 'PRI' ELSE 'MUL' END as Key FROM information_schema.key_column_usage kcu JOIN information_schema.table_constraints tc ON kcu.constraint_name = tc.constraint_name " +
                             "WHERE tc.constraint_type in ('PRIMARY KEY','FOREIGN KEY')  and kcu.table_schema ='" + split[0] + "' and kcu.table_name ='" + split[1] + "'");
+                    rs = ps.executeQuery();
+                    while (rs.next()) {
+                        if (StringUtils.isNotBlank(rs.getString("Key"))) {
+                            map.put(rs.getString("column_name"), rs.getString("Key"));
+                        }
+                    }
+                    break;
+                case DbConstants.DB_TYPE_POSTGRESQL:
+                    ps = conn.prepareStatement("select  kcu.column_name,case when tc.constraint_type='PRIMARY KEY' then 'PRI' else 'MUL' END as Key from information_schema.table_constraints tc\n" +
+                            "join information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema\n" +
+                            "WHERE tc.constraint_type = 'PRIMARY KEY' AND tc.table_name = '" + table + "';");
                     rs = ps.executeQuery();
                     while (rs.next()) {
                         if (StringUtils.isNotBlank(rs.getString("Key"))) {
