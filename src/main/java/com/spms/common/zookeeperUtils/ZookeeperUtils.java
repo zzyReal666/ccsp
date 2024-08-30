@@ -6,18 +6,22 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryOneTime;
 import org.apache.zookeeper.data.Stat;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 /**
  * @author zzypersonally@gmail.com
  * @description zookeeper工具
  * @since 2024/5/20 14:50
  */
+@Component
 @Slf4j
 public class ZookeeperUtils {
 
     public static CuratorFramework client;
 
-    private static String defaultUrl = "192.168.7.157:2181";
+    @Value("${encrypt.zookeeper.url:localhost:2181}")
+    private static String defaultUrl;
     private static int defaultSessionTimeoutMs = 10 * 1000;
     private static int defaultConnectionTimeoutMs = 2 * 1000;
     private static int defaultRetryTime = 1000;

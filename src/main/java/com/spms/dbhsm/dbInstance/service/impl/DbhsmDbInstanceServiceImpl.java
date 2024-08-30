@@ -28,6 +28,7 @@ import com.spms.dbhsm.dbUser.mapper.DbhsmDbUsersMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -62,6 +63,9 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
 
     @Autowired
     private DbhsmDbUsersMapper dbhsmDbUsersMapper;
+
+    @Value("${encrypt.zookeeper.url:localhost:2181}")
+    private String zkAddress;
 
     @PostConstruct
     public void init() {
@@ -643,8 +647,8 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
         AjaxResult error;
 
         //创建 conf 目录，复制ext-lib下的文件
-//        error = mkdir(id);
-//        if (error != null) return error;
+        error = mkdir(id);
+        if (error != null) return error;
 
         //上传配置文件
         error = uploadConfigFile(dbhsmDbInstance);
@@ -718,6 +722,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
         dataModel.put("port", dbhsmDbInstance.getDatabasePort());
         dataModel.put("username", dbhsmDbInstance.getServiceUser());
         dataModel.put("password", dbhsmDbInstance.getServicePassword());
+        dataModel.put("zookeeperIp", zkAddress);
         templateEngine.setDataModel(dataModel);
         return templateEngine.process();
     }

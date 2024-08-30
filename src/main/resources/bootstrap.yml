@@ -146,3 +146,6 @@ security:
   ignore:
     whites:
       - /api/datahsm/v1/strategy/get
+encrypt:
+  zookeeper:
+    url: 192.168.7.157:2181
