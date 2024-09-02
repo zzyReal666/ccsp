@@ -14,14 +14,14 @@ import org.springframework.stereotype.Component;
  * @description zookeeper工具
  * @since 2024/5/20 14:50
  */
-@Component
 @Slf4j
+@Component
 public class ZookeeperUtils {
 
     public static CuratorFramework client;
 
-    @Value("${encrypt.zookeeper.url:localhost:2181}")
-    private static String defaultUrl;
+    @Value("zookeeper.address")
+    private static String defaultUrl = "192.168.7.157:2181";
     private static int defaultSessionTimeoutMs = 10 * 1000;
     private static int defaultConnectionTimeoutMs = 2 * 1000;
     private static int defaultRetryTime = 1000;
@@ -54,13 +54,23 @@ public class ZookeeperUtils {
     public static void close() {
         if (client != null) {
             client.close();
+            client = null;
         }
     }
 
     //endregion
 
+    /**
+     * 更新 节点
+     *
+     * @param data     最新的数据
+     * @param nodePath 要更新的路径
+     * @param url      zookeeper地址
+     */
     public static void updateNode(String data, String nodePath, String url) {
-        init(url);
+        if (client == null) {
+            init(url);
+        }
         //不存在则创建节点并且添加数据 存在则直接添加数据
         try {
             Stat stat = client.checkExists().forPath(nodePath);
@@ -69,31 +79,31 @@ public class ZookeeperUtils {
             } else {
                 client.setData().forPath(nodePath, data.getBytes());
             }
-        } catch (Exception e) {
-            log.error("updateNode error, nodePath:{}, url:{},data:{}", nodePath, url, data);
-            throw new RuntimeException("zookeeper updateNode error", e);
+        } catch (Exception ignore) {
         }
     }
 
     public static void updateNode(String data, String nodePath) {
+        log.info("updateNode nodePath:{}, data:{}", nodePath, data);
         updateNode(data, nodePath, defaultUrl);
     }
 
 
     public static void deleteNode(String nodePath) {
+        log.info("deleteNode nodePath:{}", nodePath);
         deleteNode(nodePath, defaultUrl);
     }
 
     public static void deleteNode(String nodePath, String url) {
         try {
-            init(url);
+            if (client == null) {
+                init(url);
+            }
             Stat stat = client.checkExists().forPath(nodePath);
             if (stat != null) {
                 client.delete().deletingChildrenIfNeeded().forPath(nodePath);
             }
-        } catch (Exception e) {
-            log.error("deleteNode error, nodePath:{}, url:{}", nodePath, url);
-            throw new RuntimeException("zookeeper deleteNode error", e);
+        } catch (Exception ignored) {
         }
     }
 
@@ -109,5 +119,52 @@ public class ZookeeperUtils {
         } catch (Exception e) {
             throw new RuntimeException("zookeeper existsNode error", e);
         }
+    }
+
+
+    //读取节点数据
+    public static String readNode(String nodePath) {
+        try {
+            if (client == null) {
+                init(defaultUrl);
+            }
+            byte[] data = client.getData().forPath(nodePath);
+            return new String(data);
+        } catch (Exception e) {
+            throw new RuntimeException("zookeeper readNode error", e);
+        }
+    }
+
+    public static String readNode(String nodePath, String url) {
+        try {
+            if (client == null) {
+                init(url);
+            }
+            byte[] data = client.getData().forPath(nodePath);
+            return new String(data);
+        } catch (Exception e) {
+            throw new RuntimeException("zookeeper readNode error", e);
+        }
+    }
+
+    /**
+     * 替换节点中的内容
+     *
+     * @param nodePath   节点路径
+     * @param url        zookeeper地址
+     * @param oldContent 旧的字符串
+     * @param newContent 新的字符串
+     */
+    public static String replace(String nodePath, String url, String oldContent, String newContent) {
+        String data = readNode(nodePath, url);
+        data = data.replaceAll(oldContent, newContent);
+        //删除每行之间的空行
+        data = data.replaceAll("(?m)^[\\s]*\\r?\\n", "");
+        updateNode(data, nodePath, url);
+        return data;
+    }
+
+    public static String replace(String nodePath, String oldContent, String newContent) {
+        return replace(nodePath, defaultUrl, oldContent, newContent);
     }
 }

@@ -758,7 +758,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
             dataModel.put("singleTable", "\"*.*\"");
         } else if ("3".equals(dbhsmDbInstance.getDatabaseType())) {
             dataModel.put("url", "jdbc:postgresql://" + dbhsmDbInstance.getDatabaseIp() + ":" + dbhsmDbInstance.getDatabasePort() + "/" + dbhsmDbInstance.getDatabaseServerName());
-            dataModel.put("singleTable", "ds_0.*");
+            dataModel.put("singleTable", "\"*.*.*\"");
         }
         templateEngine.setDataModel(dataModel);
         return templateEngine.process();
