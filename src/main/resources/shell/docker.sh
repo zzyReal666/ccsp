@@ -46,7 +46,7 @@ case "${ACTION}" in
             --name "${CONTAINER_NAME}" \
             -v "${CONF_DIR}:/opt/shardingsphere-proxy/conf" \
             -v "${EXT_LIB_DIR}:/opt/shardingsphere-proxy/ext-lib" \
-             -v "/opt/db_enc/zayk4j/zayk4j.ini:/etc/zayk4j.ini" \
+            -v "/opt/db_enc/zayk4j/zayk4j.ini:/etc/zayk4j.ini" \
             -e PORT="3308" \
             -p "${PORT}:3308" \
             --restart always \

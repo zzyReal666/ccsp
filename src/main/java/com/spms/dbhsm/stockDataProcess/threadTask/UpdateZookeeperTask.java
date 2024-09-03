@@ -63,9 +63,6 @@ public class UpdateZookeeperTask extends Thread {
                         "\\s{4}cipher:\\s*\\r?\\n" +                // 匹配 "    cipher:" 行
                         "\\s{6}encryptorName:\\s*\\S+\\s*\\r?\\n" + // 匹配 "      encryptorName: STUDENT_NAME_encryptor" 行
                         "\\s{6}name:\\s*%s\\s*\\r?\\n" +            // 匹配 "      name: NAME" 行
-                        "\\s{4}likeQuery:\\s*\\r?\\n" +             // 匹配 "    likeQuery:" 行
-                        "\\s{6}encryptorName:\\s*\\S+\\s*\\r?\\n" + // 匹配 "      encryptorName: like_encryptor" 行
-                        "\\s{6}name:\\s*%s_L\\s*\\r?\\n" +          // 匹配 "      name: NAME_L" 行
                         "\\s{4}name:\\s*%s\\s*$",                   // 匹配 "    name: NAME" 行
                 Pattern.quote(col.getColumnName()), Pattern.quote(col.getColumnName()), Pattern.quote(col.getColumnName()), Pattern.quote(col.getColumnName()));
         String config = ZookeeperUtils.replace(fullPath, pattern, "");
