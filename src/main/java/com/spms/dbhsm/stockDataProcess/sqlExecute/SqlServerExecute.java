@@ -61,28 +61,30 @@ public class SqlServerExecute implements SqlExecuteSPI {
 
 
     @Override
-    public String getPrimaryKey(Connection conn, String schema, String table)  {
+    public String getPrimaryKey(Connection conn, String schema, String table) {
         try (PreparedStatement ps = conn.prepareStatement(GET_PRIMARY_KEY_SQL)) {
             ps.setString(1, table);
             ps.setString(2, schemaMap.get(table));
             ResultSet resultSet = ps.executeQuery();
             resultSet.next();
+            log.info("getPrimaryKey success result:{}", resultSet.getString(1));
             return resultSet.getString(1);
         } catch (Exception e) {
             log.warn("getPrimaryKey error sql:{},schema:{},table:{}", GET_PRIMARY_KEY_SQL, schema, table);
-           return  getAutoIncrement(conn, table);
+            return getAutoIncrement(conn, table);
         }
     }
 
 
-    private String getAutoIncrement(Connection conn, String table)  {
+    private String getAutoIncrement(Connection conn, String table) {
         try (PreparedStatement ps = conn.prepareStatement(GET_AUTO_INCREMENT_SQL)) {
             ps.setString(1, table);
             ResultSet resultSet = ps.executeQuery();
             resultSet.next();
+            log.info("getAutoIncrement success result:{}", resultSet.getString(1));
             return resultSet.getString(1);
         } catch (SQLException e) {
-            log.error("getAutoIncrement error sql:{},table:{}", GET_PRIMARY_KEY_SQL,  table);
+            log.error("getAutoIncrement error sql:{},table:{}", GET_PRIMARY_KEY_SQL, table);
             throw new RuntimeException();
         }
     }
@@ -112,6 +114,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
         sql.deleteCharAt(sql.length() - 1);
         try (PreparedStatement ps = conn.prepareStatement(sql.toString())) {
             ps.executeUpdate();
+            log.info("addTempColumn success sql:{}", sql);
         } catch (Exception e) {
             log.error("addTempColumn error sql:{}", sql);
             throw new RuntimeException();
@@ -125,6 +128,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
             sql = new ST(COUNT_DATA).add("schema", schemaMap.get(table)).add("table", table).render();
             ResultSet resultSet = statement.executeQuery(sql);
             resultSet.next();
+            log.info("count success result:{}", resultSet.getInt(1));
             return resultSet.getInt(1);
         } catch (SQLException e) {
             log.error("count error sql:{}", sql);
@@ -153,6 +157,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
                 }
                 list.add(map);
             }
+            log.info("selectColumn success");
             return list;
         } catch (SQLException e) {
             log.error("selectColumn error sql:{}", sql);

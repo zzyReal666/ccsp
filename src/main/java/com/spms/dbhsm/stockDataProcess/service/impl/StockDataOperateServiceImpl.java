@@ -112,6 +112,9 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
 
         //是否有主键，没有主键不能加密
         String primaryKey = sqlExecute.getPrimaryKey(dbaConn, databaseDTO.getDatabaseName(), tableDTO.getTableName());
+        if (primaryKey == null) {
+            throw new ZAYKException("表" + tableDTO.getTableName() + "没有主键，不能加密");
+        }
 
         // 新增临时字段
         addTempColumns(tableDTO, sqlExecute, dbaConn, operateType);
@@ -125,9 +128,6 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
     }
 
     private void afterOperate(DatabaseDTO databaseDTO, TableDTO tableDTO, SqlExecuteSPI sqlExecute, Connection dbaConn, boolean operateType) throws InterruptedException {
-        //设置进度 注意，执行到这里肯定已经完成，强制设置进度为100
-        PROGRESS_MAP.put(String.valueOf(tableDTO.getId()), new AtomicInteger(100));
-
         //交换字段名字
         exchangeColumnName(databaseDTO, tableDTO, sqlExecute, dbaConn);
 
@@ -136,6 +136,8 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
 
         // 加密策略写入 zookeeper 前置插件模式才需要 当前仅ck需要
         writeConfigToZookeeper(databaseDTO, operateType);
+        //设置进度 注意，执行到这里肯定已经完成，强制设置进度为100
+        PROGRESS_MAP.put(String.valueOf(tableDTO.getId()), new AtomicInteger(100));
     }
 
     //行式新增临时字段
