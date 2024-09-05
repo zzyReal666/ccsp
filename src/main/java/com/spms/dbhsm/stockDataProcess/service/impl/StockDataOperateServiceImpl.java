@@ -136,6 +136,7 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
 
         // 加密策略写入 zookeeper 前置插件模式才需要 当前仅ck需要
         writeConfigToZookeeper(databaseDTO, operateType);
+
         //设置进度 注意，执行到这里肯定已经完成，强制设置进度为100
         PROGRESS_MAP.put(String.valueOf(tableDTO.getId()), new AtomicInteger(100));
     }
