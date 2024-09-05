@@ -216,7 +216,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
             }
         }
 
-        if (DbConstants.DB_TYPE_SQLSERVER.equals(dbhsmDbInstance.getDatabaseType())) {
+        if (DbConstants.DB_TYPE_SQLSERVER.equals(dbhsmDbInstance.getDatabaseType()) && DbConstants.BE_PLUG.equals(dbhsmDbInstance.getPlugMode()) ) {
             Connection connection = DbConnectionPoolFactory.getInstance().getConnection(dbhsmDbInstance);
             PreparedStatement statement = null;
             try {
