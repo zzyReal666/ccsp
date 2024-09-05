@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 public class SqlServerExecute implements SqlExecuteSPI {
 
-
     private static final Map<String, String> schemaMap = new ConcurrentHashMap<>();
 
     //获取主键 PK
