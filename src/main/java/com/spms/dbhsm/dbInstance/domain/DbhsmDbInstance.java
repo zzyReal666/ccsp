@@ -100,6 +100,16 @@ public class DbhsmDbInstance extends BaseEntity
     @ApiModelProperty(name = "proxyPort",value = "代理端口")
     private Integer proxyPort;
 
+    private String schema;
+
+    public String getSchema() {
+        return schema;
+    }
+
+    public void setSchema(String schema) {
+        this.schema = schema;
+    }
+
     public void setId(Long id)
     {
         this.id = id;

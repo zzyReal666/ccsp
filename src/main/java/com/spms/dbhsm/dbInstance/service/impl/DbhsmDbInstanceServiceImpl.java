@@ -36,10 +36,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
 import javax.annotation.PostConstruct;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -218,6 +215,27 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
                 throw new ZAYKException("该端口已被使用：" + proxyPort);
             }
         }
+
+        if (DbConstants.DB_TYPE_SQLSERVER.equals(dbhsmDbInstance.getDatabaseType())) {
+            Connection connection = DbConnectionPoolFactory.getInstance().getConnection(dbhsmDbInstance);
+            PreparedStatement statement = null;
+            try {
+                statement = connection.prepareStatement("ALTER DATABASE [" + dbhsmDbInstance.getDatabaseServerName() + "] SET TRUSTWORTHY ON");
+                boolean alter = statement.execute();
+                statement = connection.prepareStatement("EXEC sp_configure 'clr enabled', 1  ");
+                boolean exec = statement.execute();
+                statement = connection.prepareStatement("CREATE ASSEMBLY libsqlextdll FROM '" + dbhsmDbInstance.getEncLibapiPath() + "'  WITH permission_set = UnSafe;");
+                boolean use = statement.execute();
+                log.info("开启数据库TRUSTWORTHY：{}，开启CLR：{}，创建程序集：{}", alter, exec, use);
+                connection.commit();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            } finally {
+                statement.close();
+                connection.close();
+            }
+        }
+
 
         return i;
     }
