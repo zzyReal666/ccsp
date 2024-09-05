@@ -738,7 +738,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
             return AjaxResult2.error(errorMessage);
         } else {
             log.info("执行manage_docker_container.sh成功，echo内容:{}", executionResult.getOutput());
-            return AjaxResult2.success();
+            return AjaxResult2.success("开启代理成功", true);
         }
     }
 
@@ -757,7 +757,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
             log.info("encryptConfigPath:{},encryptConfig:{}", encryptConfigPath, encryptConfig);
             FileUtil.writeUtf8String(encryptConfig, encryptConfigPath);
         } catch (Exception e) {
-            return AjaxResult2.error("配置文件生成失败：" + e.getMessage());
+            return AjaxResult2.success("配置文件生成失败：", false);
         }
         return null;
     }
@@ -775,7 +775,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
             dataModel.put("singleTable", "\"*.*\"");
         } else if ("3".equals(dbhsmDbInstance.getDatabaseType())) {
             dataModel.put("url", "jdbc:postgresql://" + dbhsmDbInstance.getDatabaseIp() + ":" + dbhsmDbInstance.getDatabasePort() + "/" + dbhsmDbInstance.getDatabaseServerName());
-            dataModel.put("singleTable", "ds_0.*");
+            dataModel.put("singleTable", "\"*.*.*\"");
         }
         templateEngine.setDataModel(dataModel);
         return templateEngine.process();
@@ -803,7 +803,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
         if (mkdirResult.getExitCode() != 0) {
             String errorMessage = CODE_MESSAGE.getOrDefault(mkdirResult.getExitCode(), "未知错误！");
             log.error("执行mkdir.sh失败，错误码:{},错误信息：{},echo内容:{}", mkdirResult.getExitCode(), errorMessage, mkdirResult.getOutput());
-            return AjaxResult2.error(errorMessage);
+            return AjaxResult2.success(errorMessage, false);
         }
         log.info("执行mkdir.sh成功，echo内容:{}", mkdirResult.getOutput());
         return null;
@@ -817,10 +817,10 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
         Connection connection = DbConnectionPoolFactory.getInstance().getConnection(db);
         if (connection != null && connection.isValid(timeout)) {
             log.info("数据库连接测试成功！");
-            return AjaxResult2.success();
+            return AjaxResult2.success("数据库连接测试成功！", true);
         } else {
             log.error("数据库连接测试失败！");
-            return AjaxResult2.error("数据库连接测试失败！");
+            return AjaxResult2.success("数据库连接测试失败！", false);
         }
     }
 }

@@ -30,8 +30,10 @@ public class SqlServerExecute implements SqlExecuteSPI {
 
     private static final Map<String, String> schemaMap = new ConcurrentHashMap<>();
 
-    //获取主键
+    //获取主键 PK
     private static final String GET_PRIMARY_KEY_SQL = "SELECT KU.COLUMN_NAME " + "FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS TC " + "INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE KU " + "ON TC.CONSTRAINT_NAME = KU.CONSTRAINT_NAME " + "AND TC.TABLE_NAME = KU.TABLE_NAME " + "WHERE TC.CONSTRAINT_TYPE = 'PRIMARY KEY' " + "AND KU.TABLE_NAME = ? " + "AND KU.TABLE_SCHEMA = ?";
+    //获取自增字段
+    private static final String GET_AUTO_INCREMENT_SQL = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? and TABLE_SCHEMA = 'dbo' AND COLUMNPROPERTY(OBJECT_ID(TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1";
 
     //添加字段主句
     private static final String ADD_COLUMN = "ALTER TABLE <schema>.<table> ADD ";
@@ -59,7 +61,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
 
 
     @Override
-    public String getPrimaryKey(Connection conn, String schema, String table) throws SQLException {
+    public String getPrimaryKey(Connection conn, String schema, String table)  {
         try (PreparedStatement ps = conn.prepareStatement(GET_PRIMARY_KEY_SQL)) {
             ps.setString(1, table);
             ps.setString(2, schemaMap.get(table));
@@ -67,7 +69,20 @@ public class SqlServerExecute implements SqlExecuteSPI {
             resultSet.next();
             return resultSet.getString(1);
         } catch (Exception e) {
-            log.error("getPrimaryKey error sql:{},schema:{},table:{}", GET_PRIMARY_KEY_SQL, schema, table);
+            log.warn("getPrimaryKey error sql:{},schema:{},table:{}", GET_PRIMARY_KEY_SQL, schema, table);
+           return  getAutoIncrement(conn, table);
+        }
+    }
+
+
+    private String getAutoIncrement(Connection conn, String table)  {
+        try (PreparedStatement ps = conn.prepareStatement(GET_AUTO_INCREMENT_SQL)) {
+            ps.setString(1, table);
+            ResultSet resultSet = ps.executeQuery();
+            resultSet.next();
+            return resultSet.getString(1);
+        } catch (SQLException e) {
+            log.error("getAutoIncrement error sql:{},table:{}", GET_PRIMARY_KEY_SQL,  table);
             throw new RuntimeException();
         }
     }
