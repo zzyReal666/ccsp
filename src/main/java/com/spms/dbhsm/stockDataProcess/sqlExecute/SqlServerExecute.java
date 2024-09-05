@@ -61,6 +61,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
 
     @Override
     public String getPrimaryKey(Connection conn, String schema, String table) {
+        log.info("Fetching primary key for table: {}, schema: {}", table, schema);;
         try (PreparedStatement ps = conn.prepareStatement(GET_PRIMARY_KEY_SQL)) {
             ps.setString(1, table);
             ps.setString(2, schemaMap.get(table));
@@ -76,6 +77,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
 
 
     private String getAutoIncrement(Connection conn, String table) {
+        log.info("Fetching auto increment for table: {}", table);
         try (PreparedStatement ps = conn.prepareStatement(GET_AUTO_INCREMENT_SQL)) {
             ps.setString(1, table);
             ResultSet resultSet = ps.executeQuery();
@@ -95,6 +97,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
 
     @Override
     public void addTempColumn(Connection conn, String table, List<AddColumnsDTO> addColumnsDtoList) {
+        log.info("Adding temp columns for table: {}, schema: {}", table, schemaMap.get(table));
         StringBuilder sql = new StringBuilder().append(new ST(ADD_COLUMN).add("schema", schemaMap.get(table)).add("table", table).render());
         addColumnsDtoList.forEach(addColumnsDTO -> {
             Map<String, String> columnDefinition = addColumnsDTO.getColumnDefinition();
@@ -122,6 +125,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
 
     @Override
     public int count(Connection conn, String table) {
+        log.info("Counting data for table: {}, schema: {}", table, schemaMap.get(table));
         String sql = "";
         try (Statement statement = conn.createStatement()) {
             sql = new ST(COUNT_DATA).add("schema", schemaMap.get(table)).add("table", table).render();
@@ -137,6 +141,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
 
     @Override
     public List<Map<String, String>> selectColumn(Connection conn, String table, List<String> columns, int limit, int offset) {
+        log.info("Selecting columns for table: {}, schema: {}, columns: {}, limit: {}, offset: {}", table, schemaMap.get(table), columns, limit, offset);
         String columnStr = String.join(",", columns);
         String sql = new ST(SELECT_COLUMN).add("columns", columnStr).add("id", columns.get(0)).add("schema", schemaMap.get(table)).add("table", table).add("begin", offset).add("end", offset + limit).render();
         try (Statement statement = conn.createStatement()) {
@@ -166,6 +171,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
 
     @Override
     public void batchUpdate(Connection conn, String table, List<Map<String, String>> data) {
+        log.info("Batch updating data for table: {}, schema: {}", table, schemaMap.get(table));
         StringBuilder set = new StringBuilder();
         StringBuilder where = new StringBuilder();
         //开启批量
@@ -221,6 +227,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
 
     @Override
     public void renameColumn(Connection conn, String schema, String table, String oldColumn, String newColumn) {
+        log.info("Renaming column for table: {}, schema: {}, oldColumn: {}, newColumn: {}", table, schemaMap.get(table), oldColumn, newColumn);
         String sql = new ST(RENAME_COLUMN).add("schema", schemaMap.get(table)).add("table", table).add("old", oldColumn).add("new", newColumn).render();
         try (Statement statement = conn.createStatement()) {
             statement.execute(sql);
@@ -232,6 +239,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
 
     @Override
     public void dropColumn(Connection conn, String table, List<String> columns) {
+        log.info("Dropping columns for table: {}, schema: {}, columns: {}", table, schemaMap.get(table), columns);
         StringBuilder drop = new StringBuilder();
         columns.forEach(col -> {
             String dropLoop = new ST(DROP_COLUMN_LOOP).add("column", col).render();
@@ -249,6 +257,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
 
     @Override
     public void connectionOperate(Connection conn, DatabaseDTO databaseDTO) {
+        log.info("Connection operate for database: {}", databaseDTO.getDatabaseName());
         databaseDTO.getTableDTOList().forEach(tableDTO -> {
             String schema = tableDTO.getSchema();
             if (!schemaMap.containsKey(schema)) {

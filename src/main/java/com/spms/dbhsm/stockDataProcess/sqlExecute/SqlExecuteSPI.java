@@ -5,6 +5,8 @@ import com.spms.dbhsm.stockDataProcess.domain.dto.AddColumnsDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.DatabaseDTO;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
@@ -118,5 +120,15 @@ public interface SqlExecuteSPI extends TypedSPI {
      */
     default void connectionOperate(Connection conn , DatabaseDTO databaseDTO) {
 
+    }
+
+
+    // 通用SQL执行方法
+    default ResultSet executeQuery(Connection conn, String sql, Object... params) throws SQLException {
+        PreparedStatement ps = conn.prepareStatement(sql);
+        for (int i = 0; i < params.length; i++) {
+            ps.setObject(i + 1, params[i]);
+        }
+        return ps.executeQuery();
     }
 }
