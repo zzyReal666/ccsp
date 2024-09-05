@@ -101,7 +101,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
             Map<String, String> columnDefinition = addColumnsDTO.getColumnDefinition();
             //加密 新增临时字段，固定text类型
             if (addColumnsDTO.isEncrypt()) {
-                String definitionSql = new ST(ADD_COLUMN_LOOP).add("field", addColumnsDTO.getColumnName() + getTempColumnSuffix()).add("type", "text").render();
+                String definitionSql = new ST(ADD_COLUMN_LOOP).add("field", addColumnsDTO.getColumnName() + getTempColumnSuffix()).add("type", "nvarchar(MAX)").render();
                 sql.append(definitionSql).append(",");
             }
             //解密 还原为原始字段
