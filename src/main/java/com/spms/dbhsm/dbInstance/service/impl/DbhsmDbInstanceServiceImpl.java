@@ -36,10 +36,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
 import javax.annotation.PostConstruct;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -77,7 +74,6 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
      */
     @Value("${encrypt.shell.path:/opt/spms/spms/spms-dbenc-manager/}")
     private String shellPath;
-
 
 
     @Autowired
@@ -219,6 +215,27 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
                 throw new ZAYKException("该端口已被使用：" + proxyPort);
             }
         }
+
+        if (DbConstants.DB_TYPE_SQLSERVER.equals(dbhsmDbInstance.getDatabaseType())) {
+            Connection connection = DbConnectionPoolFactory.getInstance().getConnection(dbhsmDbInstance);
+            PreparedStatement statement = null;
+            try {
+                statement = connection.prepareStatement("ALTER DATABASE [" + dbhsmDbInstance.getDatabaseServerName() + "] SET TRUSTWORTHY ON");
+                boolean alter = statement.execute();
+                statement = connection.prepareStatement("EXEC sp_configure 'clr enabled', 1  ");
+                boolean exec = statement.execute();
+                statement = connection.prepareStatement("CREATE ASSEMBLY libsqlextdll FROM '" + dbhsmDbInstance.getEncLibapiPath() + "'  WITH permission_set = UnSafe;");
+                boolean use = statement.execute();
+                log.info("开启数据库TRUSTWORTHY：{}，开启CLR：{}，创建程序集：{}", alter, exec, use);
+                connection.commit();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            } finally {
+                statement.close();
+                connection.close();
+            }
+        }
+
 
         return i;
     }
@@ -714,7 +731,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
     }
 
     private AjaxResult2<Boolean> startUpDocker(Long id, Integer proxyPort) {
-        ShellScriptExecutor.ExecutionResult executionResult = ShellScriptExecutor.executeScript(shellPath+"docker.sh", 60, "start", String.valueOf(id), String.valueOf(proxyPort));
+        ShellScriptExecutor.ExecutionResult executionResult = ShellScriptExecutor.executeScript(shellPath + "docker.sh", 60, "start", String.valueOf(id), String.valueOf(proxyPort));
         if (executionResult.getExitCode() != 0) {
             String errorMessage = CODE_MESSAGE.getOrDefault(executionResult.getExitCode(), "未知错误！");
             log.error("执行manage_docker_container.sh失败，错误码:{},错误信息：{},echo内容:{}", executionResult.getExitCode(), errorMessage, executionResult.getOutput());
@@ -782,7 +799,7 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
 //        if (null == mkdir) {
 //            return AjaxResult2.error("mkdir.sh脚本文件不存在！");
 //        }
-        ShellScriptExecutor.ExecutionResult mkdirResult = ShellScriptExecutor.executeScript(shellPath+"mkdir.sh", 30, String.valueOf(id));
+        ShellScriptExecutor.ExecutionResult mkdirResult = ShellScriptExecutor.executeScript(shellPath + "mkdir.sh", 30, String.valueOf(id));
         if (mkdirResult.getExitCode() != 0) {
             String errorMessage = CODE_MESSAGE.getOrDefault(mkdirResult.getExitCode(), "未知错误！");
             log.error("执行mkdir.sh失败，错误码:{},错误信息：{},echo内容:{}", mkdirResult.getExitCode(), errorMessage, mkdirResult.getOutput());

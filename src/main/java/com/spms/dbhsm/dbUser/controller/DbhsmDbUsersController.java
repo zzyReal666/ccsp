@@ -90,7 +90,7 @@ public class DbhsmDbUsersController extends BaseController {
     /**
      * 新增数据库用户
      */
-    @RequiresPermissions("dbUser:dbuser:add")
+//    @RequiresPermissions("dbUser:dbuser:add")
     @Log(title = "数据库用户", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@RequestBody DbhsmDbUser dbhsmDbUser) {

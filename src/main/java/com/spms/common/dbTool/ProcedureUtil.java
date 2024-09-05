@@ -344,16 +344,16 @@ public class ProcedureUtil {
 
         StringBuilder transSQL = new StringBuilder();
 
-        transSQL.append("create or alter FUNCTION func_string_encrypt_ex (");
+        transSQL.append("CREATE FUNCTION dbo.func_string_encrypt_ex(");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("@policy_id NVARCHAR(50),@policy_url NVARCHAR(200),@user_ipaddr NVARCHAR(50),");
+        transSQL.append("@policy_id NVARCHAR(MAX),@policy_url NVARCHAR(MAX),@user_ipaddr NVARCHAR(MAX),");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("@db_instance_name NVARCHAR(50),@db_name NVARCHAR(50),@db_table_name NVARCHAR(50),");
+        transSQL.append("@db_instance_name NVARCHAR(MAX),@db_name NVARCHAR(MAX),@db_table_name NVARCHAR(MAX),");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("@db_column_name NVARCHAR(50),@db_user_name NVARCHAR(50),");
+        transSQL.append("@db_column_name NVARCHAR(MAX),@db_user_name NVARCHAR(MAX),");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("@rawstring NVARCHAR(max), @rawstringlen INT,");
@@ -381,7 +381,9 @@ public class ProcedureUtil {
         try {
             log.info("创建函数func_string_encrypt_ex：{} ", transSQL.toString());
             statement = conn.prepareStatement(transSQL.toString());
-            statement.execute();
+            boolean execute = statement.execute();
+            log.info("创建func_string_encrypt_ex函数返回：{}",execute);
+            conn.commit();
             log.info("创建函数end：func_string_encrypt_ex 命令提交完成");
         } catch (Exception e) {
             e.printStackTrace();
@@ -416,19 +418,19 @@ public class ProcedureUtil {
 
         StringBuilder transSQL = new StringBuilder();
 
-        transSQL.append("create or alter FUNCTION func_string_decrypt_ex (");
+        transSQL.append("CREATE FUNCTION dbo.func_string_decrypt_ex(");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("@policy_id NVARCHAR(50),@policy_url NVARCHAR(200),@user_ipaddr NVARCHAR(50),");
+        transSQL.append("@policy_id NVARCHAR(MAX),@policy_url NVARCHAR(MAX),@user_ipaddr NVARCHAR(MAX),");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("@db_instance_name NVARCHAR(50),@db_name NVARCHAR(50), @db_table_name NVARCHAR(50),");
+        transSQL.append("@db_instance_name NVARCHAR(MAX),@db_name NVARCHAR(MAX), @db_table_name NVARCHAR(MAX),");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("@db_column_name NVARCHAR(50),@db_user_name NVARCHAR(50),");
+        transSQL.append("@db_column_name NVARCHAR(MAX),@db_user_name NVARCHAR(MAX),");
         transSQL.append(System.getProperty("line.separator"));
 
-        transSQL.append("@rawstring NVARCHAR(max), @rawstringlen INT,");
+        transSQL.append("@rawstring NVARCHAR(MAX), @rawstringlen INT,");
         transSQL.append(System.getProperty("line.separator"));
 
         transSQL.append("@offset INT, @length INT, @encryptstringlen INT");
@@ -450,8 +452,9 @@ public class ProcedureUtil {
         try {
             log.info("创建函数 func_string_decrypt_ex：{} ", transSQL.toString());
             statement = conn.prepareStatement(transSQL.toString());
-            statement.execute();
-            log.info("创建函数end：func_string_decrypt_ex 命令提交完成");
+            boolean execute = statement.execute();
+            log.info("创建func_string_decrypt_ex函数返回：{}",execute);
+            conn.commit();
         } catch (Exception e) {
             e.printStackTrace();
         } finally {

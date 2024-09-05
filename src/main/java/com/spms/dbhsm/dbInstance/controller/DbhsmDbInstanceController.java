@@ -98,7 +98,7 @@ public class DbhsmDbInstanceController extends BaseController {
     /**
      * 新增数据库实例
      */
-    @RequiresPermissions("dbhsm:dbInstance:add")
+//    @RequiresPermissions("dbhsm:dbInstance:add")
     @Log(title = "数据库实例", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult2 add(@RequestBody DbhsmDbInstance dbhsmDbInstance) {

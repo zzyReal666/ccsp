@@ -12,6 +12,7 @@ import com.spms.common.CommandUtil;
 import com.spms.common.JSONDataUtil;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.dbTool.DBUtil;
+import com.spms.common.dbTool.ViewUtil;
 import com.spms.common.enums.DatabaseTypeEnum;
 import com.spms.common.pool.hikariPool.DbConnectionPoolFactory;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
@@ -21,6 +22,7 @@ import com.spms.dbhsm.dbUser.domain.DbhsmDbUser;
 import com.spms.dbhsm.dbUser.mapper.DbhsmDbUsersMapper;
 import com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptColumns;
 import com.spms.dbhsm.encryptcolumns.domain.DbhsmEncryptTable;
+import com.spms.dbhsm.encryptcolumns.domain.dto.DbhsmEncryptColumnsAdd;
 import com.spms.dbhsm.encryptcolumns.mapper.DbhsmEncryptColumnsMapper;
 import com.spms.dbhsm.encryptcolumns.mapper.DbhsmEncryptTableMapper;
 import com.spms.dbhsm.encryptcolumns.service.IDbhsmEncryptColumnsService;
@@ -170,7 +172,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         database.setDatabaseType(DatabaseTypeEnum.getNameByCode(database.getDatabaseType()));
         database.setDatabaseName(dbhsmDbInstance.getDatabaseServerName());
         database.setInstanceType(dbhsmDbInstance.getDatabaseExampleType());
-        database.setDatabaseVersion(DbConstants.DB_TYPE_MYSQL.equals(dbhsmDbInstance.getDatabaseType()) ? "5.7": dbhsmDbInstance.getDatabaseEdition());
+        database.setDatabaseVersion(DbConstants.DB_TYPE_MYSQL.equals(dbhsmDbInstance.getDatabaseType()) ? "5.7" : dbhsmDbInstance.getDatabaseEdition());
         database.setDbStorageMode(DbConstants.DB_TYPE_HB.equals(dbhsmDbInstance.getDatabaseType()) ? DatabaseDTO.DbStorageMode.COLUMN : DatabaseDTO.DbStorageMode.ROW);
         String instance = CommandUtil.getInstance(dbhsmDbInstance);
         database.setConnectUrl(instance);
@@ -190,28 +192,36 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
 
         //加密
         if (DbConstants.ENC_MODE.equals(request.getTaskMode())) {
-            new Thread(() -> {
-                try {
-                    stockDataOperateService.stockDataOperate(database, true);
-                } catch (Exception e) {
-                    log.error(encryptTable.getTableName() + "加密失败！:{}", e.getMessage());
-                    throw new RuntimeException(encryptTable.getTableName() + "加密失败！");
+//            new Thread(() -> {
+//                try {
+//                    stockDataOperateService.stockDataOperate(database, true);
+//                } catch (Exception e) {
+//                    log.error(encryptTable.getTableName() + "加密失败！:{}", e.getMessage());
+//                    throw new RuntimeException(encryptTable.getTableName() + "加密失败！");
+//                }
+//            }).start();
+//            taskQueue.setEncStatus(1);
+//            //修改加密列状态
+//            updateEncrypt(1, columnsList);
+//            dbhsmTaskQueueMapper.updateRecord(taskQueue);
+//            //表状态修改为加密中
+//            encryptTable.setTableStatus(DbConstants.ENC_FLAG);
+//            dbhsmEncryptTableMapper.updateRecord(encryptTable);
+
+            if (DbConstants.DB_TYPE_SQLSERVER.equals(dbhsmDbInstance.getDatabaseType())) {
+                boolean b = operViewToSqlServer(columnsList, dbhsmDbInstance);
+                if (!b) {
+                    log.error("创建解密视图失败");
                 }
-            }).start();
-            taskQueue.setEncStatus(1);
-            //修改加密列状态
-            updateEncrypt(1, columnsList);
-            dbhsmTaskQueueMapper.updateRecord(taskQueue);
-            //表状态修改为加密中
-            encryptTable.setTableStatus(DbConstants.ENC_FLAG);
-            dbhsmEncryptTableMapper.updateRecord(encryptTable);
+            }
         } else {
             //解密
+//            delViewAndTrigger(dbhsmDbInstance,dbhsmEncryptColumns.getDbTable());
             new Thread(() -> {
                 try {
                     stockDataOperateService.stockDataOperate(database, false);
                 } catch (Exception e) {
-                    log.error(encryptTable.getTableName() + "解密失败！:{}", e.getMessage());
+                    log.error(encryptTable.getTableName(), "{}：解密失败！:{}", e.getMessage());
                     throw new RuntimeException(encryptTable.getTableName() + "解密失败！");
                 }
             }).start();
@@ -231,6 +241,319 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         }
     }
 
+    public boolean operViewToSqlServer(List<DbhsmEncryptColumns> dbhsmEncryptColumns, DbhsmDbInstance instance) {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        try {
+            DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd = BeanConvertUtils.beanToBean(dbhsmEncryptColumns.get(0), DbhsmEncryptColumnsAdd.class);
+            dbhsmEncryptColumnsAdd.setDatabaseType(instance.getDatabaseType());
+            dbhsmEncryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
+            connection = DbConnectionPoolFactory.getInstance().getConnection(instance);
+            preparedStatement = connection.prepareStatement("USE  [" + instance.getDatabaseServerName() + "]");
+            preparedStatement.execute();
+            preparedStatement = connection.prepareStatement("EXEC sp_rename '" + dbhsmEncryptColumnsAdd.getDbTable() + "', '" + dbhsmEncryptColumnsAdd.getDbTable() + "_ENCDATA';");
+            boolean execute = preparedStatement.execute();
+            log.info("修改表名返回:{}", execute);
+            createView(connection, dbhsmEncryptColumns, instance);
+            connection.commit();
+
+            //创建触发器
+            insertTrigger(connection, dbhsmEncryptColumns, instance);
+            connection.commit();
+            //更新触发器
+            updateTrigger(connection, dbhsmEncryptColumns, instance);
+            connection.commit();
+            return true;
+        } catch (Exception e) {
+            try {
+                connection.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            log.error("创建解密函数失败：{}", e.getMessage());
+        } finally {
+            try {
+                connection.close();
+                preparedStatement.close();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return false;
+    }
+
+    public void createView(Connection connection, List<DbhsmEncryptColumns> dbhsmEncryptColumnsList, DbhsmDbInstance instance) {
+        PreparedStatement preparedStatement = null;
+        try {
+            DbhsmEncryptColumnsAdd dbhsmEncryptColumns = BeanConvertUtils.beanToBean(dbhsmEncryptColumnsList.get(0), DbhsmEncryptColumnsAdd.class);
+            StringBuffer stringBuffer = new StringBuffer();
+            stringBuffer.append("create view ").append(instance.getSchema()).append(".").append(dbhsmEncryptColumns.getDbTable()).append(" AS ");
+            stringBuffer.append(System.lineSeparator());
+
+            //insert into 语句
+            StringBuilder into = new StringBuilder();
+            String tableName = instance.getSchema() + ":" + dbhsmEncryptColumns.getDbTable() + "_ENCDATA";
+            List<Map<String, String>> allColumnsInfo = DBUtil.findAllColumnsInfo(connection, tableName, DbConstants.DB_TYPE_SQLSERVER);
+            for (Map<String, String> stringStringMap : allColumnsInfo) {
+                String columnName = stringStringMap.get(DbConstants.DB_COLUMN_NAME);
+                into.append(columnName).append(",");
+            }
+
+            boolean isSel = true;
+            for (DbhsmEncryptColumns encryptColumns : dbhsmEncryptColumnsList) {
+                if (isSel) {
+                    stringBuffer.append("select ").append(System.lineSeparator());
+                }
+                stringBuffer.append(instance.getSchema()+".func_string_decrypt_ex(").append(System.lineSeparator());
+                stringBuffer.append("'").append(encryptColumns.getId()).append("',").append(System.lineSeparator());
+                stringBuffer.append("'").append(dbhsmEncryptColumns.getIpAndPort()).append("/prod-api/dbhsm/api/datahsm/v1/strategy/get',").append(System.lineSeparator());
+                stringBuffer.append("'ip_addr',").append(System.lineSeparator());
+                stringBuffer.append("CAST(@@ServerName as char),").append(System.lineSeparator());
+                stringBuffer.append("db_name(),").append(System.lineSeparator());
+                stringBuffer.append("'").append(encryptColumns.getDbTable()).append("',").append(System.lineSeparator());
+                stringBuffer.append("'").append(encryptColumns.getEncryptColumns()).append("',").append(System.lineSeparator());
+                stringBuffer.append(" suser_name(),").append(System.lineSeparator());
+                stringBuffer.append(encryptColumns.getEncryptColumns() + ",").append("DATALENGTH(" + encryptColumns.getEncryptColumns() + "),").append(System.lineSeparator());
+                stringBuffer.append("0,").append("DATALENGTH(" + encryptColumns.getEncryptColumns() + "),").append(System.lineSeparator());
+                stringBuffer.append("DATALENGTH(" + encryptColumns.getEncryptColumns() + ")) as "+encryptColumns.getEncryptColumns()+",").append(System.lineSeparator());
+                isSel = false;
+            }
+            stringBuffer.deleteCharAt(stringBuffer.length() - 1);
+            //表中剩余列
+            String[] split = into.toString().split(",");
+            List<String> colNames = dbhsmEncryptColumnsList.stream().map(DbhsmEncryptColumns::getEncryptColumns).collect(Collectors.toList());
+            List<String> residueCol = Arrays.stream(split).filter(s -> colNames.stream().noneMatch(s::equals)).collect(Collectors.toList());
+            for (String col : residueCol) {
+                stringBuffer.append(col).append(" as ").append(col).append(",");
+            }
+            stringBuffer.deleteCharAt(stringBuffer.length() - 1);
+
+            stringBuffer.append(" from "+instance.getSchema()+"."+dbhsmEncryptColumns.getDbTable()+"_ENCDATA;").append(System.lineSeparator());
+
+            System.out.println(stringBuffer);
+            log.info("创建视图：{}", stringBuffer);
+            preparedStatement = connection.prepareStatement(stringBuffer.toString());
+            boolean execute = preparedStatement.execute();
+            log.info("创建视图返回：{}",execute);
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("创建视图错误：{}", e.getMessage());
+        } finally {
+            try {
+                preparedStatement.close();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    public void insertTrigger(Connection connection, List<DbhsmEncryptColumns> dbhsmEncryptColumnsList, DbhsmDbInstance instance) throws SQLException {
+        PreparedStatement preparedStatement = null;
+        try {
+            DbhsmEncryptColumnsAdd dbhsmEncryptColumns = BeanConvertUtils.beanToBean(dbhsmEncryptColumnsList.get(0), DbhsmEncryptColumnsAdd.class);
+            StringBuffer stringBuffer = new StringBuffer();
+            stringBuffer.append("CREATE TRIGGER [tr_" + dbhsmEncryptColumns.getDbTable() + "_ENCDATA_sm4_insert]").append(System.lineSeparator());
+            stringBuffer.append(" ON dbo." + dbhsmEncryptColumns.getDbTable() + "_ENCDATA ").append(System.lineSeparator());
+            stringBuffer.append(" INSTEAD OF INSERT ").append(System.lineSeparator());
+            stringBuffer.append("AS").append(System.lineSeparator());
+            stringBuffer.append(" declare").append(System.lineSeparator());
+            stringBuffer.append(" @user_ipaddr NVARCHAR(max)").append(System.lineSeparator());
+            stringBuffer.append(" BEGIN").append(System.lineSeparator());
+            stringBuffer.append("  SET NOCOUNT ON;").append(System.lineSeparator());
+            stringBuffer.append("  select @user_ipaddr = client_net_address FROM sys.dm_exec_connections WHERE session_id = @@SPID ").append(System.lineSeparator());
+            stringBuffer.append(" insert into dbo." + dbhsmEncryptColumns.getDbTable() + "_ENCDATA");
+
+            //insert into 语句
+            StringBuilder into = new StringBuilder();
+            String tableName = instance.getSchema() + ":" + dbhsmEncryptColumns.getDbTable() + "_ENCDATA";
+            List<Map<String, String>> allColumnsInfo = DBUtil.findAllColumnsInfo(connection, tableName, DbConstants.DB_TYPE_SQLSERVER);
+            for (Map<String, String> stringStringMap : allColumnsInfo) {
+                String columnName = stringStringMap.get(DbConstants.DB_COLUMN_NAME);
+                into.append(columnName).append(",");
+            }
+
+            stringBuffer.append("(").append(into.deleteCharAt(into.length() - 1)).append(")").append(System.lineSeparator());
+            boolean isSel = true;
+            for (DbhsmEncryptColumns encryptColumns : dbhsmEncryptColumnsList) {
+                if (isSel) {
+                    stringBuffer.append("select dbo.func_string_encrypt_ex(").append(System.lineSeparator());
+                } else {
+                    stringBuffer.append("dbo.func_string_encrypt_ex(").append(System.lineSeparator());
+                }
+                stringBuffer.append("'").append(encryptColumns.getId()).append("',").append(System.lineSeparator());
+                stringBuffer.append("'").append(dbhsmEncryptColumns.getIpAndPort()).append("/prod-api/dbhsm/api/datahsm/v1/strategy/get',").append(System.lineSeparator());
+                stringBuffer.append(" @user_ipaddr, ").append(System.lineSeparator());
+                stringBuffer.append(" CAST(@@ServerName as char),").append(System.lineSeparator());
+                stringBuffer.append("db_name(),").append(System.lineSeparator());
+                stringBuffer.append("'").append(encryptColumns.getDbTable()).append("',").append(System.lineSeparator());
+                stringBuffer.append("'").append(encryptColumns.getEncryptColumns()).append("',").append(System.lineSeparator());
+                stringBuffer.append(" suser_name(),").append(System.lineSeparator());
+                stringBuffer.append("i." + encryptColumns.getEncryptColumns() + ",").append("DATALENGTH(i." + encryptColumns.getEncryptColumns() + "),").append(System.lineSeparator());
+                stringBuffer.append("0,").append("DATALENGTH(i." + encryptColumns.getEncryptColumns() + "),").append(System.lineSeparator());
+                stringBuffer.append("DATALENGTH(i." + encryptColumns.getEncryptColumns() + ")),").append(System.lineSeparator());
+                isSel = false;
+            }
+            stringBuffer.deleteCharAt(into.length() - 1);
+            //表中剩余列
+            String[] split = into.toString().split(",");
+            List<String> colNames = dbhsmEncryptColumnsList.stream().map(DbhsmEncryptColumns::getEncryptColumns).collect(Collectors.toList());
+            List<String> residueCol = Arrays.stream(split).filter(s -> colNames.stream().noneMatch(s::equals)).collect(Collectors.toList());
+            for (String col : residueCol) {
+                stringBuffer.append("i.").append(col).append(",");
+            }
+            stringBuffer.deleteCharAt(stringBuffer.length() - 1);
+
+            stringBuffer.append(" FROM inserted i;").append(System.lineSeparator());
+            stringBuffer.append("END").append(System.lineSeparator());
+
+            log.info("插入触发器：{}", stringBuffer);
+            preparedStatement = connection.prepareStatement(stringBuffer.toString());
+            preparedStatement.executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("创建插入触发器错误：{}", e.getMessage());
+        } finally {
+            preparedStatement.close();
+        }
+
+    }
+
+    public void updateTrigger(Connection connection, List<DbhsmEncryptColumns> dbhsmEncryptColumnsList, DbhsmDbInstance instance) throws SQLException {
+        DbhsmEncryptColumnsAdd dbhsmEncryptColumns = BeanConvertUtils.beanToBean(dbhsmEncryptColumnsList.get(0), DbhsmEncryptColumnsAdd.class);
+        StringBuilder update = new StringBuilder();
+        String priKey = "";
+        PreparedStatement preparedStatement = null;
+        try {
+            StringBuffer stringBuffer = new StringBuffer();
+            stringBuffer.append("CREATE TRIGGER [tr_" + dbhsmEncryptColumns.getDbTable() + "_ENCDATA_sm4_update]").append(System.lineSeparator());
+            stringBuffer.append(" ON dbo." + dbhsmEncryptColumns.getDbTable() + "_ENCDATA ").append(System.lineSeparator());
+            stringBuffer.append("  AFTER UPDATE ").append(System.lineSeparator());
+            stringBuffer.append("AS").append(System.lineSeparator());
+            stringBuffer.append(" declare").append(System.lineSeparator());
+            stringBuffer.append(" @user_ipaddr NVARCHAR(max)").append(System.lineSeparator());
+            stringBuffer.append(" BEGIN").append(System.lineSeparator());
+            stringBuffer.append("  SET NOCOUNT ON;").append(System.lineSeparator());
+            stringBuffer.append("  select @user_ipaddr = client_net_address FROM sys.dm_exec_connections WHERE session_id = @@SPID ").append(System.lineSeparator());
+            stringBuffer.append(" UPDATE dbo." + dbhsmEncryptColumns.getDbTable() + "_ENCDATA ");
+
+            //insert into 语句
+            String tableName = instance.getSchema() + ":" + dbhsmEncryptColumns.getDbTable() + "_ENCDATA";
+            List<Map<String, String>> allColumnsInfo = DBUtil.findAllColumnsInfo(connection, tableName, DbConstants.DB_TYPE_SQLSERVER);
+            for (Map<String, String> stringStringMap : allColumnsInfo) {
+                String columnName = stringStringMap.get(DbConstants.DB_COLUMN_NAME);
+                update.append(columnName).append(",");
+                if (stringStringMap.containsKey(DbConstants.DB_COLUMN_KEY)) {
+                    priKey = stringStringMap.get(DbConstants.DB_COLUMN_NAME);
+                }
+            }
+            update.deleteCharAt(update.length() - 1);
+
+            boolean isSet = true;
+            for (DbhsmEncryptColumns encryptColumns : dbhsmEncryptColumnsList) {
+                if (isSet) {
+                    stringBuffer.append(" SET ");
+                }
+                stringBuffer.append(encryptColumns.getEncryptColumns()).append("= ").append(instance.getDatabaseServerName()).append(".dbo.func_string_encrypt_ex(").append(System.lineSeparator());
+                stringBuffer.append("'").append(encryptColumns.getId()).append("',").append(System.lineSeparator());
+                stringBuffer.append("'").append(dbhsmEncryptColumns.getIpAndPort()).append("/prod-api/dbhsm/api/datahsm/v1/strategy/get',").append(System.lineSeparator());
+                stringBuffer.append(" @user_ipaddr, ").append(System.lineSeparator());
+                stringBuffer.append(" CAST(@@ServerName as char),").append(System.lineSeparator());
+                stringBuffer.append("db_name(),").append(System.lineSeparator());
+                stringBuffer.append("'").append(encryptColumns.getDbTable()).append("',").append(System.lineSeparator());
+                stringBuffer.append("'").append(encryptColumns.getEncryptColumns()).append("',").append(System.lineSeparator());
+                stringBuffer.append(" suser_name(),").append(System.lineSeparator());
+                stringBuffer.append("i." + encryptColumns.getEncryptColumns() + ",").append("DATALENGTH(i." + encryptColumns.getEncryptColumns() + "),").append(System.lineSeparator());
+                stringBuffer.append("0,").append("DATALENGTH(i." + encryptColumns.getEncryptColumns() + "),").append(System.lineSeparator());
+                stringBuffer.append("DATALENGTH(i." + encryptColumns.getEncryptColumns() + ")),").append(System.lineSeparator());
+                isSet = false;
+            }
+
+            stringBuffer.deleteCharAt(stringBuffer.length() - 1);
+
+            //表中剩余列
+            String[] split = update.toString().split(",");
+            List<String> colNames = dbhsmEncryptColumnsList.stream().map(DbhsmEncryptColumns::getEncryptColumns).collect(Collectors.toList());
+            List<String> residueCol = Arrays.stream(split).filter(s -> colNames.stream().noneMatch(s::equals)).collect(Collectors.toList());
+            for (String col : residueCol) {
+                stringBuffer.append(col).append("=i.").append(col).append(",");
+            }
+            stringBuffer.deleteCharAt(stringBuffer.length() - 1);
+
+
+            stringBuffer.append(" FROM dbo." + dbhsmEncryptColumns.getDbTable() + "_ENCDATA e").append(System.lineSeparator());
+            stringBuffer.append(" JOIN inserted i ON e." + priKey + " = i." + priKey + ";").append(System.lineSeparator());
+            stringBuffer.append("END").append(System.lineSeparator());
+
+            log.info("更新触发器：{}", stringBuffer);
+            preparedStatement = connection.prepareStatement(stringBuffer.toString());
+            preparedStatement.executeUpdate();
+
+            //instead of
+            insteadBySqlServer(connection, "INSERT", dbhsmEncryptColumns.getDbTable(), update.toString(), priKey);
+            insteadBySqlServer(connection, "UPDATE", dbhsmEncryptColumns.getDbTable(), update.toString(), priKey);
+            insteadBySqlServer(connection, "DELETE", dbhsmEncryptColumns.getDbTable(), update.toString(), priKey);
+        } catch (Exception e) {
+            log.error("创建更新触发器失败：{}", e.getMessage());
+        } finally {
+            preparedStatement.close();
+        }
+    }
+
+    public void insteadBySqlServer(Connection connection, String instType, String tableName, String cols, String keyCol) throws SQLException {
+        StringBuffer sb = new StringBuffer();
+        sb.append("create trigger ").append(tableName).append("_instead_" + instType.toLowerCase()).append(System.lineSeparator());
+        sb.append("on dbo.").append(tableName).append(System.lineSeparator());
+        sb.append("instead of ").append(instType).append(System.lineSeparator());
+        sb.append("AS").append(System.lineSeparator());
+        sb.append("begin").append(System.lineSeparator());
+        if ("INSERT".equals(instType)) {
+            sb.append("INSERT INTO dbo.").append(tableName).append("_ENCDATA ").append(System.lineSeparator());
+            sb.append("(").append(cols).append(")").append(System.lineSeparator());
+            sb.append("SELECT ").append(cols).append(System.lineSeparator());
+            sb.append("FROM inserted;").append(System.lineSeparator());
+        } else if ("UPDATE".equals(instType)) {
+            sb.append("UPDATE dbo.").append(tableName).append("_ENCDATA").append(System.lineSeparator());
+            sb.append("SET ").append(System.lineSeparator());
+            String[] split = cols.split(",");
+            for (String col : split) {
+                sb.append(col).append(" = ").append("i.").append(col).append(",");
+            }
+            sb.deleteCharAt(sb.length() - 1);
+            sb.append(" FROM dbo.").append(tableName).append("_ENCDATA e").append(System.lineSeparator());
+            sb.append("JOIN inserted i ON e.").append(keyCol).append(" = i.").append(keyCol).append(";").append(System.lineSeparator());
+        } else if ("DELETE".equals(instType)) {
+            sb.append("DELETE FROM dbo.").append(tableName).append("_ENCDATA ").append(System.lineSeparator());
+            sb.append("where ").append(keyCol).append(" in (select ").append(keyCol).append(" from deleted);").append(System.lineSeparator());
+        }
+        sb.append("end;").append(System.lineSeparator());
+
+        log.info("instead of触发器执行语句：{}", sb);
+        PreparedStatement preparedStatement = connection.prepareStatement(sb.toString());
+        boolean execute = preparedStatement.execute();
+        log.info(instType, "{}：类型instead of触发器：{}", execute);
+
+        preparedStatement.close();
+    }
+
+    public void delViewAndTrigger(String tableName, String schema) {
+//        PreparedStatement preparedStatement = null;
+//        try {
+//            connection = DbConnectionPoolFactory.getInstance().getConnection(instance);
+//            preparedStatement = connection.prepareStatement("DROP TRIGGER dbo." + tableName + "_instead_delete;");
+//            preparedStatement.executeUpdate();
+//            preparedStatement = connection.prepareStatement("DROP TRIGGER dbo." + tableName + "_instead_insert;");
+//            preparedStatement.executeUpdate();
+//            preparedStatement = connection.prepareStatement("DROP TRIGGER dbo." + tableName + "_instead_update;");
+//            preparedStatement.executeUpdate();
+//            preparedStatement = connection.prepareStatement("DROP TRIGGER dbo.tr_"+tableName+"_ENCDATA_sm4_update;");
+//            preparedStatement.executeUpdate();
+//            preparedStatement = connection.prepareStatement("EXEC "+schema+".sys.sp_rename N'"+schema+".dbo."+tableName+"_ENCDATA', N'"+tableName+"', 'OBJECT';");
+//            preparedStatement.executeUpdate();
+//        } catch (SQLException e) {
+//            throw new RuntimeException(e);
+//        }
+
+    }
 
     /**
      * 组装字段基本信息
@@ -251,10 +574,11 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             conn = DbConnectionPoolFactory.getInstance().getConnection(connDTO);
             if (Optional.ofNullable(conn).isPresent()) {
                 //SQL Server 单独获取schema
+                String schema = "";
                 if (DbConstants.DB_TYPE_SQLSERVER.equals(dbhsmDbInstance.getDatabaseType())) {
-                    String schema = getDataBaseSchema(conn, dbhsmEncryptColumns.get(0).getDbTable(), dbhsmDbInstance.getDatabaseType());
+                    schema = getDataBaseSchema(conn, dbhsmEncryptColumns.get(0).getDbTable(), dbhsmDbInstance.getDatabaseType());
                     tableDTO.setSchema(schema);
-                    dbhsmDbInstance.setDatabaseServerName(schema);
+                    dbhsmDbInstance.setSchema(schema);
                 }
 
                 List<ColumnDTO> list = new ArrayList<>();
@@ -262,7 +586,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                     ColumnDTO columnDTO = new ColumnDTO();
                     Statement stmt = conn.createStatement();
                     ResultSet resultSet = null;
-                    String sql = databaseTypeSqlColumns(dbhsmDbInstance.getDatabaseType(), dbhsmEncryptColumn.getDbTable(), dbhsmDbInstance.getDatabaseServerName());
+                    String sql = databaseTypeSqlColumns(dbhsmDbInstance.getDatabaseType(), dbhsmEncryptColumn.getDbTable(), schema);
                     log.info("获取表字段信息SQL：{}", sql);
                     resultSet = stmt.executeQuery(sql);
                     while (resultSet.next()) {
@@ -271,10 +595,6 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                         //只获取需要加密的列字段
                         if (!dbhsmEncryptColumn.getEncryptColumns().equals(columnName)) {
                             continue;
-                        }
-                        if (DbConstants.DB_TYPE_KB.equals(dbhsmDbInstance.getDatabaseType()) || DbConstants.DB_TYPE_POSTGRESQL.equals(dbhsmDbInstance.getDatabaseType())) {
-                            String schema = resultSet.getString("table_schema");
-                            tableDTO.setSchema(schema);
                         }
                         //解密时 使用加密前的列类型  从加密列字段获取
                         String type = dbhsmEncryptColumn.getColumnsType();

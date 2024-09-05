@@ -13,22 +13,21 @@ import java.nio.charset.StandardCharsets;
 import java.sql.*;
 
 /**
+ * @author 18853
+ * @version 1.0
  * @project ccsp
  * @description 加解密函数工具类
- * @author 18853
  * @date 2023/10/26 11:38:38
- * @version 1.0
  */
 @Slf4j
 public class FunctionUtil {
     /**
      * 创建mysql加密解密函数
-     *
+     * <p>
      * CREATE FUNCTION StringEncrypt RETURNS STRING SONAME "mysqldll.dll";
-     *
+     * <p>
      * CREATE FUNCTION StringDecrypt RETURNS STRING SONAME "mysqldll.dll";
-     *
-     * */
+     */
     public static void createMysqlStringEncryptDecryptFunction(Connection connection) throws SQLException {
 
         String osName = System.getProperty("os.name");
@@ -67,7 +66,7 @@ public class FunctionUtil {
             }
         }
 
-        try{
+        try {
             log.info("CREATE MYSQL  FpeStringEncrypt FUNCTION INFO：\n" + fpeEncryptFunction);
             preparedStatement = connection.prepareStatement(fpeEncryptFunction);
             preparedStatement.execute();
@@ -79,7 +78,7 @@ public class FunctionUtil {
                 preparedStatement.close();
             }
         }
-        try{
+        try {
             log.info("CREATE MYSQL  FpeStringDecrypt FUNCTION INFO：\n" + fpeDecryptFunction);
             preparedStatement = connection.prepareStatement(fpeDecryptFunction);
             preparedStatement.execute();
@@ -94,8 +93,8 @@ public class FunctionUtil {
     }
 
     public static void createEncryptDecryptFunction(Connection connection, DbhsmDbInstance dbhsmDbInstance) throws ZAYKException, SQLException {
-        String sql ="";
-        String dbType= dbhsmDbInstance.getDatabaseType();
+        String sql = "";
+        String dbType = dbhsmDbInstance.getDatabaseType();
         switch (dbType) {
             case DbConstants.DB_TYPE_ORACLE:
                 break;
@@ -115,6 +114,7 @@ public class FunctionUtil {
 
     /**
      * 创建加解密方法 fpe方法
+     *
      * @param connection
      */
     public static void createSqlServerFunction(Connection connection) {
@@ -122,45 +122,42 @@ public class FunctionUtil {
             //创建加解密方法 fpe方法
             ProcedureUtil.transSQLServerStringEncryptEX(connection);
             ProcedureUtil.transSQLServerStringDecryptEX(connection);
-            ProcedureUtil.funcSQLServerFuncFpeEncryptEx(connection);
-            ProcedureUtil.funcSQLServerFuncFpeDecryptEx(connection);
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
     /**
-     *
      * ALTER TABLE tuser1.TABLE1_SM4_ECB
      * MODIFY(
      * CHANGE DECIMAL(20,6) ENCRYPT WITH SM4_ECB MANUAL BY 1111111122222222 USER (tuser1)
      * );
-     *
+     * <p>
      * MODIFY + (加密列配置)
      * 加密列配置 = 加密列定义 + ENCRYPT WITH + 加密算法 + MANUAL BY + 密钥 + USER + (可见用户)
-     *
+     * <p>
      * 注：
      * CHANGE为列名，后接列定义。配置加密列时，保持列定义与原表一致
      * 1111…为指定的密钥
      * DES_ECB为算法，支持的算法见2.3加载自定义算法
      * tuser1为可见用户，除此用户外，其他用户均不可见该列数据
-     * */
+     */
     public static void encOrdecColumnsSqlToDM(Connection conn, DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd, int encOrDecFlag) throws ZAYKException {
-        Statement stmt=null;
+        Statement stmt = null;
         String schema = dbhsmEncryptColumnsAdd.getDbUserName();
         String tableName = dbhsmEncryptColumnsAdd.getDbTable();
         String columnDefinitions = dbhsmEncryptColumnsAdd.getColumnDefinitions();
         String alg = dbhsmEncryptColumnsAdd.getEncryptionAlgorithm();
-        String encStr = "",decStr = "",encOrDecFlagStr;
-        if(DbConstants.ENC_FLAG==encOrDecFlag) {
+        String encStr = "", decStr = "", encOrDecFlagStr;
+        if (DbConstants.ENC_FLAG == encOrDecFlag) {
             String secretKey;
             secretKey = dbhsmEncryptColumnsAdd.getSecretKey();
-            if(StringUtils.isEmpty(secretKey)) {
+            if (StringUtils.isEmpty(secretKey)) {
                 throw new ZAYKException("密钥不存在！");
             }
             encStr = StringUtils.format("{} ENCRYPT WITH {} MANUAL BY \"{}\" USER ({}) ", columnDefinitions, alg, secretKey, schema);
-            encOrDecFlagStr="加密";
-        }else {
+            encOrDecFlagStr = "加密";
+        } else {
             decStr = dbhsmEncryptColumnsAdd.getColumnDefinitions();
             encOrDecFlagStr = "解密";
         }
@@ -170,15 +167,15 @@ public class FunctionUtil {
         sql.append(alterSql);
         sql.append(");");
         //执行sql
-        log.info("执行"+encOrDecFlagStr+"配置sql:{}", sql);
+        log.info("执行" + encOrDecFlagStr + "配置sql:{}", sql);
         try {
             stmt = conn.createStatement();
             stmt.execute(sql.toString());
         } catch (SQLException e) {
             e.printStackTrace();
-            throw  new ZAYKException(e.getMessage());
-        }finally {
-            if (stmt != null){
+            throw new ZAYKException(e.getMessage());
+        } finally {
+            if (stmt != null) {
                 try {
                     stmt.close();
                 } catch (SQLException e) {
@@ -190,12 +187,13 @@ public class FunctionUtil {
 
     /**
      * 获取达梦口令策略
+     *
      * @param conn
      * @throws ZAYKException
      */
     public static int getPwdPolicyToDM(Connection conn) throws ZAYKException {
-        Statement stmt=null;
-        int value=2;
+        Statement stmt = null;
+        int value = 2;
         String pwdPolicySql = "SELECT value FROM V$PARAMETER WHERE NAME= 'PWD_POLICY'";
         //执行sql
         log.info("获取口令策略sql:{}", pwdPolicySql);
@@ -209,9 +207,9 @@ public class FunctionUtil {
             return value;
         } catch (SQLException e) {
             e.printStackTrace();
-            throw  new ZAYKException(e.getMessage());
-        }finally {
-            if (stmt != null){
+            throw new ZAYKException(e.getMessage());
+        } finally {
+            if (stmt != null) {
                 try {
                     stmt.close();
                 } catch (SQLException e) {
@@ -226,14 +224,16 @@ public class FunctionUtil {
             }
         }
     }
+
     /**
      * 获取达梦口令策略INI 参数 PWD_MIN_LEN 设置的值
+     *
      * @param conn
      * @throws ZAYKException
      */
     public static int getPwdMinLenToDM(Connection conn) throws ZAYKException {
-        Statement stmt=null;
-        int value=2;
+        Statement stmt = null;
+        int value = 2;
         String pwdMinLenSql = "SELECT value FROM V$PARAMETER WHERE NAME= 'PWD_MIN_LEN'";
         //执行sql
         log.info("获取口令策略INI 参数 PWD_MIN_LEN 设置的值:{}", pwdMinLenSql);
@@ -247,9 +247,9 @@ public class FunctionUtil {
             return value;
         } catch (SQLException e) {
             e.printStackTrace();
-            throw  new ZAYKException(e.getMessage());
-        }finally {
-            if (stmt != null){
+            throw new ZAYKException(e.getMessage());
+        } finally {
+            if (stmt != null) {
                 try {
                     stmt.close();
                 } catch (SQLException e) {
@@ -264,6 +264,7 @@ public class FunctionUtil {
             }
         }
     }
+
     public static void main1(String[] args) {
         // Base64编码的字符串
         //String base64String = "SGVsbG8gd29ybGQ=";
@@ -277,25 +278,56 @@ public class FunctionUtil {
         // 解码
         byte[] decodedBytes = org.bouncycastle.util.encoders.Base64.decode(base64String);
 
-        System.out.println(new String(decodedBytes));;
+        System.out.println(new String(decodedBytes));
+        ;
     }
 
     public static void main(String[] args) throws Exception {
-        String plainText = "message digest";
+        // JDBC连接字符串
+        String url = "jdbc:sqlserver://;serverName=192.168.6.64;databaseName=master";
+        String user = "sa";
+        String password = "server@2020";
 
-        //String sm2Pubk = "043c246100a7d242540d6bc94be497b09b22ccb72c25b3aafd80586ef995fd26c80ccb2f5be4db45020aabdc6acd2c4a101411fe154cd04468f3ccda789b99f5f1";
-        //String pubkS = new String(org.zayksoft.util.encoders.Base64.encode(Util.hexToByte(sm2Pubk)));
-        String pubkS = "MFkwEwYHKoZIzj0CAQYIKoEcz1UBgi0DQgAEgBIQBz1ayFZoRnw1mbdSEDm7fnA3Zt+x1nrolIib6cyS69+AcQCWWkYhGxpqlFf7SigE7jOVpM+RcGOsWI2pGw==";
-        pubkS = new String(Base64.encode(pubkS.getBytes()));
-        System.out.println("加密: ");
-        byte[] cipherText = SM2Utils.encrypt(org.zayksoft.util.encoders.Base64.decode(pubkS.getBytes()), "1234567812345678".getBytes());
-        System.out.println("");
-        System.out.println("解密: ");
-        //String sm2Prik = "67254fdb1cf67b4497d5a7b4eb31f60876b2f8cc1d014d068fb9d83493599d64";
-        //String prikS = new String(org.zayksoft.util.encoders.Base64.encode(Util.hexToByte(sm2Prik)));
-        String prikS = "MIGTAgEAMBMGByqGSM49AgEGCCqBHM9VAYItBHkwdwIBAQQgCulB6/CHlSV7STb+bIUheSfdw5hgHyvhR7R4fIDliiGgCgYIKoEcz1UBgi2hRANCAASAEhAHPVrIVmhGfDWZt1IQObt+cDdm37HWeuiUiJvpzJLr34BxAJZaRiEbGmqUV/tKKATuM5Wkz5FwY6xYjakb";
-        plainText = new String(SM2Utils.decrypt(org.zayksoft.util.encoders.Base64.decode(prikS.getBytes()), cipherText));
-        System.out.println(plainText);
+        Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+        Connection connection = null;
+        PreparedStatement statement = null;
+
+        try {
+            // 连接到SQL Server
+            connection = DriverManager.getConnection(url, user, password);
+            System.out.println("连接成功!");
+
+            // 创建一个Statement对象
+            statement = connection.prepareStatement("CREATE FUNCTION dbo.func_string_encrypt_ex(\n" +
+                    "@policy_id NVARCHAR(MAX),@policy_url NVARCHAR(MAX),@user_ipaddr NVARCHAR(MAX),\n" +
+                    "@db_instance_name NVARCHAR(MAX),@db_name NVARCHAR(MAX),@db_table_name NVARCHAR(MAX),\n" +
+                    "@db_column_name NVARCHAR(MAX),@db_user_name NVARCHAR(MAX),\n" +
+                    "@rawstring NVARCHAR(max), @rawstringlen INT,\n" +
+                    "@offset INT, @length INT, @encryptstringlen INT\n" +
+                    ")\n" +
+                    "RETURNS NVARCHAR(max)\n" +
+                    "AS\n" +
+                    "EXTERNAL NAME\n" +
+                    "libsqlextdll.[libsqlserver.SqlExtPolicyFunc].SqlStringEncryptEx ");
+            boolean execute = statement.execute();
+            System.out.println(execute);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            // 关闭资源
+
+            try {
+                if (statement != null) statement.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            try {
+                if (connection != null) connection.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
 }
