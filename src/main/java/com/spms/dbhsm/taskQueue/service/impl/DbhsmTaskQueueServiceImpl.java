@@ -209,10 +209,12 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             encryptTable.setTableStatus(DbConstants.ENC_FLAG);
             dbhsmEncryptTableMapper.updateRecord(encryptTable);
         } else {
-            //解密
-            boolean isDel = delViewAndTrigger(columnsList.get(0).getDbTable(), dbhsmDbInstance);
-            if (!isDel) {
-                return AjaxResult.error("恢复表名失败，无法进行解密");
+            if (DbConstants.DB_TYPE_SQLSERVER.equals(dbhsmDbInstance.getDatabaseType()) && DbConstants.BE_PLUG.equals(dbhsmDbInstance.getPlugMode())) {
+                //解密
+                boolean isDel = delViewAndTrigger(columnsList.get(0).getDbTable(), dbhsmDbInstance);
+                if (!isDel) {
+                    return AjaxResult.error("恢复表名失败，无法进行解密");
+                }
             }
             new Thread(() -> {
                 try {
