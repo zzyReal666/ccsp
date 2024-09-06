@@ -297,6 +297,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                 String columnName = stringStringMap.get(DbConstants.DB_COLUMN_NAME);
                 into.append(columnName).append(",");
             }
+            String ip = DBIpUtil.getIp(dbhsmEncryptColumns.getEthernetPort());
 
             boolean isSel = true;
             for (DbhsmEncryptColumns encryptColumns : dbhsmEncryptColumnsList) {
@@ -305,7 +306,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                 }
                 stringBuffer.append(instance.getSchema() + ".func_string_decrypt_ex(").append(System.lineSeparator());
                 stringBuffer.append("'").append(encryptColumns.getId()).append("',").append(System.lineSeparator());
-                stringBuffer.append("'").append(dbhsmEncryptColumns.getIpAndPort()).append("/prod-api/dbhsm/api/datahsm/v1/strategy/get',").append(System.lineSeparator());
+                stringBuffer.append("'http://").append(ip.trim()).append(":80/prod-api/dbhsm/api/datahsm/v1/strategy/get',").append(System.lineSeparator());
                 stringBuffer.append("'ip_addr',").append(System.lineSeparator());
                 stringBuffer.append("CAST(@@ServerName as char),").append(System.lineSeparator());
                 stringBuffer.append("db_name(),").append(System.lineSeparator());
