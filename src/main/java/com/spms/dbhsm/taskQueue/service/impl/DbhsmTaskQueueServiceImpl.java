@@ -9,10 +9,10 @@ import com.ccsp.common.core.web.domain.AjaxResult;
 import com.ccsp.common.core.web.domain.AjaxResult2;
 import com.ccsp.common.security.utils.SecurityUtils;
 import com.spms.common.CommandUtil;
+import com.spms.common.DBIpUtil;
 import com.spms.common.JSONDataUtil;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.dbTool.DBUtil;
-import com.spms.common.dbTool.ViewUtil;
 import com.spms.common.enums.DatabaseTypeEnum;
 import com.spms.common.pool.hikariPool.DbConnectionPoolFactory;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
@@ -192,35 +192,33 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
 
         //加密
         if (DbConstants.ENC_MODE.equals(request.getTaskMode())) {
-//            new Thread(() -> {
-//                try {
-//                    stockDataOperateService.stockDataOperate(database, true);
-//                } catch (Exception e) {
-//                    log.error(encryptTable.getTableName() + "加密失败！:{}", e.getMessage());
-//                    throw new RuntimeException(encryptTable.getTableName() + "加密失败！");
-//                }
-//            }).start();
-//            taskQueue.setEncStatus(1);
-//            //修改加密列状态
-//            updateEncrypt(1, columnsList);
-//            dbhsmTaskQueueMapper.updateRecord(taskQueue);
-//            //表状态修改为加密中
-//            encryptTable.setTableStatus(DbConstants.ENC_FLAG);
-//            dbhsmEncryptTableMapper.updateRecord(encryptTable);
-
-            if (DbConstants.DB_TYPE_SQLSERVER.equals(dbhsmDbInstance.getDatabaseType())) {
-                boolean b = operViewToSqlServer(columnsList, dbhsmDbInstance);
-                if (!b) {
-                    log.error("创建解密视图失败");
+            new Thread(() -> {
+                try {
+                    stockDataOperateService.stockDataOperate(database, true);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    log.error(encryptTable.getTableName() + "加密失败！:{}", e.getMessage());
+                    throw new RuntimeException(encryptTable.getTableName() + "加密失败！");
                 }
-            }
+            }).start();
+            taskQueue.setEncStatus(1);
+            //修改加密列状态
+            updateEncrypt(1, columnsList);
+            dbhsmTaskQueueMapper.updateRecord(taskQueue);
+            //表状态修改为加密中
+            encryptTable.setTableStatus(DbConstants.ENC_FLAG);
+            dbhsmEncryptTableMapper.updateRecord(encryptTable);
         } else {
             //解密
-//            delViewAndTrigger(dbhsmDbInstance,dbhsmEncryptColumns.getDbTable());
+            boolean isDel = delViewAndTrigger(columnsList.get(0).getDbTable(), dbhsmDbInstance);
+            if (!isDel) {
+                return AjaxResult.error("恢复表名失败，无法进行解密");
+            }
             new Thread(() -> {
                 try {
                     stockDataOperateService.stockDataOperate(database, false);
                 } catch (Exception e) {
+                    e.printStackTrace();
                     log.error(encryptTable.getTableName(), "{}：解密失败！:{}", e.getMessage());
                     throw new RuntimeException(encryptTable.getTableName() + "解密失败！");
                 }
@@ -249,6 +247,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             dbhsmEncryptColumnsAdd.setDatabaseType(instance.getDatabaseType());
             dbhsmEncryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
             connection = DbConnectionPoolFactory.getInstance().getConnection(instance);
+            instance.setSchema(getDataBaseSchema(connection, dbhsmEncryptColumns.get(0).getDbTable(), instance.getDatabaseType()));
             preparedStatement = connection.prepareStatement("USE  [" + instance.getDatabaseServerName() + "]");
             preparedStatement.execute();
             preparedStatement = connection.prepareStatement("EXEC sp_rename '" + dbhsmEncryptColumnsAdd.getDbTable() + "', '" + dbhsmEncryptColumnsAdd.getDbTable() + "_ENCDATA';");
@@ -304,7 +303,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                 if (isSel) {
                     stringBuffer.append("select ").append(System.lineSeparator());
                 }
-                stringBuffer.append(instance.getSchema()+".func_string_decrypt_ex(").append(System.lineSeparator());
+                stringBuffer.append(instance.getSchema() + ".func_string_decrypt_ex(").append(System.lineSeparator());
                 stringBuffer.append("'").append(encryptColumns.getId()).append("',").append(System.lineSeparator());
                 stringBuffer.append("'").append(dbhsmEncryptColumns.getIpAndPort()).append("/prod-api/dbhsm/api/datahsm/v1/strategy/get',").append(System.lineSeparator());
                 stringBuffer.append("'ip_addr',").append(System.lineSeparator());
@@ -315,7 +314,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                 stringBuffer.append(" suser_name(),").append(System.lineSeparator());
                 stringBuffer.append(encryptColumns.getEncryptColumns() + ",").append("DATALENGTH(" + encryptColumns.getEncryptColumns() + "),").append(System.lineSeparator());
                 stringBuffer.append("0,").append("DATALENGTH(" + encryptColumns.getEncryptColumns() + "),").append(System.lineSeparator());
-                stringBuffer.append("DATALENGTH(" + encryptColumns.getEncryptColumns() + ")) as "+encryptColumns.getEncryptColumns()+",").append(System.lineSeparator());
+                stringBuffer.append("DATALENGTH(" + encryptColumns.getEncryptColumns() + ")) as " + encryptColumns.getEncryptColumns() + ",").append(System.lineSeparator());
                 isSel = false;
             }
             stringBuffer.deleteCharAt(stringBuffer.length() - 1);
@@ -328,13 +327,13 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             }
             stringBuffer.deleteCharAt(stringBuffer.length() - 1);
 
-            stringBuffer.append(" from "+instance.getSchema()+"."+dbhsmEncryptColumns.getDbTable()+"_ENCDATA;").append(System.lineSeparator());
+            stringBuffer.append(" from " + instance.getSchema() + "." + dbhsmEncryptColumns.getDbTable() + "_ENCDATA;").append(System.lineSeparator());
 
             System.out.println(stringBuffer);
             log.info("创建视图：{}", stringBuffer);
             preparedStatement = connection.prepareStatement(stringBuffer.toString());
             boolean execute = preparedStatement.execute();
-            log.info("创建视图返回：{}",execute);
+            log.info("创建视图返回：{}", execute);
         } catch (Exception e) {
             e.printStackTrace();
             log.error("创建视图错误：{}", e.getMessage());
@@ -352,8 +351,9 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         try {
             DbhsmEncryptColumnsAdd dbhsmEncryptColumns = BeanConvertUtils.beanToBean(dbhsmEncryptColumnsList.get(0), DbhsmEncryptColumnsAdd.class);
             StringBuffer stringBuffer = new StringBuffer();
-            stringBuffer.append("CREATE TRIGGER [tr_" + dbhsmEncryptColumns.getDbTable() + "_ENCDATA_sm4_insert]").append(System.lineSeparator());
-            stringBuffer.append(" ON dbo." + dbhsmEncryptColumns.getDbTable() + "_ENCDATA ").append(System.lineSeparator());
+            String encTableName = dbhsmEncryptColumns.getDbTable() + "_ENCDATA";
+            stringBuffer.append("CREATE TRIGGER [tr_" + encTableName + "_sm4_insert] ").append(System.lineSeparator());
+            stringBuffer.append(" ON dbo." + encTableName + " ").append(System.lineSeparator());
             stringBuffer.append(" INSTEAD OF INSERT ").append(System.lineSeparator());
             stringBuffer.append("AS").append(System.lineSeparator());
             stringBuffer.append(" declare").append(System.lineSeparator());
@@ -361,19 +361,25 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             stringBuffer.append(" BEGIN").append(System.lineSeparator());
             stringBuffer.append("  SET NOCOUNT ON;").append(System.lineSeparator());
             stringBuffer.append("  select @user_ipaddr = client_net_address FROM sys.dm_exec_connections WHERE session_id = @@SPID ").append(System.lineSeparator());
-            stringBuffer.append(" insert into dbo." + dbhsmEncryptColumns.getDbTable() + "_ENCDATA");
+            stringBuffer.append(" insert into dbo." + encTableName);
 
             //insert into 语句
             StringBuilder into = new StringBuilder();
-            String tableName = instance.getSchema() + ":" + dbhsmEncryptColumns.getDbTable() + "_ENCDATA";
+            String tableName = instance.getSchema() + ":" + encTableName;
             List<Map<String, String>> allColumnsInfo = DBUtil.findAllColumnsInfo(connection, tableName, DbConstants.DB_TYPE_SQLSERVER);
             for (Map<String, String> stringStringMap : allColumnsInfo) {
                 String columnName = stringStringMap.get(DbConstants.DB_COLUMN_NAME);
                 into.append(columnName).append(",");
             }
-
-            stringBuffer.append("(").append(into.deleteCharAt(into.length() - 1)).append(")").append(System.lineSeparator());
+            String[] split = into.toString().split(",");
+            List<String> colNames = dbhsmEncryptColumnsList.stream().map(DbhsmEncryptColumns::getEncryptColumns).collect(Collectors.toList());
+            List<String> residueCol = Arrays.stream(split).filter(s -> colNames.stream().noneMatch(s::equals)).collect(Collectors.toList());
+            String encCol = StringUtils.join(colNames, ",");
+            String noEncCol = StringUtils.join(residueCol, ",");
+            stringBuffer.append("(").append(encCol).append(",").append(noEncCol).append(")").append(System.lineSeparator());
             boolean isSel = true;
+            String ip = DBIpUtil.getIp(dbhsmEncryptColumns.getEthernetPort());
+
             for (DbhsmEncryptColumns encryptColumns : dbhsmEncryptColumnsList) {
                 if (isSel) {
                     stringBuffer.append("select dbo.func_string_encrypt_ex(").append(System.lineSeparator());
@@ -381,7 +387,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                     stringBuffer.append("dbo.func_string_encrypt_ex(").append(System.lineSeparator());
                 }
                 stringBuffer.append("'").append(encryptColumns.getId()).append("',").append(System.lineSeparator());
-                stringBuffer.append("'").append(dbhsmEncryptColumns.getIpAndPort()).append("/prod-api/dbhsm/api/datahsm/v1/strategy/get',").append(System.lineSeparator());
+                stringBuffer.append("'http://").append(ip.trim()).append(":80/prod-api/dbhsm/api/datahsm/v1/strategy/get',").append(System.lineSeparator());
                 stringBuffer.append(" @user_ipaddr, ").append(System.lineSeparator());
                 stringBuffer.append(" CAST(@@ServerName as char),").append(System.lineSeparator());
                 stringBuffer.append("db_name(),").append(System.lineSeparator());
@@ -393,11 +399,9 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                 stringBuffer.append("DATALENGTH(i." + encryptColumns.getEncryptColumns() + ")),").append(System.lineSeparator());
                 isSel = false;
             }
-            stringBuffer.deleteCharAt(into.length() - 1);
+//            stringBuffer.deleteCharAt(stringBuffer.length() - 1);
             //表中剩余列
-            String[] split = into.toString().split(",");
-            List<String> colNames = dbhsmEncryptColumnsList.stream().map(DbhsmEncryptColumns::getEncryptColumns).collect(Collectors.toList());
-            List<String> residueCol = Arrays.stream(split).filter(s -> colNames.stream().noneMatch(s::equals)).collect(Collectors.toList());
+
             for (String col : residueCol) {
                 stringBuffer.append("i.").append(col).append(",");
             }
@@ -448,6 +452,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             }
             update.deleteCharAt(update.length() - 1);
 
+            String ip = DBIpUtil.getIp(dbhsmEncryptColumns.getEthernetPort());
             boolean isSet = true;
             for (DbhsmEncryptColumns encryptColumns : dbhsmEncryptColumnsList) {
                 if (isSet) {
@@ -455,7 +460,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                 }
                 stringBuffer.append(encryptColumns.getEncryptColumns()).append("= ").append(instance.getDatabaseServerName()).append(".dbo.func_string_encrypt_ex(").append(System.lineSeparator());
                 stringBuffer.append("'").append(encryptColumns.getId()).append("',").append(System.lineSeparator());
-                stringBuffer.append("'").append(dbhsmEncryptColumns.getIpAndPort()).append("/prod-api/dbhsm/api/datahsm/v1/strategy/get',").append(System.lineSeparator());
+                stringBuffer.append("'http://").append(ip.trim()).append(":80/prod-api/dbhsm/api/datahsm/v1/strategy/get',").append(System.lineSeparator());
                 stringBuffer.append(" @user_ipaddr, ").append(System.lineSeparator());
                 stringBuffer.append(" CAST(@@ServerName as char),").append(System.lineSeparator());
                 stringBuffer.append("db_name(),").append(System.lineSeparator());
@@ -535,24 +540,42 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         preparedStatement.close();
     }
 
-    public void delViewAndTrigger(String tableName, String schema) {
-//        PreparedStatement preparedStatement = null;
-//        try {
-//            connection = DbConnectionPoolFactory.getInstance().getConnection(instance);
-//            preparedStatement = connection.prepareStatement("DROP TRIGGER dbo." + tableName + "_instead_delete;");
-//            preparedStatement.executeUpdate();
-//            preparedStatement = connection.prepareStatement("DROP TRIGGER dbo." + tableName + "_instead_insert;");
-//            preparedStatement.executeUpdate();
-//            preparedStatement = connection.prepareStatement("DROP TRIGGER dbo." + tableName + "_instead_update;");
-//            preparedStatement.executeUpdate();
-//            preparedStatement = connection.prepareStatement("DROP TRIGGER dbo.tr_"+tableName+"_ENCDATA_sm4_update;");
-//            preparedStatement.executeUpdate();
-//            preparedStatement = connection.prepareStatement("EXEC "+schema+".sys.sp_rename N'"+schema+".dbo."+tableName+"_ENCDATA', N'"+tableName+"', 'OBJECT';");
-//            preparedStatement.executeUpdate();
-//        } catch (SQLException e) {
-//            throw new RuntimeException(e);
-//        }
+    public boolean delViewAndTrigger(String tableName, DbhsmDbInstance instance) {
+        PreparedStatement preparedStatement = null;
+        Connection connection = null;
+        try {
+            connection = DbConnectionPoolFactory.getInstance().getConnection(instance);
+            //1.切换database
+            preparedStatement = connection.prepareStatement("USE  [" + instance.getDatabaseServerName() + "]");
+            preparedStatement.execute();
+            //2.删视图
+            preparedStatement = connection.prepareStatement("DROP VIEW " + instance.getSchema() + "." + tableName + ";");
+            boolean dropView = preparedStatement.execute();
+            //3.删除触发器
+            preparedStatement = connection.prepareStatement("DROP TRIGGER " + instance.getSchema() + ".tr_" + tableName + "_ENCDATA_sm4_insert;");
+            boolean dropInsert = preparedStatement.execute();
+            preparedStatement = connection.prepareStatement("DROP TRIGGER " + instance.getSchema() + ".tr_" + tableName + "_ENCDATA_sm4_update;");
+            boolean dropUpdate = preparedStatement.execute();
+            //4.恢复表名
+            preparedStatement = connection.prepareStatement("EXEC " + instance.getDatabaseServerName() + ".sys.sp_rename N'" + instance.getDatabaseServerName() + "." + instance.getSchema() + "." + tableName + "_ENCDATA', N'" + tableName + "', 'OBJECT';");
+            boolean execTable = preparedStatement.execute();
 
+            connection.commit();
+            log.info("删除视图：{}，删除新增触发器：{}，删除更新触发器：{}，修改表名：{}", dropView, dropInsert, dropUpdate, execTable);
+
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("删除视图、触发器、修改表名错误：{}", e.getMessage());
+            return false;
+        } finally {
+            try {
+                preparedStatement.close();
+                connection.close();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     /**
@@ -586,7 +609,11 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                     ColumnDTO columnDTO = new ColumnDTO();
                     Statement stmt = conn.createStatement();
                     ResultSet resultSet = null;
-                    String sql = databaseTypeSqlColumns(dbhsmDbInstance.getDatabaseType(), dbhsmEncryptColumn.getDbTable(), schema);
+                    String tableName = dbhsmEncryptColumn.getDbTable();
+                    if (dbhsmEncryptColumn.getEncryptionStatus() == 3 && DbConstants.DB_TYPE_SQLSERVER.equals(dbhsmDbInstance.getDatabaseType()) && DbConstants.BE_PLUG.equals(dbhsmDbInstance.getPlugMode())) {
+                        tableName = dbhsmEncryptColumn.getDbTable() + "_encdata";
+                    }
+                    String sql = databaseTypeSqlColumns(dbhsmDbInstance.getDatabaseType(), tableName, schema);
                     log.info("获取表字段信息SQL：{}", sql);
                     resultSet = stmt.executeQuery(sql);
                     while (resultSet.next()) {
@@ -1100,9 +1127,15 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         }
         //加密状态是否到达阈值
         if (100 == i) {
+            try {
+                Thread.sleep(1000L);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             //更新列状态
             List<DbhsmEncryptColumns> columnsList = dbhsmEncryptColumnsMapper.selectDbhsmEncryptByTableId(String.valueOf(encryptTable.getTableId()));
 
+            DbhsmDbInstance dbhsmDbInstance = dbhsmDbInstanceMapper.selectDbhsmDbInstanceById(encryptTable.getInstanceId());
             //解密状态为空，当前队列为加密
             if (null == taskQueue.getDecStatus()) {
                 //加密完成更新加密列状态    解密完成不需要更新
@@ -1113,6 +1146,12 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                 //设置队列状态
                 taskQueue.setEncStatus(DbConstants.ENCRYPTING);
                 dbhsmTaskQueueMapper.updateRecord(taskQueue);
+                if (DbConstants.DB_TYPE_SQLSERVER.equals(dbhsmDbInstance.getDatabaseType()) && DbConstants.BE_PLUG.equals(dbhsmDbInstance.getPlugMode())) {
+                    boolean b = operViewToSqlServer(columnsList, dbhsmDbInstance);
+                    if (!b) {
+                        log.error("创建解密视图失败");
+                    }
+                }
             } else {
                 List<DbhsmEncryptColumns> decComplete = columnsList.stream().filter(col -> DbConstants.DECRYPTING.equals(col.getEncryptionStatus())).collect(Collectors.toList());
                 //过滤需要删除的加密列ID
@@ -1176,35 +1215,6 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         }
 
         return list;
-    }
-
-    private static void initKingBase() throws ClassNotFoundException, SQLException {
-        Class.forName("com.kingbase8.Driver");
-        Connection conn = DriverManager.getConnection("jdbc:kingbase8://192.168.7.149:54321/SAMPLES", "SYSTEM", "server@2020");
-        try (Statement statement = conn.createStatement()) {
-            statement.execute("set search_path to 'WZHTEST'");
-        } catch (SQLException e) {
-            log.error("connectionOperate error", e);
-            throw new RuntimeException(e);
-        }
-        conn.createStatement().execute("DROP TABLE IF EXISTS student");
-        //如果不存在则创建学生表
-        String createSQL = "CREATE TABLE IF NOT EXISTS student\n" + "(\n" + "    id      INTEGER PRIMARY KEY,\n" + "    name    VARCHAR(100) NOT NULL,\n" + "    age     INTEGER      NOT NULL,\n" + "    address varchar(100)\n" + ");";
-        conn.createStatement().execute(createSQL);
-
-        Statement statement = conn.createStatement();
-
-        for (int i = 0; i < 10000; i++) {
-            String insertSQL = String.format(
-                    "INSERT INTO WZHTEST.STUDENT (id, name, age, address) VALUES (%d, '%s', %d, '%s')",
-                    i,
-                    "name" + i,
-                    i % 55,
-                    "address" + i
-            );
-            statement.executeUpdate(insertSQL); // 执行每一条插入语句
-        }
-        log.info("===================init environment success");
     }
 
     @Override

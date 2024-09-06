@@ -164,7 +164,7 @@ public class ZaStrategyController {
             byte[] key = Base64.decode("rNe0Mwty2E+AfNotLSi9sw==");
             v.add(new DEROctetString(key));
 //                char iv[32];                // 初始化向量
-            v.add(new DEROctetString("1234567812345678".getBytes()));
+            v.add(new DEROctetString(new byte[16]));
 //                int cipher_type;            // SGD_SM4_CTR
             v.add(new ASN1Integer(DbConstants.SGD_SM4_CTR));
 //                int hash_type;              // SGD_SM3
@@ -305,7 +305,7 @@ public class ZaStrategyController {
         byte[] key = Base64.decode(symmKey);
         v.add(new DEROctetString(key));
         //char iv[32];                // 初始化向量
-        v.add(new DEROctetString("1234567812345678".getBytes()));
+        v.add(new DEROctetString(new byte[16]));
         //int cipher_type;            // SGD_SM4_CTR
         v.add(new ASN1Integer(DbConstants.SGD_SM4_CTR));
         //int hash_type;              // SGD_SM3
