@@ -307,7 +307,7 @@ public class ZaStrategyController {
         //char iv[32];                // 初始化向量
         v.add(new DEROctetString(new byte[16]));
         //int cipher_type;            // SGD_SM4_CTR
-        v.add(new ASN1Integer(DbConstants.SGD_SM4_CTR));
+        v.add(new ASN1Integer(DbConstants.SGD_SM4_OFB));
         //int hash_type;              // SGD_SM3
         v.add(new ASN1Integer(DbConstants.SGD_SM3));
         //LICY_INFO;
