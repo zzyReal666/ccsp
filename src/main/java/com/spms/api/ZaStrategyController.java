@@ -20,7 +20,11 @@ import com.zayk.ciphercard.ZaykManageClass;
 import com.zayk.ciphercard.factory.zayk.ZaSDSUtils;
 import com.zayk.ciphercard.util.BitOperator;
 import lombok.extern.slf4j.Slf4j;
-import org.bouncycastle.asn1.*;
+import org.bouncycastle.asn1.ASN1EncodableVector;
+import org.bouncycastle.asn1.ASN1Integer;
+import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.DEROctetString;
+import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.util.encoders.Base64;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -34,7 +38,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -306,7 +309,7 @@ public class ZaStrategyController {
         byte[] key = Base64.decode(symmKey);
         v.add(new DEROctetString(key));
         //char iv[32];                // 初始化向量
-        v.add(new DEROctetString("1111111111111111".getBytes(StandardCharsets.US_ASCII)));
+        v.add(new DEROctetString(new byte[16]));
         //int cipher_type;            // SGD_SM4_CTR
         v.add(new ASN1Integer(DbConstants.SGD_SM4_OFB));
         //int hash_type;              // SGD_SM3

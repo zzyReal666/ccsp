@@ -51,7 +51,7 @@ public class ColumnDTO {
     private String encryptKeyIndex;
 
     /**
-     * 加密密钥 密钥数据  十六进制字符串，长度应为32，例如
+     * 加密密钥 密钥数据  Base64 编码
      */
     private String encryptKeyData;
 
