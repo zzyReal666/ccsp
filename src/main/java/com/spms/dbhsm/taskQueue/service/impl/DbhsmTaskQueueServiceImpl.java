@@ -38,6 +38,7 @@ import com.spms.dbhsm.taskQueue.domain.DbhsmTaskQueue;
 import com.spms.dbhsm.taskQueue.mapper.DbhsmTaskQueueMapper;
 import com.spms.dbhsm.taskQueue.service.DbhsmTaskQueueService;
 import com.spms.dbhsm.taskQueue.vo.*;
+import com.zayk.ciphercard.ZaykManageClass;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
@@ -427,13 +428,13 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
 
     public void updateTrigger(Connection connection, List<DbhsmEncryptColumns> dbhsmEncryptColumnsList, DbhsmDbInstance instance) throws SQLException {
         DbhsmEncryptColumnsAdd dbhsmEncryptColumns = BeanConvertUtils.beanToBean(dbhsmEncryptColumnsList.get(0), DbhsmEncryptColumnsAdd.class);
-        StringBuilder update = new StringBuilder();
         String priKey = "";
+        StringBuilder update = new StringBuilder();
         PreparedStatement preparedStatement = null;
         try {
             StringBuffer stringBuffer = new StringBuffer();
             stringBuffer.append("CREATE TRIGGER [tr_" + dbhsmEncryptColumns.getDbTable() + "_ENCDATA_sm4_update]").append(System.lineSeparator());
-            stringBuffer.append(" ON dbo." + dbhsmEncryptColumns.getDbTable() + "_ENCDATA ").append(System.lineSeparator());
+            stringBuffer.append(" ON [" + instance.getSchema() + "].[" + dbhsmEncryptColumns.getDbTable() + "_ENCDATA]").append(System.lineSeparator());
             stringBuffer.append("  AFTER UPDATE ").append(System.lineSeparator());
             stringBuffer.append("AS").append(System.lineSeparator());
             stringBuffer.append(" declare").append(System.lineSeparator());
@@ -441,7 +442,6 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             stringBuffer.append(" BEGIN").append(System.lineSeparator());
             stringBuffer.append("  SET NOCOUNT ON;").append(System.lineSeparator());
             stringBuffer.append("  select @user_ipaddr = client_net_address FROM sys.dm_exec_connections WHERE session_id = @@SPID ").append(System.lineSeparator());
-            stringBuffer.append(" UPDATE dbo." + dbhsmEncryptColumns.getDbTable() + "_ENCDATA ");
 
             //insert into 语句
             String tableName = instance.getSchema() + ":" + dbhsmEncryptColumns.getDbTable() + "_ENCDATA";
@@ -456,12 +456,13 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             update.deleteCharAt(update.length() - 1);
 
             String ip = DBIpUtil.getIp(dbhsmEncryptColumns.getEthernetPort());
-            boolean isSet = true;
+            String triTabName = instance.getSchema() + "." + dbhsmEncryptColumns.getDbTable() + "_ENCDATA";
+
             for (DbhsmEncryptColumns encryptColumns : dbhsmEncryptColumnsList) {
-                if (isSet) {
-                    stringBuffer.append(" SET ");
-                }
-                stringBuffer.append(encryptColumns.getEncryptColumns()).append("= ").append(instance.getDatabaseServerName()).append(".dbo.func_string_encrypt_ex(").append(System.lineSeparator());
+                stringBuffer.append("IF UPDATE([" + encryptColumns.getEncryptColumns() + "])").append(System.lineSeparator());
+                stringBuffer.append("BEGIN").append(System.lineSeparator());
+                stringBuffer.append(" UPDATE ").append(triTabName).append(System.lineSeparator());
+                stringBuffer.append(" SET " + encryptColumns.getEncryptColumns()).append("= ").append(instance.getDatabaseServerName()).append("." + instance.getSchema() + ".func_string_encrypt_ex(").append(System.lineSeparator());
                 stringBuffer.append("'").append(encryptColumns.getId()).append("',").append(System.lineSeparator());
                 stringBuffer.append("'http://").append(ip.trim()).append(":80/prod-api/dbhsm/api/datahsm/v1/strategy/get',").append(System.lineSeparator());
                 stringBuffer.append(" @user_ipaddr, ").append(System.lineSeparator());
@@ -472,24 +473,11 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                 stringBuffer.append(" suser_name(),").append(System.lineSeparator());
                 stringBuffer.append("i." + encryptColumns.getEncryptColumns() + ",").append("DATALENGTH(i." + encryptColumns.getEncryptColumns() + "),").append(System.lineSeparator());
                 stringBuffer.append("0,").append("DATALENGTH(i." + encryptColumns.getEncryptColumns() + "),").append(System.lineSeparator());
-                stringBuffer.append("DATALENGTH(i." + encryptColumns.getEncryptColumns() + ")),").append(System.lineSeparator());
-                isSet = false;
+                stringBuffer.append("DATALENGTH(i." + encryptColumns.getEncryptColumns() + "))").append(System.lineSeparator());
+                stringBuffer.append("   FROM " + triTabName + " e").append(System.lineSeparator());
+                stringBuffer.append("JOIN inserted i ON e." + priKey + " = i." + priKey + ";").append(System.lineSeparator());
+                stringBuffer.append("END").append(System.lineSeparator());
             }
-
-            stringBuffer.deleteCharAt(stringBuffer.length() - 1);
-
-            //表中剩余列
-            String[] split = update.toString().split(",");
-            List<String> colNames = dbhsmEncryptColumnsList.stream().map(DbhsmEncryptColumns::getEncryptColumns).collect(Collectors.toList());
-            List<String> residueCol = Arrays.stream(split).filter(s -> colNames.stream().noneMatch(s::equals)).collect(Collectors.toList());
-            for (String col : residueCol) {
-                stringBuffer.append(col).append("=i.").append(col).append(",");
-            }
-            stringBuffer.deleteCharAt(stringBuffer.length() - 1);
-
-
-            stringBuffer.append(" FROM dbo." + dbhsmEncryptColumns.getDbTable() + "_ENCDATA e").append(System.lineSeparator());
-            stringBuffer.append(" JOIN inserted i ON e." + priKey + " = i." + priKey + ";").append(System.lineSeparator());
             stringBuffer.append("END").append(System.lineSeparator());
 
             log.info("更新触发器：{}", stringBuffer);
@@ -647,6 +635,8 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                         columnDTO.setEncryptAlgorithm("TestAlg");
                         DbhsmSecretKeyManage dbhsmSecretKeyManage = dbhsmSecretKeyManageMapper.selectDbhsmSecretKeyId(dbhsmEncryptColumn.getSecretKeyId());
                         if (null != dbhsmSecretKeyManage) {
+                            String priKey = importCardSecretKey(dbhsmSecretKeyManage);
+                            columnDTO.setEncryptKeyData(priKey);
                             columnDTO.setEncryptKeyIndex(Long.toString(dbhsmSecretKeyManage.getSecretKeyIndex()));
                         }
                         list.add(columnDTO);
@@ -665,6 +655,43 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             }
         }
         return tableDTO;
+    }
+
+    public String importCardSecretKey(DbhsmSecretKeyManage secretKeyManage) throws Exception {
+        String symmKey = null;
+        //根据加密列信息获取加密列使用的密钥ID,根据密钥ID查询密钥信息（za_secret_key_manage表中的密钥关系信息），根据密钥信息获取该密钥的密钥来源
+        //密钥ID，对应密钥表中的id字段
+        //密钥索引
+        Long secretKeyIndex = secretKeyManage.getSecretKeyIndex();
+        //密钥来源：
+        Integer keySource = secretKeyManage.getSecretKeySource();
+
+        Object crytoCartTypeObj = JSONDataUtil.getSysDataToDB(DbConstants.cryptoCardType);
+        if (null == crytoCartTypeObj) {
+            throw new IOException();
+        }
+
+        int crytoCartTypeSInt = Integer.parseInt(crytoCartTypeObj.toString());
+        ZaykManageClass mgr = new ZaykManageClass();
+        Integer ret = mgr.Initialize(crytoCartTypeSInt);
+        log.info("初始化卡：{}",ret);
+        if (0 != ret){
+            return null;
+        }
+        if (DbConstants.KEY_SOURCE_SECRET_CARD.equals(keySource)) {
+            int keyGenerationMode = JSONDataUtil.getSecretKeyGenerateType(DbConstants.SYSDATA_ALGORITHM_TYPE_SYK);
+            if (keyGenerationMode == DbConstants.HARD_SECRET_KEY) {
+                //密钥来源为密码卡，导出密钥
+                Map<String, String> exportKey = mgr.ZaykExportKeyPair(secretKeyManage.getSecretKeyType(), secretKeyIndex.intValue());
+                if (null == exportKey) {
+                    log.error("加密列配置的" + secretKeyIndex + "号对称密钥不存在,请重新生成密钥。");
+                    throw new IOException();
+                }
+                symmKey = exportKey.get("privateKey");
+                log.info("卡内密钥：{}",symmKey);
+            }
+        }
+        return symmKey;
     }
 
     public static String databaseTypeSqlColumns(String type, String table, String schema) {
