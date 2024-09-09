@@ -340,9 +340,9 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
                 String encryptAlgorithm = columnDTO.getEncryptAlgorithm();
                 TypedSPIRegistry.findRegisteredService(AlgorithmSPI.class, encryptAlgorithm).ifPresent(algorithmSPI -> {
                     if (operateType) {
-                        valueRef.set(algorithmSPI.encrypt(valueRef.get(), columnDTO.getEncryptKeyIndex(), columnDTO.getProperty()));
+                        valueRef.set(algorithmSPI.encrypt(valueRef.get(), columnDTO.getEncryptKeyData(), columnDTO.getProperty()));
                     } else {
-                        valueRef.set(algorithmSPI.decrypt(valueRef.get(), columnDTO.getEncryptKeyIndex(), columnDTO.getProperty()));
+                        valueRef.set(algorithmSPI.decrypt(valueRef.get(), columnDTO.getEncryptKeyData(), columnDTO.getProperty()));
                     }
                 });
             }

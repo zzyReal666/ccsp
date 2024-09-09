@@ -37,7 +37,7 @@ public class HardSM4 implements AlgorithmSPI {
         }
         init(props);
         //加密
-        byte[] bytes = SDF.SDF_Encrypt_Ex(Integer.parseInt(key), sm4Mode, new byte[0], sm4Iv, data.getBytes(StandardCharsets.UTF_8), false);
+        byte[] bytes = SDF.SDF_Encrypt_Ex(0, sm4Mode, Base64.decode(key), sm4Iv, data.getBytes(StandardCharsets.UTF_8), false);
         if (null == bytes || bytes.length == 0) {
             log.error("encrypt result isEmpty, data:{}, key:{}, props:{}", data, key, props);
             return "";
@@ -57,7 +57,7 @@ public class HardSM4 implements AlgorithmSPI {
         init(props);
         //解密
         byte[] decode = Base64.decode(data);
-        byte[] bytes = SDF.SDF_Decrypt_Ex(Integer.parseInt(key), sm4Mode, new byte[0],sm4Iv, decode, false);
+        byte[] bytes = SDF.SDF_Decrypt_Ex(0, sm4Mode, Base64.decode(key),sm4Iv, decode, false);
         if (null == bytes || bytes.length == 0) {
             log.error("decrypt result isEmpty, data:{}, key:{}, props:{}", data, key, props);
             return "";
