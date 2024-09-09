@@ -8,10 +8,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * @author zzypersonally@gmail.com
@@ -27,19 +24,7 @@ public class HardSM4 implements AlgorithmSPI {
     @Getter
     private static final ZaykSDF SDF;
 
-    //key
     private static final String KEY_INDEX = "key-index";
-
-    private static final String IV = "iv";
-
-    private static final String MODE = "mode";
-
-    private static final int IV_LENGTH = 16;
-
-    private static final Set<String> MODES = new HashSet<>(Arrays.asList("ECB", "CBC"));
-
-    //value
-    private int keyIndex;
 
     private byte[] sm4Iv;
 
@@ -52,7 +37,7 @@ public class HardSM4 implements AlgorithmSPI {
         }
         init(props);
         //加密
-        byte[] bytes = SDF.SDF_Encrypt_Ex(Integer.parseInt(key), sm4Mode, new byte[0], sm4Iv, data.getBytes(StandardCharsets.UTF_8), true);
+        byte[] bytes = SDF.SDF_Encrypt_Ex(Integer.parseInt(key), sm4Mode, new byte[0], sm4Iv, data.getBytes(StandardCharsets.UTF_8), false);
         if (null == bytes || bytes.length == 0) {
             log.error("encrypt result isEmpty, data:{}, key:{}, props:{}", data, key, props);
             return "";
@@ -63,6 +48,7 @@ public class HardSM4 implements AlgorithmSPI {
     }
 
 
+
     @Override
     public String decrypt(String data, String key, Map<String, String> props) {
         if (null == data || data.isEmpty()) {
@@ -71,7 +57,7 @@ public class HardSM4 implements AlgorithmSPI {
         init(props);
         //解密
         byte[] decode = Base64.decode(data);
-        byte[] bytes = SDF.SDF_Decrypt_Ex(Integer.parseInt(key), sm4Mode, new byte[0], sm4Iv, decode, true);
+        byte[] bytes = SDF.SDF_Decrypt_Ex(Integer.parseInt(key), sm4Mode, new byte[0],sm4Iv, decode, false);
         if (null == bytes || bytes.length == 0) {
             log.error("decrypt result isEmpty, data:{}, key:{}, props:{}", data, key, props);
             return "";
@@ -88,25 +74,11 @@ public class HardSM4 implements AlgorithmSPI {
 
 
     private void init(Map<String, String> props) {
-        //参数
         sm4Mode = createSm4Mode(props);
-//        keyIndex = createSm4Key(props);
         sm4Iv = createSm4Iv(props, sm4Mode);
     }
 
     private byte[] createSm4Iv(Map<String, String> props, int sm4Mode) {
-//        if (sm4Mode == ZaykJceGlobal.SGD_SMS4_ECB) {
-//            return new byte[0];
-//        }
-//        if (!props.containsKey(IV)) {
-//            throw new RuntimeException("iv is not set");
-//        }
-//        String ivStr = props.get(IV);
-//        byte[] result = fromHexString(ivStr);
-//        if (result.length != IV_LENGTH) {
-//            throw new RuntimeException("iv length must be " + IV_LENGTH);
-//        }
-//        return result;
         return new byte[16];
     }
 
@@ -120,20 +92,6 @@ public class HardSM4 implements AlgorithmSPI {
     }
 
     private int createSm4Mode(Map<String, String> props) {
-//        if (!props.containsKey(MODE)) {
-//            throw new RuntimeException("mode is not set");
-//        }
-//        String mode = props.get(MODE);
-//        if (!MODES.contains(mode)) {
-//            throw new RuntimeException("Mode must be either CBC or ECB");
-//        }
-//        switch (mode) {
-//            case "CBC":
-//                return ZaykJceGlobal.SGD_SMS4_CBC;
-//            case "ECB":
-//            default:
-//                return ZaykJceGlobal.SGD_SMS4_ECB;
-//        }
         return ZaykJceGlobal.SGD_SMS4_OFB;
     }
 
