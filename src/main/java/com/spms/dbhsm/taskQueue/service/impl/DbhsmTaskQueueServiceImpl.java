@@ -316,9 +316,9 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                 stringBuffer.append("'").append(encryptColumns.getDbTable()).append("',").append(System.lineSeparator());
                 stringBuffer.append("'").append(encryptColumns.getEncryptColumns()).append("',").append(System.lineSeparator());
                 stringBuffer.append(" suser_name(),").append(System.lineSeparator());
-                stringBuffer.append(encryptColumns.getEncryptColumns() + ",").append("DATALENGTH(" + encryptColumns.getEncryptColumns() + "),").append(System.lineSeparator());
-                stringBuffer.append("0,").append("DATALENGTH(" + encryptColumns.getEncryptColumns() + "),").append(System.lineSeparator());
-                stringBuffer.append("DATALENGTH(" + encryptColumns.getEncryptColumns() + ")) as " + encryptColumns.getEncryptColumns() + ",").append(System.lineSeparator());
+                stringBuffer.append(encryptColumns.getEncryptColumns() + ",").append("0,").append(System.lineSeparator());
+                stringBuffer.append("0,").append("0,").append(System.lineSeparator());
+                stringBuffer.append("0) as " + encryptColumns.getEncryptColumns() + ",").append(System.lineSeparator());
                 isSel = false;
             }
             stringBuffer.deleteCharAt(stringBuffer.length() - 1);
@@ -398,9 +398,9 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                 stringBuffer.append("'").append(encryptColumns.getDbTable()).append("',").append(System.lineSeparator());
                 stringBuffer.append("'").append(encryptColumns.getEncryptColumns()).append("',").append(System.lineSeparator());
                 stringBuffer.append(" suser_name(),").append(System.lineSeparator());
-                stringBuffer.append("i." + encryptColumns.getEncryptColumns() + ",").append("DATALENGTH(i." + encryptColumns.getEncryptColumns() + "),").append(System.lineSeparator());
-                stringBuffer.append("0,").append("DATALENGTH(i." + encryptColumns.getEncryptColumns() + "),").append(System.lineSeparator());
-                stringBuffer.append("DATALENGTH(i." + encryptColumns.getEncryptColumns() + ")),").append(System.lineSeparator());
+                stringBuffer.append("i." + encryptColumns.getEncryptColumns() + ",").append("0,").append(System.lineSeparator());
+                stringBuffer.append("0,0,").append(System.lineSeparator());
+                stringBuffer.append("0),").append(System.lineSeparator());
                 isSel = false;
             }
 //            stringBuffer.deleteCharAt(stringBuffer.length() - 1);
@@ -471,9 +471,9 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                 stringBuffer.append("'").append(encryptColumns.getDbTable()).append("',").append(System.lineSeparator());
                 stringBuffer.append("'").append(encryptColumns.getEncryptColumns()).append("',").append(System.lineSeparator());
                 stringBuffer.append(" suser_name(),").append(System.lineSeparator());
-                stringBuffer.append("i." + encryptColumns.getEncryptColumns() + ",").append("DATALENGTH(i." + encryptColumns.getEncryptColumns() + "),").append(System.lineSeparator());
-                stringBuffer.append("0,").append("DATALENGTH(i." + encryptColumns.getEncryptColumns() + "),").append(System.lineSeparator());
-                stringBuffer.append("DATALENGTH(i." + encryptColumns.getEncryptColumns() + "))").append(System.lineSeparator());
+                stringBuffer.append("i." + encryptColumns.getEncryptColumns() + ",").append("0,").append(System.lineSeparator());
+                stringBuffer.append("0,0,").append(System.lineSeparator());
+                stringBuffer.append("0)").append(System.lineSeparator());
                 stringBuffer.append("   FROM " + triTabName + " e").append(System.lineSeparator());
                 stringBuffer.append("JOIN inserted i ON e." + priKey + " = i." + priKey + ";").append(System.lineSeparator());
                 stringBuffer.append("END").append(System.lineSeparator());
