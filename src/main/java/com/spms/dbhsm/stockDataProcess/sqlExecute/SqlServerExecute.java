@@ -4,6 +4,7 @@ import com.spms.common.enums.DatabaseTypeEnum;
 import com.spms.dbhsm.stockDataProcess.domain.dto.AddColumnsDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.DatabaseDTO;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 import org.stringtemplate.v4.ST;
 
 import java.sql.Connection;
@@ -38,7 +39,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
     private static final String ADD_COLUMN = "ALTER TABLE <schema>.<table> ADD ";
 
     //添加字段字句 循环段
-    private static final String ADD_COLUMN_LOOP = " <field> <type> ";
+    private static final String ADD_COLUMN_LOOP = " <field> <type> <null> DEFAULT <default>";
 
     //统计表中数据量语句
     private static final String COUNT_DATA = "SELECT COUNT(*) FROM <schema>.<table>";
@@ -51,6 +52,29 @@ public class SqlServerExecute implements SqlExecuteSPI {
 
     //重命名字段
     private static final String RENAME_COLUMN = "EXEC sp_rename '<schema>.<table>.<old>', '<new>', 'COLUMN';";
+
+    //查询默认值约束
+    private static final String GET_DEFAULT_CONSTRAINT_SQL = "SELECT \n" +
+            "    dc.name AS ConstraintName,       -- 约束名称\n" +
+            "    c.name AS ColumnName,            -- 字段名称\n" +
+            "    t.name AS TableName,             -- 表名称\n" +
+            "    s.name AS SchemaName,            -- 模式名称\n" +
+            "    dc.definition AS DefaultValue    -- 默认值定义\n" +
+            "FROM \n" +
+            "    sys.default_constraints dc\n" +
+            "INNER JOIN \n" +
+            "    sys.columns c ON dc.parent_column_id = c.column_id AND dc.parent_object_id = c.object_id\n" +
+            "INNER JOIN \n" +
+            "    sys.tables t ON dc.parent_object_id = t.object_id\n" +
+            "INNER JOIN \n" +
+            "    sys.schemas s ON t.schema_id = s.schema_id\n" +
+            "WHERE \n" +
+            "    s.name = '<schema>'  -- 替换为模式名\n" +
+            "    AND t.name = '<table>'  -- 替换为表名\n" +
+            "    AND c.name = '<field>';  -- 替换为字段名";
+
+    //删除约束
+    private static final String DROP_CONSTRAINT_SQL = "ALTER TABLE <schema>.<table> DROP CONSTRAINT <constraint>";
 
     //删除字段
     private static final String DROP_COLUMN = "ALTER TABLE <schema>.<table>  DROP COLUMN <drop>";
@@ -95,20 +119,38 @@ public class SqlServerExecute implements SqlExecuteSPI {
 
     @Override
     public void addTempColumn(Connection conn, String table, List<AddColumnsDTO> addColumnsDtoList) {
+        log.info("addTempColumn start table:{},addColumnsDtoList:{}", table, addColumnsDtoList);
         StringBuilder sql = new StringBuilder().append(new ST(ADD_COLUMN).add("schema", schemaMap.get(table)).add("table", table).render());
         addColumnsDtoList.forEach(addColumnsDTO -> {
             Map<String, String> columnDefinition = addColumnsDTO.getColumnDefinition();
-            //加密 新增临时字段，固定text类型
-            if (addColumnsDTO.isEncrypt()) {
-                String definitionSql = new ST(ADD_COLUMN_LOOP).add("field", addColumnsDTO.getColumnName() + getTempColumnSuffix()).add("type", "nvarchar(MAX)").render();
-                sql.append(definitionSql).append(",");
+            //加密 新增临时字段，固定nvarchar(MAX)类型
+            String nullable = "NO".equals(addColumnsDTO.getColumnDefinition().get("Null")) ? "NOT NULL" :
+                    ("YES".equals(addColumnsDTO.getColumnDefinition().get("Null")) ? "NULL" : "");
+            String defaultStr = addColumnsDTO.getColumnDefinition().get("Default");
+            if ("NOT NULL".equals(nullable) && StringUtils.isBlank(defaultStr)) {
+                log.warn("field {} is not null and has no default value, set default value to ''", addColumnsDTO.getColumnName());
+                defaultStr = "('')";
             }
-            //解密 还原为原始字段
-            else {
-                String definitionSql = new ST(ADD_COLUMN_LOOP).add("field", addColumnsDTO.getColumnName() + getTempColumnSuffix()).add("type", columnDefinition.get("type")).render();
-                sql.append(definitionSql).append(",");
-            }
-        });
+                if (addColumnsDTO.isEncrypt()) {
+                    String definitionSql = new ST(ADD_COLUMN_LOOP)
+                            .add("field", addColumnsDTO.getColumnName() + getTempColumnSuffix())//
+                            .add("type", "nvarchar(MAX)")//
+                            .add("null", nullable)//
+                            .add("default", defaultStr)//
+                            .render();
+                    sql.append(definitionSql).append(",");
+                }
+                //解密 还原为原始字段
+                else {
+                    String definitionSql = new ST(ADD_COLUMN_LOOP)
+                            .add("field", addColumnsDTO.getColumnName() + getTempColumnSuffix())//
+                            .add("type", columnDefinition.get("type"))//
+                            .add("null", nullable)//
+                            .add("default", defaultStr)//
+                            .render();
+                    sql.append(definitionSql).append(",");
+                }
+            });
         //删除最后一个逗号
         sql.deleteCharAt(sql.length() - 1);
         try (PreparedStatement ps = conn.prepareStatement(sql.toString())) {
@@ -232,8 +274,11 @@ public class SqlServerExecute implements SqlExecuteSPI {
 
     @Override
     public void dropColumn(Connection conn, String table, List<String> columns) {
+
         StringBuilder drop = new StringBuilder();
         columns.forEach(col -> {
+            //删除默认值约束
+            dropConstraint(conn, table, col);
             String dropLoop = new ST(DROP_COLUMN_LOOP).add("column", col).render();
             drop.append(dropLoop).append(",");
         });
@@ -243,6 +288,38 @@ public class SqlServerExecute implements SqlExecuteSPI {
             statement.execute(sql);
         } catch (SQLException e) {
             log.error("dropColumn error sql:{}", sql, e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void dropConstraint(Connection conn, String table, String col) {
+        //查询约束名称
+        String constraintName = "";
+        String sql = new ST(GET_DEFAULT_CONSTRAINT_SQL)
+                .add("schema", schemaMap.get(table)
+                ).add("table", table)
+                .add("field", col)
+                .render();
+        log.info("getConstraint sql:{}", sql);
+        try (PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            ResultSet resultSet = preparedStatement.executeQuery();
+            if (resultSet.next()) {
+                constraintName = resultSet.getString("ConstraintName");
+                sql = new ST(DROP_CONSTRAINT_SQL)
+                        .add("schema", schemaMap.get(table))
+                        .add("table", table)
+                        .add("constraint", constraintName)
+                        .render();
+                log.info("dropConstraint sql:{}", sql);
+                try (Statement statement = conn.createStatement()) {
+                    statement.execute(sql);
+                    log.info("drop filed {} constraint {} success", col, constraintName);
+                }
+            } else {
+                log.info("field {} has no default constraint", col);
+            }
+        } catch (Exception e) {
+            log.error("getConstraint error sql:{}", sql, e);
             throw new RuntimeException(e);
         }
     }

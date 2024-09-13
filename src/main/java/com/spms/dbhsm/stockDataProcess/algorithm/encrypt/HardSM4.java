@@ -42,9 +42,7 @@ public class HardSM4 implements AlgorithmSPI {
             log.error("encrypt result isEmpty, data:{}, key:{}, props:{}", data, key, props);
             return "";
         }
-        String result = Base64.encode(bytes);
-        log.info("encrypt result:{}, data:{}, key:{}, props:{}",result, data, key, props);
-        return result;
+        return Base64.encode(bytes);
     }
 
 
