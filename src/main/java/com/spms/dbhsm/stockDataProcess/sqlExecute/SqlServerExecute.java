@@ -1,5 +1,6 @@
 package com.spms.dbhsm.stockDataProcess.sqlExecute;
 
+import com.spms.annotation.Loggable;
 import com.spms.common.enums.DatabaseTypeEnum;
 import com.spms.dbhsm.stockDataProcess.domain.dto.AddColumnsDTO;
 import com.spms.dbhsm.stockDataProcess.domain.dto.DatabaseDTO;
@@ -39,7 +40,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
     private static final String ADD_COLUMN = "ALTER TABLE <schema>.<table> ADD ";
 
     //添加字段字句 循环段
-    private static final String ADD_COLUMN_LOOP = " <field> <type> <null> DEFAULT <default>";
+    private static final String ADD_COLUMN_LOOP = " <field> <type> <null> <default>";
 
     //统计表中数据量语句
     private static final String COUNT_DATA = "SELECT COUNT(*) FROM <schema>.<table>";
@@ -84,6 +85,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
 
 
     @Override
+    @Loggable
     public String getPrimaryKey(Connection conn, String schema, String table) {
         try (PreparedStatement ps = conn.prepareStatement(GET_PRIMARY_KEY_SQL)) {
             ps.setString(1, table);
@@ -99,6 +101,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
     }
 
 
+    @Loggable
     private String getAutoIncrement(Connection conn, String table) {
         try (PreparedStatement ps = conn.prepareStatement(GET_AUTO_INCREMENT_SQL)) {
             ps.setString(1, table);
@@ -118,8 +121,9 @@ public class SqlServerExecute implements SqlExecuteSPI {
     }
 
     @Override
+    @Loggable
     public void addTempColumn(Connection conn, String table, List<AddColumnsDTO> addColumnsDtoList) {
-        log.info("addTempColumn start table:{},addColumnsDtoList:{}", table, addColumnsDtoList);
+        log.debug("addTempColumn start table:{},addColumnsDtoList:{}", table, addColumnsDtoList);
         StringBuilder sql = new StringBuilder().append(new ST(ADD_COLUMN).add("schema", schemaMap.get(table)).add("table", table).render());
         addColumnsDtoList.forEach(addColumnsDTO -> {
             Map<String, String> columnDefinition = addColumnsDTO.getColumnDefinition();
@@ -129,28 +133,30 @@ public class SqlServerExecute implements SqlExecuteSPI {
             String defaultStr = addColumnsDTO.getColumnDefinition().get("Default");
             if ("NOT NULL".equals(nullable) && StringUtils.isBlank(defaultStr)) {
                 log.warn("field {} is not null and has no default value, set default value to ''", addColumnsDTO.getColumnName());
-                defaultStr = "('')";
+                defaultStr = "DEFAULT ('')";
+            } else if (StringUtils.isNotBlank(defaultStr)) {
+                defaultStr = "DEFAULT " + defaultStr;
             }
-                if (addColumnsDTO.isEncrypt()) {
-                    String definitionSql = new ST(ADD_COLUMN_LOOP)
-                            .add("field", addColumnsDTO.getColumnName() + getTempColumnSuffix())//
-                            .add("type", "nvarchar(MAX)")//
-                            .add("null", nullable)//
-                            .add("default", defaultStr)//
-                            .render();
-                    sql.append(definitionSql).append(",");
-                }
-                //解密 还原为原始字段
-                else {
-                    String definitionSql = new ST(ADD_COLUMN_LOOP)
-                            .add("field", addColumnsDTO.getColumnName() + getTempColumnSuffix())//
-                            .add("type", columnDefinition.get("type"))//
-                            .add("null", nullable)//
-                            .add("default", defaultStr)//
-                            .render();
-                    sql.append(definitionSql).append(",");
-                }
-            });
+            if (addColumnsDTO.isEncrypt()) {
+                String definitionSql = new ST(ADD_COLUMN_LOOP)
+                        .add("field", addColumnsDTO.getColumnName() + getTempColumnSuffix())//
+                        .add("type", "nvarchar(MAX)")//
+                        .add("null", nullable)//
+                        .add("default", defaultStr)//
+                        .render();
+                sql.append(definitionSql).append(",");
+            }
+            //解密 还原为原始字段
+            else {
+                String definitionSql = new ST(ADD_COLUMN_LOOP)
+                        .add("field", addColumnsDTO.getColumnName() + getTempColumnSuffix())//
+                        .add("type", columnDefinition.get("type"))//
+                        .add("null", nullable)//
+                        .add("default", defaultStr)//
+                        .render();
+                sql.append(definitionSql).append(",");
+            }
+        });
         //删除最后一个逗号
         sql.deleteCharAt(sql.length() - 1);
         try (PreparedStatement ps = conn.prepareStatement(sql.toString())) {
@@ -163,6 +169,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
     }
 
     @Override
+    @Loggable
     public int count(Connection conn, String table) {
         String sql = "";
         try (Statement statement = conn.createStatement()) {
@@ -178,6 +185,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
     }
 
     @Override
+    @Loggable
     public List<Map<String, String>> selectColumn(Connection conn, String table, List<String> columns, int limit, int offset) {
         String columnStr = String.join(",", columns);
         String sql = new ST(SELECT_COLUMN).add("columns", columnStr).add("id", columns.get(0)).add("schema", schemaMap.get(table)).add("table", table).add("begin", offset).add("end", offset + limit).render();
@@ -207,6 +215,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
     }
 
     @Override
+    @Loggable
     public void batchUpdate(Connection conn, String table, List<Map<String, String>> data) {
         StringBuilder set = new StringBuilder();
         StringBuilder where = new StringBuilder();
@@ -262,6 +271,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
     }
 
     @Override
+    @Loggable
     public void renameColumn(Connection conn, String schema, String table, String oldColumn, String newColumn) {
         String sql = new ST(RENAME_COLUMN).add("schema", schemaMap.get(table)).add("table", table).add("old", oldColumn).add("new", newColumn).render();
         try (Statement statement = conn.createStatement()) {
@@ -273,6 +283,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
     }
 
     @Override
+    @Loggable
     public void dropColumn(Connection conn, String table, List<String> columns) {
 
         StringBuilder drop = new StringBuilder();
@@ -291,7 +302,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
             throw new RuntimeException(e);
         }
     }
-
+    @Loggable
     private void dropConstraint(Connection conn, String table, String col) {
         //查询约束名称
         String constraintName = "";
@@ -325,6 +336,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
     }
 
     @Override
+    @Loggable
     public void connectionOperate(Connection conn, DatabaseDTO databaseDTO) {
         databaseDTO.getTableDTOList().forEach(tableDTO -> {
             String schema = tableDTO.getSchema();

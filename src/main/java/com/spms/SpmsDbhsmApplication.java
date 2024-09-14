@@ -4,6 +4,7 @@ import com.ccsp.common.security.annotation.EnableRyFeignClients;
 import com.ccsp.common.swagger.annotation.EnableCustomSwagger2;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.scheduling.annotation.EnableAsync;
 
 @EnableRyFeignClients
