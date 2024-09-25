@@ -148,6 +148,6 @@ security:
       - /api/datahsm/v1/strategy/get
 encrypt:
   zookeeper:
-    url: 192.168.7.157:2181
+    url: 192.168.7.157:12181
   shell:
-    path: /opt/spms/spms/spms-dbenc-manager/
+    path: /opt/db_enc

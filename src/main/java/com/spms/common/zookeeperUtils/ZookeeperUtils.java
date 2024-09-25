@@ -33,7 +33,11 @@ public class ZookeeperUtils {
         defaultSessionTimeoutMs = sessionTimeoutMs == 0 ? defaultSessionTimeoutMs : sessionTimeoutMs;
         defaultConnectionTimeoutMs = connectionTimeoutMs == 0 ? defaultConnectionTimeoutMs : connectionTimeoutMs;
         defaultRetryTime = retryTime == 0 ? defaultRetryTime : retryTime;
-        client = CuratorFrameworkFactory.builder().connectString(defaultUrl).sessionTimeoutMs(defaultSessionTimeoutMs).connectionTimeoutMs(defaultConnectionTimeoutMs).retryPolicy(new RetryOneTime(defaultRetryTime)).build();
+        client = CuratorFrameworkFactory.builder()
+                .connectString(defaultUrl)
+                .sessionTimeoutMs(defaultSessionTimeoutMs)
+                .connectionTimeoutMs(defaultConnectionTimeoutMs)
+                .retryPolicy(new RetryOneTime(defaultRetryTime)).build();
         client.start();
     }
 
