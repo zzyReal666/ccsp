@@ -19,6 +19,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Test;
+import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -32,8 +33,8 @@ import java.util.Collections;
 import java.util.List;
 
 @Slf4j
-public class
-StockDataOperateServiceImplTest {
+@SpringBootTest
+public class StockDataOperateServiceImplTest {
 
     static final StockDataOperateServiceImpl service = new StockDataOperateServiceImpl();
     static Connection conn = null;
@@ -54,7 +55,7 @@ StockDataOperateServiceImplTest {
     @Test
     public void postgres() throws Exception {
         initpg();
-        DatabaseDTO dto =  getPostgresDTO();
+        DatabaseDTO dto = getPostgresDTO();
         service.stockDataOperate(dto, true);
         service.stockDataOperate(dto, false);
     }
@@ -92,7 +93,7 @@ StockDataOperateServiceImplTest {
 
     }
 
-    private void initSqlServer() throws  Exception{
+    private void initSqlServer() throws Exception {
         Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
         conn = DriverManager.getConnection("jdbc:jtds:sqlserver://192.168.6.64:1433/wzhtest;instance=WIN-I287SD6IN93", "sa", "server@2020");
         //指定schema
@@ -125,13 +126,14 @@ StockDataOperateServiceImplTest {
         statement.close();
         conn.close();
     }
+
     private DatabaseDTO getSqlServerDTO() {
 
         //准备加密函数的入参
         ColumnDTO name = new ColumnDTO();
         name.setId(1L);
         name.setColumnName("name");
-        name.setColumnDefinition(Collections.singletonMap("type","VARCHAR(50)"));  //todo 还原必须要求有这个数据类型
+        name.setColumnDefinition(Collections.singletonMap("type", "VARCHAR(50)"));  //todo 还原必须要求有这个数据类型
         name.setComment("名字");
         name.setNotNull(true);
         name.setEncryptAlgorithm("TestAlg");
@@ -140,7 +142,7 @@ StockDataOperateServiceImplTest {
         ColumnDTO address = new ColumnDTO();
         address.setId(3L);
         address.setColumnName("address");
-        address.setColumnDefinition(Collections.singletonMap("type","VARCHAR(100)")); //todo 还原必须要求有这个数据类型
+        address.setColumnDefinition(Collections.singletonMap("type", "VARCHAR(100)")); //todo 还原必须要求有这个数据类型
         address.setComment("地址");
         address.setNotNull(true);
         address.setEncryptAlgorithm("TestAlg");
@@ -201,12 +203,13 @@ StockDataOperateServiceImplTest {
         statement.close();
         conn.close();
     }
+
     private DatabaseDTO getPostgresDTO() {
         //准备加密函数的入参
         ColumnDTO name = new ColumnDTO();
         name.setId(1L);
         name.setColumnName("name");
-        name.setColumnDefinition(Collections.singletonMap("type","VARCHAR(50)"));  //todo 还原必须要求有这个数据类型
+        name.setColumnDefinition(Collections.singletonMap("type", "VARCHAR(50)"));  //todo 还原必须要求有这个数据类型
         name.setComment("名字");
         name.setNotNull(true);
         name.setEncryptAlgorithm("TestAlg");
@@ -215,7 +218,7 @@ StockDataOperateServiceImplTest {
         ColumnDTO address = new ColumnDTO();
         address.setId(3L);
         address.setColumnName("address");
-        address.setColumnDefinition(Collections.singletonMap("type","VARCHAR(100)")); //todo 还原必须要求有这个数据类型
+        address.setColumnDefinition(Collections.singletonMap("type", "VARCHAR(100)")); //todo 还原必须要求有这个数据类型
         address.setComment("地址");
         address.setNotNull(true);
         address.setEncryptAlgorithm("TestAlg");
@@ -274,6 +277,7 @@ StockDataOperateServiceImplTest {
         statement.close();
         conn.close();
     }
+
     private static DatabaseDTO getCLickHouseDTO() {
         //准备加密函数的入参
         ColumnDTO name = new ColumnDTO();
@@ -360,6 +364,7 @@ StockDataOperateServiceImplTest {
         table.close();
         connection.close();
     }
+
     private static DatabaseDTO getHbaseDTO() {
         //dto
         //准备加密函数的入参
@@ -407,7 +412,7 @@ StockDataOperateServiceImplTest {
         ColumnDTO name = new ColumnDTO();
         name.setId(1L);
         name.setColumnName("name");
-        name.setColumnDefinition(Collections.singletonMap("type","VARCHAR(50)"));
+        name.setColumnDefinition(Collections.singletonMap("type", "VARCHAR(50)"));
         name.setComment("名字");
         name.setNotNull(true);
         name.setEncryptAlgorithm("TestAlg");
@@ -449,6 +454,7 @@ StockDataOperateServiceImplTest {
         dto.setTableDTOList(tables);
         return dto;
     }
+
     private static void initKingBase() throws ClassNotFoundException, SQLException {
         Class.forName("com.kingbase8.Driver");
         conn = DriverManager.getConnection("jdbc:kingbase8://192.168.7.113:54321/ZZY", "SYSTEM", "123456");
@@ -503,6 +509,7 @@ StockDataOperateServiceImplTest {
 
         operate.join();
     }
+
     private static DatabaseDTO getMysqlDTO() throws ZAYKException, SQLException, InterruptedException {
         ColumnDTO name = new ColumnDTO();
         name.setId(1L);
@@ -596,11 +603,12 @@ StockDataOperateServiceImplTest {
         statement.close();
         conn.close();
     }
+
     private static DatabaseDTO getMysql57DTO() throws ZAYKException, SQLException, InterruptedException {
         ColumnDTO name = new ColumnDTO();
         name.setId(1L);
         name.setColumnName("name");
-        name.setColumnDefinition(Collections.singletonMap("type","VARCHAR(50)"));
+        name.setColumnDefinition(Collections.singletonMap("type", "VARCHAR(50)"));
         name.setComment("名字");
         name.setNotNull(true);
         name.setEncryptAlgorithm("TestAlg");
@@ -610,7 +618,7 @@ StockDataOperateServiceImplTest {
         ColumnDTO age = new ColumnDTO();
         age.setId(2L);
         age.setColumnName("age");
-        age.setColumnDefinition(Collections.singletonMap("type","INT"));
+        age.setColumnDefinition(Collections.singletonMap("type", "INT"));
         age.setComment("年龄");
         age.setNotNull(false);
         age.setEncryptAlgorithm("TestAlg");
@@ -618,7 +626,7 @@ StockDataOperateServiceImplTest {
 
         //address
         ColumnDTO address = new ColumnDTO();
-        address.setColumnDefinition(Collections.singletonMap("type","VARCHAR(100)"));
+        address.setColumnDefinition(Collections.singletonMap("type", "VARCHAR(100)"));
         address.setId(3L);
         address.setColumnName("address");
         address.setComment("地址");
@@ -630,7 +638,7 @@ StockDataOperateServiceImplTest {
         ColumnDTO phone = new ColumnDTO();
         phone.setId(3L);
         phone.setColumnName("phone");
-        phone.setColumnDefinition(Collections.singletonMap("type","VARCHAR(20)"));
+        phone.setColumnDefinition(Collections.singletonMap("type", "VARCHAR(20)"));
         phone.setComment("电话");
         phone.setNotNull(false);
         phone.setEncryptAlgorithm("TestAlg");
@@ -664,7 +672,6 @@ StockDataOperateServiceImplTest {
         dto.setTableDTOList(tables);
         return dto;
     }
-
 
 
 }

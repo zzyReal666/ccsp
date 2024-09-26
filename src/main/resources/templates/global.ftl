@@ -4,7 +4,7 @@ mode:
     type: ZooKeeper
     props:
       namespace: ZA-${ip}:${port}
-      server-lists: ${zookeeperIp}
+      server-lists: zookeeper:2181
       retryIntervalMilliseconds: 500
       timeToLiveSeconds: 60
       maxRetries: 3

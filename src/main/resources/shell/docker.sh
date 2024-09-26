@@ -49,6 +49,8 @@ case "${ACTION}" in
             -v "/opt/db_enc/zayk4j/zayk4j.ini:/etc/zayk4j.ini" \
             -e PORT="3308" \
             -p "${PORT}:3308" \
+            --security-opt seccomp=unconfined \
+            --network my_network \
             --restart always \
             "${IMAGE_NAME}" || error_exit "Failed to start Docker container ${CONTAINER_NAME}" "${ERR_DOCKER_COMMAND}"
         echo "Configuring firewall rules..."

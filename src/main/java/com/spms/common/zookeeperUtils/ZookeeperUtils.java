@@ -20,8 +20,8 @@ public class ZookeeperUtils {
 
     public static CuratorFramework client;
 
-    @Value("zookeeper.address")
-    private static String defaultUrl = "192.168.7.157:2181";
+    @Value("${encrypt.zookeeper.url}")
+    private static String defaultUrl;
     private static int defaultSessionTimeoutMs = 10 * 1000;
     private static int defaultConnectionTimeoutMs = 2 * 1000;
     private static int defaultRetryTime = 1000;
@@ -33,11 +33,11 @@ public class ZookeeperUtils {
         defaultSessionTimeoutMs = sessionTimeoutMs == 0 ? defaultSessionTimeoutMs : sessionTimeoutMs;
         defaultConnectionTimeoutMs = connectionTimeoutMs == 0 ? defaultConnectionTimeoutMs : connectionTimeoutMs;
         defaultRetryTime = retryTime == 0 ? defaultRetryTime : retryTime;
-        client = CuratorFrameworkFactory.builder()
-                .connectString(defaultUrl)
-                .sessionTimeoutMs(defaultSessionTimeoutMs)
-                .connectionTimeoutMs(defaultConnectionTimeoutMs)
-                .retryPolicy(new RetryOneTime(defaultRetryTime)).build();
+        client = CuratorFrameworkFactory.builder().connectString(defaultUrl)      //zookeeper地址
+                .sessionTimeoutMs(defaultSessionTimeoutMs) //会话超时时间
+                .connectionTimeoutMs(defaultConnectionTimeoutMs) //连接超时时间
+                .retryPolicy(new RetryOneTime(defaultRetryTime))    //重试策略
+                .build();
         client.start();
     }
 

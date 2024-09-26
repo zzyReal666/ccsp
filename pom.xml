@@ -13,6 +13,13 @@
 
     <dependencies>
 
+        <!-- Spring Boot Starter Test -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>  <!-- 只在测试时使用 -->
+        </dependency>
+
         <!-- Mysql Connector -->
         <dependency>
             <groupId>mysql</groupId>

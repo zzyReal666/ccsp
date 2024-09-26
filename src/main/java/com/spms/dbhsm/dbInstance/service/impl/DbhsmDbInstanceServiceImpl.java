@@ -789,7 +789,6 @@ public class DbhsmDbInstanceServiceImpl implements IDbhsmDbInstanceService {
         dataModel.put("port", dbhsmDbInstance.getDatabasePort());
         dataModel.put("username", dbhsmDbInstance.getServiceUser());
         dataModel.put("password", dbhsmDbInstance.getServicePassword());
-        dataModel.put("zookeeperIp", zkAddress);
         templateEngine.setDataModel(dataModel);
         return templateEngine.process();
     }
