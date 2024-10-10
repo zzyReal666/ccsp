@@ -664,12 +664,12 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
 
     }
 
-    @Transactional(rollbackFor = Exception.class)
     public int insertSqlServerlUser(DbhsmDbUser dbhsmDbUser, DbhsmDbInstance instance) throws Exception {
         PreparedStatement preparedStatement = null;
         Connection connection = null;
         //根据实例获取数据库连接
         connection = DbConnectionPoolFactory.getInstance().getConnection(instance);
+        connection.setAutoCommit(true);
         if (!Optional.ofNullable(connection).isPresent()) {
             throw new ZAYKException("数据库连接获取失败");
         }
@@ -693,9 +693,9 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
             boolean exec = preparedStatement.execute();
             log.info("创建登录用户：{}，将登录名放在dbo下：{}，添加db_own权限：{}", create, use, exec);
 
-            connection.commit();
+//            connection.commit();
         } catch (Exception e) {
-            //释放资源
+            //释放资源1
             if (preparedStatement != null) {
                 try {
                     preparedStatement.close();
