@@ -448,7 +448,12 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             List<Map<String, String>> allColumnsInfo = DBUtil.findAllColumnsInfo(connection, tableName, DbConstants.DB_TYPE_SQLSERVER);
             for (Map<String, String> stringStringMap : allColumnsInfo) {
                 String columnName = stringStringMap.get(DbConstants.DB_COLUMN_NAME);
-                update.append(columnName).append(",");
+
+                //数据类型不为timestamp 加入 instead of 触发器中
+                if (!stringStringMap.get(DbConstants.DB_COLUMN_TYPE).equalsIgnoreCase("timestamp")) {
+                    update.append(columnName).append(",");
+                }
+
                 if (stringStringMap.containsKey(DbConstants.DB_COLUMN_KEY)) {
                     priKey = stringStringMap.get(DbConstants.DB_COLUMN_NAME);
                 }
