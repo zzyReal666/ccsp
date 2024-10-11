@@ -234,6 +234,12 @@ public class SqlServerExecute implements SqlExecuteSPI {
                     if (isFirst.get()) {
                         where.append(k).append(" = ").append(v);
                     } else {
+                        if (v.startsWith("'")) {
+                            v = "'" + v;
+                        }
+                        if (v.endsWith("'")) {
+                            v = v + "'";
+                        }
                         set.append(k).append(getTempColumnSuffix()).append(" = ").append("'").append(v).append("'").append(",");
                     }
                     isFirst.set(false);
@@ -246,7 +252,7 @@ public class SqlServerExecute implements SqlExecuteSPI {
                 try {
                     statement.addBatch(sql);
                 } catch (SQLException e) {
-                    log.error("addBatch error", e);
+                    log.error("addBatch error，sql{}", sql);
                     throw new RuntimeException(e);
                 }
             });
