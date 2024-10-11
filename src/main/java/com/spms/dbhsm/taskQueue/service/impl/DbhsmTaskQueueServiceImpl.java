@@ -448,15 +448,17 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             List<Map<String, String>> allColumnsInfo = DBUtil.findAllColumnsInfo(connection, tableName, DbConstants.DB_TYPE_SQLSERVER);
             for (Map<String, String> stringStringMap : allColumnsInfo) {
                 String columnName = stringStringMap.get(DbConstants.DB_COLUMN_NAME);
-
-                //数据类型不为timestamp 加入 instead of 触发器中
-                if (!stringStringMap.get(DbConstants.DB_COLUMN_TYPE).equalsIgnoreCase("timestamp")) {
-                    update.append(columnName).append(",");
+                //字段加入 instead of 触发器中
+                //timestamp 数据类型跳过
+                if ("timestamp".equalsIgnoreCase(stringStringMap.get(DbConstants.DB_COLUMN_TYPE))) {
+                    continue;
                 }
-
                 if (stringStringMap.containsKey(DbConstants.DB_COLUMN_KEY)) {
                     priKey = stringStringMap.get(DbConstants.DB_COLUMN_NAME);
+                    continue;
                 }
+                update.append(columnName).append(",");
+
             }
             update.deleteCharAt(update.length() - 1);
 
@@ -679,8 +681,8 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
         int crytoCartTypeSInt = Integer.parseInt(crytoCartTypeObj.toString());
         ZaykManageClass mgr = new ZaykManageClass();
         Integer ret = mgr.Initialize(crytoCartTypeSInt);
-        log.info("初始化卡：{}",ret);
-        if (0 != ret){
+        log.info("初始化卡：{}", ret);
+        if (0 != ret) {
             return null;
         }
         if (DbConstants.KEY_SOURCE_SECRET_CARD.equals(keySource)) {
@@ -693,7 +695,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                     throw new IOException();
                 }
                 symmKey = exportKey.get("privateKey");
-                log.info("卡内密钥：{}",symmKey);
+                log.info("卡内密钥：{}", symmKey);
             }
         }
         return symmKey;
@@ -702,57 +704,24 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
     public static String databaseTypeSqlColumns(String type, String table, String schema) {
         String sql = "";
         if (DbConstants.DB_TYPE_ORACLE.equals(type)) {
-            sql = "SELECT cols.column_name AS \"Field\", cols.data_type || CASE WHEN cols.data_type IN ('VARCHAR2', 'CHAR', 'NUMBER') THEN '(' || cols.data_length || ')' ELSE '' END AS \"type\",\n" +
-                    "   CASE WHEN cols.nullable = 'Y' THEN 'YES' ELSE 'NO' END AS  \"Null\", cols.data_default AS \"Default\", comments.comments AS \"Comment\",CASE WHEN pk.constraint_type = 'P' THEN 'PRI' ELSE '' END AS \"Key\"\n" +
-                    "FROM  user_tab_columns cols LEFT JOIN user_col_comments comments\n" +
-                    "ON cols.table_name = comments.table_name AND cols.column_name = comments.column_name\n" +
-                    "LEFT JOIN (SELECT uc.table_name, ucc.column_name, uc.constraint_type FROM user_cons_columns ucc JOIN user_constraints uc \n" +
-                    "     ON uc.constraint_name = ucc.constraint_name WHERE uc.constraint_type = 'P') pk ON cols.table_name = pk.table_name AND cols.column_name = pk.column_name\n" +
-                    "WHERE cols.table_name = '" + table + "'";
+            sql = "SELECT cols.column_name AS \"Field\", cols.data_type || CASE WHEN cols.data_type IN ('VARCHAR2', 'CHAR', 'NUMBER') THEN '(' || cols.data_length || ')' ELSE '' END AS \"type\",\n" + "   CASE WHEN cols.nullable = 'Y' THEN 'YES' ELSE 'NO' END AS  \"Null\", cols.data_default AS \"Default\", comments.comments AS \"Comment\",CASE WHEN pk.constraint_type = 'P' THEN 'PRI' ELSE '' END AS \"Key\"\n" + "FROM  user_tab_columns cols LEFT JOIN user_col_comments comments\n" + "ON cols.table_name = comments.table_name AND cols.column_name = comments.column_name\n" + "LEFT JOIN (SELECT uc.table_name, ucc.column_name, uc.constraint_type FROM user_cons_columns ucc JOIN user_constraints uc \n" + "     ON uc.constraint_name = ucc.constraint_name WHERE uc.constraint_type = 'P') pk ON cols.table_name = pk.table_name AND cols.column_name = pk.column_name\n" + "WHERE cols.table_name = '" + table + "'";
         } else if (DbConstants.DB_TYPE_SQLSERVER.equals(type)) {
             //sqlserver
-            sql = "SELECT \n" +
-                    "  'Field' = a.name, 'Key' = case when exists( SELECT 1 FROM sysobjects \n" +
-                    "    where xtype = 'PK' and parent_obj = a.id and name in (\n" +
-                    "        SELECT name FROM sysindexes WHERE indid in( SELECT indid FROM sysindexkeys WHERE id = a.id AND colid = a.colid))\n" +
-                    "  ) then 'PRI' else '' end, 'Type' = b.name, \n" +
-                    "  'Null' = case when a.isnullable = 1 then 'YES' else 'NO' end, 'Default' = isnull(e.text, ''), 'Comment' = isnull(g.[value], '') \n" +
-                    "FROM syscolumns a \n" +
-                    "  left join systypes b on a.xusertype = b.xusertype inner join sysobjects d on a.id = d.id and d.xtype = 'U' and d.name<>'dtproperties' \n" +
-                    "  left join syscomments e on a.cdefault = e.id \n" +
-                    "  left join sys.extended_properties g on a.id = G.major_id and a.colid = g.minor_id \n" +
-                    "  left join sys.extended_properties f on d.id = f.major_id and f.minor_id = 0   INNER JOIN sys.schemas s ON d.uid = s.schema_id \n" +
-                    "where d.name = '" + table + "' and  s.name = '" + schema + "' order by a.id, a.colorder";
+            sql = "SELECT \n" + "  'Field' = a.name, 'Key' = case when exists( SELECT 1 FROM sysobjects \n" + "    where xtype = 'PK' and parent_obj = a.id and name in (\n" + "        SELECT name FROM sysindexes WHERE indid in( SELECT indid FROM sysindexkeys WHERE id = a.id AND colid = a.colid))\n" + "  ) then 'PRI' else '' end, 'Type' = b.name, \n" + "  'Null' = case when a.isnullable = 1 then 'YES' else 'NO' end, 'Default' = isnull(e.text, ''), 'Comment' = isnull(g.[value], '') \n" + "FROM syscolumns a \n" + "  left join systypes b on a.xusertype = b.xusertype inner join sysobjects d on a.id = d.id and d.xtype = 'U' and d.name<>'dtproperties' \n" + "  left join syscomments e on a.cdefault = e.id \n" + "  left join sys.extended_properties g on a.id = G.major_id and a.colid = g.minor_id \n" + "  left join sys.extended_properties f on d.id = f.major_id and f.minor_id = 0   INNER JOIN sys.schemas s ON d.uid = s.schema_id \n" + "where d.name = '" + table + "' and  s.name = '" + schema + "' order by a.id, a.colorder";
         } else if (DbConstants.DB_TYPE_DM.equals(type)) {
             //dm
-            sql = "SELECT\n" +
-                    "\ta.column_name AS \"Field\",\n" +
-                    "\ta.data_type || CASE WHEN a.data_type != 'TEXT' THEN '(' || a.data_length || ')'ELSE '' END AS \"type\" ,\n" +
-                    "\tc.comments AS \"Comment\",\n" +
-                    "\ta.nullable AS \"Null\",\n" +
-                    "\ta.data_default AS \"Default\",\n" +
-                    "\t(SELECT CASE WHEN t.CONSTRAINT_TYPE='P' then 'PRI' else 'MUL' END as KEY FROM USER_CONSTRAINTS t JOIN USER_CONS_COLUMNS b ON t.constraint_name = b.constraint_name WHERE b.table_name = '" + table + "' AND b.column_name = a.column_name) AS \"key\"\n" +
-                    "FROM all_tab_columns a LEFT JOIN all_col_comments c ON a.table_name = c.table_name AND a.column_name = c.column_name\n" +
-                    "WHERE a.TABLE_NAME = '" + table + "'";
+            sql = "SELECT\n" + "\ta.column_name AS \"Field\",\n" + "\ta.data_type || CASE WHEN a.data_type != 'TEXT' THEN '(' || a.data_length || ')'ELSE '' END AS \"type\" ,\n" + "\tc.comments AS \"Comment\",\n" + "\ta.nullable AS \"Null\",\n" + "\ta.data_default AS \"Default\",\n" + "\t(SELECT CASE WHEN t.CONSTRAINT_TYPE='P' then 'PRI' else 'MUL' END as KEY FROM USER_CONSTRAINTS t JOIN USER_CONS_COLUMNS b ON t.constraint_name = b.constraint_name WHERE b.table_name = '" + table + "' AND b.column_name = a.column_name) AS \"key\"\n" + "FROM all_tab_columns a LEFT JOIN all_col_comments c ON a.table_name = c.table_name AND a.column_name = c.column_name\n" + "WHERE a.TABLE_NAME = '" + table + "'";
         } else if (DbConstants.DB_TYPE_POSTGRESQL.equals(type)) {
             //pgSql
-            sql = "SELECT table_schema,column_name as Field, data_type as Type, is_nullable as Null, column_default as Default,'' as Comment,\n" +
-                    "CASE WHEN (column_name = (SELECT a.attname AS pk_column_name FROM pg_class t,pg_attribute a,pg_constraint c WHERE c.contype = 'p'AND c.conrelid = t.oid AND a.attrelid = t.oid AND a.attnum = ANY(c.conkey) AND t.relkind = 'r' AND t.relname = '" + table + "' limit 1))THEN  'PRI' ELSE  '' END  as key\n" +
-                    "FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" + table + "' and table_schema=(SELECT table_schema FROM information_schema.columns WHERE table_name = '" + table + "' LIMIT 1);";
+            sql = "SELECT table_schema,column_name as Field, data_type as Type, is_nullable as Null, column_default as Default,'' as Comment,\n" + "CASE WHEN (column_name = (SELECT a.attname AS pk_column_name FROM pg_class t,pg_attribute a,pg_constraint c WHERE c.contype = 'p'AND c.conrelid = t.oid AND a.attrelid = t.oid AND a.attnum = ANY(c.conkey) AND t.relkind = 'r' AND t.relname = '" + table + "' limit 1))THEN  'PRI' ELSE  '' END  as key\n" + "FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" + table + "' and table_schema=(SELECT table_schema FROM information_schema.columns WHERE table_name = '" + table + "' LIMIT 1);";
         } else if (DbConstants.DB_TYPE_KB.equals(type)) {
-            sql = "SELECT c.table_schema,c.column_name AS Field, c.data_type AS Type, c.is_nullable AS Null, c.column_default AS Default,'' as Comment,\n" +
-                    "(SELECT tc.constraint_type\n" +
-                    "FROM information_schema.table_constraints AS tc\n" +
-                    "JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema\n" +
-                    "WHERE tc.constraint_type = 'PRIMARY KEY' AND tc.table_name = c.table_name and kcu.column_name = c.column_name) as Key\n" +
-                    "FROM information_schema.columns c WHERE c.table_name = '" + table + "' AND c.table_schema not in('S-C','public')";
+            sql = "SELECT c.table_schema,c.column_name AS Field, c.data_type AS Type, c.is_nullable AS Null, c.column_default AS Default,'' as Comment,\n" + "(SELECT tc.constraint_type\n" + "FROM information_schema.table_constraints AS tc\n" + "JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema\n" + "WHERE tc.constraint_type = 'PRIMARY KEY' AND tc.table_name = c.table_name and kcu.column_name = c.column_name) as Key\n" + "FROM information_schema.columns c WHERE c.table_name = '" + table + "' AND c.table_schema not in('S-C','public')";
         } else if (DbConstants.DB_TYPE_MYSQL.equals(type)) {
             //MySql
             sql = "SHOW FULL COLUMNS from " + table;
         } else if (DbConstants.DB_TYPE_CLICKHOUSE.equals(type)) {
             //ClickHouse
-            sql = "select name as Field,type as Type,comment as Comment,default_expression as Default,if(is_in_primary_key = 1,'PRI','') as Key,\n" +
-                    "if(type like '%Nullable%','YES','NO') as Null from system.columns where database = '" + schema + "' and  table='" + table + "';";
+            sql = "select name as Field,type as Type,comment as Comment,default_expression as Default,if(is_in_primary_key = 1,'PRI','') as Key,\n" + "if(type like '%Nullable%','YES','NO') as Null from system.columns where database = '" + schema + "' and  table='" + table + "';";
         }
         return sql;
     }
@@ -932,19 +901,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             index = DbConstants.DB_TYPE_MYSQL.equals(dbhsmDbInstance.getDatabaseType()) ? 2 : 1;
         } else if (DbConstants.DB_TYPE_KB.equals(dbhsmDbInstance.getDatabaseType())) {
             //组装创建表的DDL以及主键信息
-            sql = "SELECT 'CREATE TABLE ' || table_name || ' (' || array_to_string( array_agg(\n" +
-                    "            column_name || ' ' || data_type ||\n" +
-                    "            CASE WHEN data_type IN ('integer', 'int', 'int4', 'int8') THEN '' ELSE COALESCE('(' || character_maximum_length || ')', '') END ||\n" +
-                    "            CASE WHEN is_nullable = 'NO' THEN ' NOT NULL' ELSE '' END ||\n" +
-                    "            COALESCE(' ' || column_default, '') ), ', ' ) || '); ' ||\n" +
-                    "    COALESCE((\n" +
-                    "        SELECT 'ALTER TABLE ' || kcu.table_name || ' ADD CONSTRAINT ' || tc.constraint_name || ' PRIMARY KEY (' || string_agg(kcu.column_name, ', ') || ');'\n" +
-                    "        FROM information_schema.table_constraints tc JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name\n" +
-                    "        WHERE tc.table_schema = ( SELECT table_schema FROM information_schema.columns WHERE table_name = '" + table + "' LIMIT 1 )\n" +
-                    "        AND tc.table_name = '" + table + "' AND tc.constraint_type = 'PRIMARY KEY' GROUP BY kcu.table_name, tc.constraint_name ), '') AS ddl_statement\n" +
-                    "FROM information_schema.columns\n" +
-                    "WHERE table_schema = ( SELECT table_schema FROM information_schema.columns WHERE table_name = '" + table + "'  LIMIT 1 )\n" +
-                    "    AND table_name = '" + table + "' GROUP BY table_name;";
+            sql = "SELECT 'CREATE TABLE ' || table_name || ' (' || array_to_string( array_agg(\n" + "            column_name || ' ' || data_type ||\n" + "            CASE WHEN data_type IN ('integer', 'int', 'int4', 'int8') THEN '' ELSE COALESCE('(' || character_maximum_length || ')', '') END ||\n" + "            CASE WHEN is_nullable = 'NO' THEN ' NOT NULL' ELSE '' END ||\n" + "            COALESCE(' ' || column_default, '') ), ', ' ) || '); ' ||\n" + "    COALESCE((\n" + "        SELECT 'ALTER TABLE ' || kcu.table_name || ' ADD CONSTRAINT ' || tc.constraint_name || ' PRIMARY KEY (' || string_agg(kcu.column_name, ', ') || ');'\n" + "        FROM information_schema.table_constraints tc JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name\n" + "        WHERE tc.table_schema = ( SELECT table_schema FROM information_schema.columns WHERE table_name = '" + table + "' LIMIT 1 )\n" + "        AND tc.table_name = '" + table + "' AND tc.constraint_type = 'PRIMARY KEY' GROUP BY kcu.table_name, tc.constraint_name ), '') AS ddl_statement\n" + "FROM information_schema.columns\n" + "WHERE table_schema = ( SELECT table_schema FROM information_schema.columns WHERE table_name = '" + table + "'  LIMIT 1 )\n" + "    AND table_name = '" + table + "' GROUP BY table_name;";
         }
 
         ResultSet rs = stmt.executeQuery(sql);
@@ -957,10 +914,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
 
     public static String getSqlServerDDL(String schemaName, String tableName, Connection connection) throws SQLException {
         // Step 1: Query the INFORMATION_SCHEMA.COLUMNS view
-        String sql = "SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE, COLUMN_DEFAULT " +
-                "FROM INFORMATION_SCHEMA.COLUMNS " +
-                "WHERE TABLE_SCHEMA = '" + schemaName + "' AND TABLE_NAME = '" + tableName + "' " +
-                "ORDER BY ORDINAL_POSITION";
+        String sql = "SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE, COLUMN_DEFAULT " + "FROM INFORMATION_SCHEMA.COLUMNS " + "WHERE TABLE_SCHEMA = '" + schemaName + "' AND TABLE_NAME = '" + tableName + "' " + "ORDER BY ORDINAL_POSITION";
 
         Statement statement = connection.createStatement();
         ResultSet resultSet = statement.executeQuery(sql);
@@ -1310,8 +1264,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             }
         } else if ("2".equals(detailsMode)) {
             //加密详情 ：   未开始加密、加密中、已加密
-            return list.stream().filter(enc -> DbConstants.CREATED_ON_WEB_SEDE.equals(enc.getEncryptionStatus())
-                    || DbConstants.NOT_ENCRYPTED.equals(enc.getEncryptionStatus()) || DbConstants.ENCRYPTED.equals(enc.getEncryptionStatus())).collect(Collectors.toList());
+            return list.stream().filter(enc -> DbConstants.CREATED_ON_WEB_SEDE.equals(enc.getEncryptionStatus()) || DbConstants.NOT_ENCRYPTED.equals(enc.getEncryptionStatus()) || DbConstants.ENCRYPTED.equals(enc.getEncryptionStatus())).collect(Collectors.toList());
         } else if ("3".equals(detailsMode)) {
             //解密详情  获取解密中或者未开始解密的数据
             return list.stream().filter(enc -> DbConstants.ENCRYPTING.equals(enc.getEncryptionStatus()) || DbConstants.DECRYPTING.equals(enc.getEncryptionStatus())).collect(Collectors.toList());
