@@ -372,6 +372,9 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             String tableName = instance.getSchema() + ":" + encTableName;
             List<Map<String, String>> allColumnsInfo = DBUtil.findAllColumnsInfo(connection, tableName, DbConstants.DB_TYPE_SQLSERVER);
             for (Map<String, String> stringStringMap : allColumnsInfo) {
+                if ("timestamp".equalsIgnoreCase(stringStringMap.get(DbConstants.DB_COLUMN_TYPE))) {
+                    continue;
+                }
                 String columnName = stringStringMap.get(DbConstants.DB_COLUMN_NAME);
                 into.append(columnName).append(",");
             }
