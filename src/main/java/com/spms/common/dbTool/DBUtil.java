@@ -313,8 +313,8 @@ public final class DBUtil {
                         ps = conn.prepareStatement("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '"+table+"' and TABLE_SCHEMA = 'dbo' AND COLUMNPROPERTY(OBJECT_ID(TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1");
                         rs = ps.executeQuery();
                         while (rs.next()) {
-                            if (StringUtils.isNotBlank(rs.getString("Key"))) {
-                                map.put(rs.getString("column_name"), rs.getString("Key"));
+                            if (StringUtils.isNotBlank(rs.getString(1))) {
+                                map.put(rs.getString("column_name"), "PRIMARY KEY");
                             }
                         }
                     }
