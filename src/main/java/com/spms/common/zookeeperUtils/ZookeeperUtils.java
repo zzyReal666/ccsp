@@ -7,7 +7,10 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryOneTime;
 import org.apache.zookeeper.data.Stat;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
+
+import javax.annotation.PostConstruct;
 
 /**
  * @author zzypersonally@gmail.com
@@ -16,18 +19,26 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@Scope(value = "singleton")
 public class ZookeeperUtils {
 
     public static CuratorFramework client;
 
     @Value("${encrypt.zookeeper.url}")
-    private static String defaultUrl;
+    private String url ;
+    private static String defaultUrl ;
     private static int defaultSessionTimeoutMs = 10 * 1000;
-    private static int defaultConnectionTimeoutMs = 2 * 1000;
+    private static int defaultConnectionTimeoutMs = 5 * 1000;
     private static int defaultRetryTime = 1000;
 
 
     //region //================初始化 close================
+
+    @PostConstruct
+    public void init() {
+        // 将非静态的 defaultUrl 赋值给静态变量
+        ZookeeperUtils.defaultUrl = this.url;
+    }
     public static void init(String url, int sessionTimeoutMs, int connectionTimeoutMs, int retryTime) {
         defaultUrl = StringUtil.isNullOrEmpty(url) ? defaultUrl : url;
         defaultSessionTimeoutMs = sessionTimeoutMs == 0 ? defaultSessionTimeoutMs : sessionTimeoutMs;
@@ -88,7 +99,7 @@ public class ZookeeperUtils {
     }
 
     public static void updateNode(String data, String nodePath) {
-        log.info("updateNode nodePath:{}, data:{}", nodePath, data);
+        log.info("updateNode url:{}, nodePath:{}, data:{}",defaultUrl, nodePath, data);
         updateNode(data, nodePath, defaultUrl);
     }
 

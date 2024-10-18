@@ -150,4 +150,4 @@ encrypt:
   zookeeper:
     url: 192.168.7.157:12181
   shell:
-    path: /opt/db_enc
+    path: /opt/db_enc/

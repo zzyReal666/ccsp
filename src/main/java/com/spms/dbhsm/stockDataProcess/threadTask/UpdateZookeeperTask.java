@@ -143,7 +143,7 @@ public class UpdateZookeeperTask extends Thread {
     private static Map<String, Object> getEncryptorDataModel(ColumnDTO col) {
         Map<String, Object> dataModel = new HashMap<>();
         dataModel.put("type", col.getEncryptAlgorithm());
-        dataModel.put("keyIndex", col.getEncryptKeyIndex());
+        dataModel.put("keyIndex", col.getEncryptKeyData());
         //数据模型 props
         List<Map<String, String>> props = new ArrayList<>();
         col.getProperty().forEach((k, v) -> {

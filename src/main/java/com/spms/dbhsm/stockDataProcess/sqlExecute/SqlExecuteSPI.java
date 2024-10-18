@@ -119,7 +119,6 @@ public interface SqlExecuteSPI extends TypedSPI {
      * @param conn
      */
     default void connectionOperate(Connection conn , DatabaseDTO databaseDTO) {
-
     }
 
 

@@ -221,12 +221,14 @@ public class PostgresExecute implements SqlExecuteSPI {
      * postgres连接时 设置search path
      *
      * @param conn        连接
-     * @param databaseDTO 数据库信息 table中包含schema
+     * @param databaseDTO 数据库信息 table中包含schema1
      */
     @Override
     public void connectionOperate(Connection conn, DatabaseDTO databaseDTO) {
         try (Statement statement = conn.createStatement()) {
-            statement.execute("set search_path to '" + databaseDTO.getTableDTOList().get(0).getSchema() + "'");
+            String sql = "set search_path to '" + "public" + "'";
+            statement.execute(sql);
+            log.info("set search_path to {}", "public");
         } catch (SQLException e) {
             log.error("connectionOperate error", e);
             throw new RuntimeException(e);

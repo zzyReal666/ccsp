@@ -186,6 +186,7 @@ public class MysqlExecute implements SqlExecuteSPI {
             log.error("setAutoCommit to false error", e);
             throw new RuntimeException(e);
         }
+
         try (Statement statement = conn.createStatement()) {
             data.forEach(map -> {
                 AtomicBoolean isFirst = new AtomicBoolean(true);
@@ -204,9 +205,10 @@ public class MysqlExecute implements SqlExecuteSPI {
                 set.setLength(0);
                 where.setLength(0);
                 try {
+                    log.info("addBatch sql:{}", sql);
                     statement.addBatch(sql);
                 } catch (SQLException e) {
-                    log.error("addBatch error", e);
+                    log.error("addBatch error，sql:{}", sql);
                     throw new RuntimeException(e);
                 }
             });
