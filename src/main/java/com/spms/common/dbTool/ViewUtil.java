@@ -461,7 +461,7 @@ public class ViewUtil {
      * @param encryptColumnsMapper
      * @return
      */
-    private static boolean operViewToPostGreSql(Connection conn, DbhsmEncryptColumnsAdd encryptColumns, DbhsmEncryptColumnsMapper encryptColumnsMapper, String dbSchema) throws SQLException {
+    public static boolean operViewToPostGreSql(Connection conn, DbhsmEncryptColumnsAdd encryptColumns, DbhsmEncryptColumnsMapper encryptColumnsMapper, String dbSchema) throws SQLException {
 
         /**
          * create or replace view v_table1 --视图名称
@@ -492,7 +492,7 @@ public class ViewUtil {
 
         StringBuffer viewSql = new StringBuffer();
 
-        viewSql.append("create or replace view " + dbSchema + ".v_" + encryptColumns.getDbTable());
+        viewSql.append("create or replace view " + dbSchema + "." + encryptColumns.getDbTable());
         viewSql.append(System.getProperty("line.separator"));
         viewSql.append("as SELECT ");
         viewSql.append(System.getProperty("line.separator"));
@@ -527,19 +527,7 @@ public class ViewUtil {
                     item.append(System.getProperty("line.separator"));
                     item.append("CAST(user AS text),");
                     item.append(System.getProperty("line.separator"));
-
-                    if (DbConstants.SGD_SM4.equals(encryptColumn1.getEncryptionAlgorithm())) {
-                        item.append(encryptColumn1.getEncryptColumns() + ",0,0)" + (haveEncColumn ? ")" : "") + "\n");
-                    } else {
-                        if (DbConstants.ESTABLISH_RULES_YES.equals(encryptColumn1.getEstablishRules())) {
-                            item.append(encryptColumn1.getEncryptColumns() + "," + //加密列
-                                    (encryptColumn1.getEncryptionOffset() - 1) + "," + //偏移量
-                                    (encryptColumn1.getEncryptionLength() - (encryptColumn1.getEncryptionOffset() - 1)) + "," +//加密长度
-                                    encryptColumn1.getEncryptionAlgorithm() + ")" + (haveEncColumn ? ")" : "") + "\n");
-                        } else {
-                            item.append(encryptColumn1.getEncryptColumns() + ",0,0," + encryptColumn1.getEncryptionAlgorithm() + ")" + (haveEncColumn ? ")" : "") + "\n");
-                        }
-                    }
+                    item.append(encryptColumn1.getEncryptColumns() + ",0,0,10)" + (haveEncColumn ? ")" : "") + "\n");
                     item.append(" as " + encryptColumn1.getEncryptColumns() + " ,");
                     isEncColumn = true;
                     haveEncColumn = true;
@@ -565,7 +553,7 @@ public class ViewUtil {
         try {
             preparedStatement = conn.prepareStatement(viewSql.toString());
             preparedStatement.execute();
-            String viemName = dbSchema + ".v_" + encryptColumns.getDbTable();
+            String viemName = dbSchema + "." + encryptColumns.getDbTable();
             String permssionSql = "GRANT SELECT ON " + viemName + " TO  \"" + encryptColumns.getDbUserName() + "\"";
             log.info("给用户授权查询视图权限Sql:" + permssionSql);
             preparedStatement = conn.prepareStatement(permssionSql);

@@ -450,21 +450,8 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
                 throw new ZAYKException("创建用户失败!");
             }
         }
-        //根据权限组id查询权限组对应的所有权限SQL：
-        //List<String> permissionsSqlList = dbhsmPermissionGroupMapper.getPermissionsSqlByPermissionsGroupid(permissionGroupId);
-        //赋权
-        //String permissionsSql = null;
+
         try {
-            //for (String permission : permissionsSqlList) {
-            //    permissionsSql = permission.toLowerCase();
-            //    if (!(permissionsSql.startsWith("grant") && !(permissionsSql.startsWith("revoke")))) {
-            //        log.info("不支持的授权SQL:" + permissionsSql);
-            //        throw new ZAYKException("不支持的授权SQL:" + permissionsSql);
-            //    }
-            //    sql = permission.trim() + " ON SCHEMA " + dbhsmDbUser.getDbSchema() + " to \"" + username + "\"";
-            //    preparedStatement = connection.prepareStatement(sql);
-            //    preparedStatement.executeUpdate();
-            //}
             sql = "GRANT ALL ON SCHEMA  \"" + dbhsmDbUser.getDbSchema() + "\" to \"" + username + "\"";
             preparedStatement = connection.prepareStatement(sql);
             preparedStatement.executeUpdate();
@@ -474,8 +461,8 @@ public class DbhsmDbUsersServiceImpl implements IDbhsmDbUsersService {
             ProcedureUtil.pgextFuncStringEncrypt(connection, dbhsmDbUser);
             ProcedureUtil.pgextFuncStringDecrypt(connection, dbhsmDbUser);
             //fpe函数
-            ProcedureUtil.pgextFuncFPEEncrypt(connection, dbhsmDbUser);
-            ProcedureUtil.pgextFuncFPEDecrypt(connection, dbhsmDbUser);
+//            ProcedureUtil.pgextFuncFPEEncrypt(connection, dbhsmDbUser);
+//            ProcedureUtil.pgextFuncFPEDecrypt(connection, dbhsmDbUser);
             connection.commit();
         } catch (SQLException throwables) {
             throwables.printStackTrace();

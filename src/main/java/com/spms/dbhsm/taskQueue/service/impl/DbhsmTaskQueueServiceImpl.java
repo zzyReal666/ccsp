@@ -13,6 +13,8 @@ import com.spms.common.DBIpUtil;
 import com.spms.common.JSONDataUtil;
 import com.spms.common.constant.DbConstants;
 import com.spms.common.dbTool.DBUtil;
+import com.spms.common.dbTool.ViewUtil;
+import com.spms.common.dbTool.stockDataProcess.postgresql.PostgreSQLStock;
 import com.spms.common.enums.DatabaseTypeEnum;
 import com.spms.common.pool.hikariPool.DbConnectionPoolFactory;
 import com.spms.dbhsm.dbInstance.domain.DTO.DbInstanceGetConnDTO;
@@ -265,6 +267,62 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             //更新触发器
             updateTrigger(connection, dbhsmEncryptColumns, instance);
             connection.commit();
+            return true;
+        } catch (Exception e) {
+            try {
+                connection.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            log.error("创建解密函数失败：{}", e.getMessage());
+        } finally {
+            try {
+                connection.close();
+                preparedStatement.close();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return false;
+    }
+
+    public boolean operViewToPgSql(List<DbhsmEncryptColumns> dbhsmEncryptColumns, DbhsmDbInstance instance) {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        try {
+            boolean isFor = true;
+            for (DbhsmEncryptColumns dbhsmEncryptColumn : dbhsmEncryptColumns) {
+                DbhsmEncryptColumnsAdd dbhsmEncryptColumnsAdd = BeanConvertUtils.beanToBean(dbhsmEncryptColumn, DbhsmEncryptColumnsAdd.class);
+                dbhsmEncryptColumnsAdd.setDatabaseType(instance.getDatabaseType());
+                dbhsmEncryptColumnsAdd.setDatabaseServerName(instance.getDatabaseServerName());
+                connection = DbConnectionPoolFactory.getInstance().getConnection(instance);
+                instance.setSchema(getDataBaseSchema(connection, dbhsmEncryptColumnsAdd.getDbTable(), instance.getDatabaseType()));
+                if (isFor) {
+                    preparedStatement = connection.prepareStatement("alter table " + instance.getSchema() + "." + dbhsmEncryptColumnsAdd.getDbTable() + "  rename to " + dbhsmEncryptColumnsAdd.getDbTable() + "_ENCDATA");
+                    boolean execute = preparedStatement.execute();
+                    log.info("修改表名返回:{}", execute);
+                    ViewUtil.operViewToPostGreSql(connection, dbhsmEncryptColumnsAdd, dbhsmEncryptColumnsMapper, instance.getSchema());
+                    connection.commit();
+                }
+
+                DbhsmDbUser dbUser = new DbhsmDbUser();
+                dbUser.setUserName(dbhsmEncryptColumnsAdd.getDbUserName());
+                dbUser.setDatabaseInstanceId(dbhsmEncryptColumnsAdd.getDbInstanceId());
+                List<DbhsmDbUser> dbhsmDbUsers = dbUsersMapper.selectDbhsmDbUsersList(dbUser);
+                if (com.ccsp.common.core.utils.StringUtils.isEmpty(dbhsmDbUsers)) {
+                    log.error("根据实例ID和用户名未获取到用户信息, InstanceId：{}，DbUserName：{}", dbUser.getDatabaseInstanceId(), dbUser.getUserName());
+                    throw new Exception("根据实例ID和用户名未获取到用户信息,用户名：" + dbUser.getUserName());
+                }
+                dbUser = dbhsmDbUsers.get(0);
+                dbUser.setDbSchema(instance.getSchema());
+                //定义触发器
+                PostgreSQLStock.replaceTrigger(connection, dbhsmEncryptColumnsAdd,dbUser);
+                //创建触发器
+                PostgreSQLStock.createTrigger(connection, dbhsmEncryptColumnsAdd,dbUser);
+                isFor = false;
+            }
+
+            PostgreSQLStock.createTriggerFun(connection, dbhsmEncryptColumns.get(0),instance);
             return true;
         } catch (Exception e) {
             try {
@@ -1138,10 +1196,18 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                 //设置队列状态
                 taskQueue.setEncStatus(DbConstants.ENCRYPTING);
                 dbhsmTaskQueueMapper.updateRecord(taskQueue);
-                if (DbConstants.DB_TYPE_SQLSERVER.equals(dbhsmDbInstance.getDatabaseType()) && DbConstants.BE_PLUG.equals(dbhsmDbInstance.getPlugMode())) {
-                    boolean b = operViewToSqlServer(columnsList, dbhsmDbInstance);
-                    if (!b) {
-                        log.error("创建解密视图失败");
+                if (DbConstants.BE_PLUG.equals(dbhsmDbInstance.getPlugMode())) {
+                    if (DbConstants.DB_TYPE_SQLSERVER.equals(dbhsmDbInstance.getDatabaseType())) {
+                        boolean b = operViewToSqlServer(columnsList, dbhsmDbInstance);
+                        if (!b) {
+                            log.error("Sqlserver创建解密视图失败");
+                        }
+                    }
+                    if (DbConstants.DB_TYPE_POSTGRESQL.equals(dbhsmDbInstance.getDatabaseType())) {
+                        boolean b = operViewToPgSql(columnsList, dbhsmDbInstance);
+                        if (!b) {
+                            log.error("PgSql创建解密视图失败");
+                        }
                     }
                 }
             } else {
