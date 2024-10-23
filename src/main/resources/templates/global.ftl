@@ -21,7 +21,12 @@ logging:
       additivity: true
       level: INFO
       props:
-        enable: true
+        enable: tsqlFederation:
+  sqlFederationEnabled: true
+  allQueryUseSQLFederation: false
+  executionPlanCache:
+    initialCapacity: 2000
+    maximumSize: 65535
 props:
   sql-show: true
   check-table-metadata-enabled: true
