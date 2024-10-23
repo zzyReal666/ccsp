@@ -193,7 +193,7 @@ public class MysqlExecute implements SqlExecuteSPI {
                 map.forEach((k, v) -> {
                     //第一个是主键
                     if (isFirst.get()) {
-                        where.append(k).append(" = ").append(v);
+                        where.append(k).append(" = ").append("'").append(v).append("'");
                     } else {
                         set.append(k).append(TEMP_COLUMN_SUFFIX).append(" = ").append("'").append(v).append("'").append(",");
                     }
