@@ -429,11 +429,19 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             StringBuilder into = new StringBuilder();
             String tableName = instance.getSchema() + ":" + encTableName;
             List<Map<String, String>> allColumnsInfo = DBUtil.findAllColumnsInfo(connection, tableName, DbConstants.DB_TYPE_SQLSERVER);
+            //查询自增列并排除
+            Map<String, String> needCheckColumn = DBUtil.getNeedCheckColumn(connection, tableName, DbConstants.DB_TYPE_SQLSERVER);
             for (Map<String, String> stringStringMap : allColumnsInfo) {
+                //排除timestamp类型
                 if ("timestamp".equalsIgnoreCase(stringStringMap.get(DbConstants.DB_COLUMN_TYPE))) {
                     continue;
                 }
+
+                //排除自增列
                 String columnName = stringStringMap.get(DbConstants.DB_COLUMN_NAME);
+                if (!needCheckColumn.isEmpty() && needCheckColumn.containsValue(columnName)) {
+                    continue;
+                }
                 into.append(columnName).append(",");
             }
             String[] split = into.toString().split(",");
@@ -507,6 +515,8 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             //insert into 语句
             String tableName = instance.getSchema() + ":" + dbhsmEncryptColumns.getDbTable() + "_ENCDATA";
             List<Map<String, String>> allColumnsInfo = DBUtil.findAllColumnsInfo(connection, tableName, DbConstants.DB_TYPE_SQLSERVER);
+            //获取需要排除的列
+            Map<String, String> needCheckColumn = DBUtil.getNeedCheckColumn(connection, tableName, DbConstants.DB_TYPE_SQLSERVER);
             for (Map<String, String> stringStringMap : allColumnsInfo) {
                 String columnName = stringStringMap.get(DbConstants.DB_COLUMN_NAME);
                 //字段加入 instead of 触发器中
@@ -518,6 +528,10 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                     priKey = stringStringMap.get(DbConstants.DB_COLUMN_NAME);
                     continue;
                 }
+                if (!needCheckColumn.isEmpty() && needCheckColumn.containsValue(columnName)) {
+                    continue;
+                }
+
                 update.append(columnName).append(",");
 
             }
