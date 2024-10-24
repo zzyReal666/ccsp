@@ -171,7 +171,7 @@ public final class DBUtil {
                         colMap.put(DbConstants.DB_COLUMN_TYPE, resultSet.getString("data_type") + (StringUtils.isBlank(resultSet.getString("CHARACTER_MAXIMUM_LENGTH")) ? "" : "(" + resultSet.getString("CHARACTER_MAXIMUM_LENGTH") + ")"));
                         //主键信息
                         if (!columnPAMKey.isEmpty() && columnPAMKey.containsKey(columName)) {
-                            log.info("主键内容：{}",columnPAMKey.get(columName));
+                            log.info("主键内容：{}", columnPAMKey.get(columName));
                             colMap.put(DbConstants.DB_COLUMN_KEY, columnPAMKey.get(columName));
                         }
                         colList.add(colMap);
@@ -310,7 +310,7 @@ public final class DBUtil {
                         }
                     }
                     if (map.isEmpty()) {
-                        ps = conn.prepareStatement("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '"+table+"' and TABLE_SCHEMA = 'dbo' AND COLUMNPROPERTY(OBJECT_ID(TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1");
+                        ps = conn.prepareStatement("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" + table + "' and TABLE_SCHEMA = 'dbo' AND COLUMNPROPERTY(OBJECT_ID(TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1");
                         rs = ps.executeQuery();
                         while (rs.next()) {
                             if (StringUtils.isNotBlank(rs.getString(1))) {
@@ -318,7 +318,7 @@ public final class DBUtil {
                             }
                         }
                     }
-                    log.info("是否存在主键：{}",map.size());
+                    log.info("是否存在主键：{}", map.size());
                     break;
                 case DbConstants.DB_TYPE_ORACLE:
                     ps = conn.prepareStatement("SELECT cols.column_name,CASE WHEN cons.CONSTRAINT_TYPE='P' then 'PRI' else 'MUL' END as Key FROM all_constraints cons JOIN all_cons_columns cols ON cons.constraint_name = cols.constraint_name WHERE cons.table_name = '" + table.toUpperCase() + "'");
@@ -360,6 +360,36 @@ public final class DBUtil {
                         }
                     }
                     break;
+            }
+        } catch (Exception e) {
+            log.info("获取主键信息失败：{}", e.getMessage());
+        } finally {
+            try {
+                ps.close();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            try {
+                rs.close();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+        return map;
+    }
+
+    public static Map<String, String> getNeedCheckColumn(Connection conn, String table, String databaseType) {
+        Map<String, String> map = new HashMap<>();
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            if (databaseType.equals(DbConstants.DB_TYPE_SQLSERVER)) {
+                String[] split = table.toLowerCase().split(":");
+                ps = conn.prepareStatement("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" + split[1] + "' AND TABLE_SCHEMA = '" + split[0] + "'  AND COLUMNPROPERTY(OBJECT_ID(TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1  OR COLUMNPROPERTY(OBJECT_ID(TABLE_NAME), COLUMN_NAME, 'IsComputed') = 1;");
+                rs = ps.executeQuery();
+                while (rs.next()) {
+                    map.put(DbConstants.DB_COLUMN_NAME, rs.getString("COLUMN_NAME"));
+                }
             }
         } catch (Exception e) {
             log.info("获取主键信息失败：{}", e.getMessage());
