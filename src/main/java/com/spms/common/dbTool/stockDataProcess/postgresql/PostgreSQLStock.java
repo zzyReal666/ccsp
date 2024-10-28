@@ -308,7 +308,7 @@ public class PostgreSQLStock {
         try {
             StringBuilder transSql = new StringBuilder("create trigger " + funName);
             transSql.append(System.getProperty("line.separator"));
-            transSql.append("before insert or update on" + userSchema);
+            transSql.append("before insert or update on " + userSchema);
             transSql.append(System.getProperty("line.separator"));
             transSql.append("for each row");
             transSql.append(System.getProperty("line.separator"));

@@ -436,10 +436,13 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                 if ("timestamp".equalsIgnoreCase(stringStringMap.get(DbConstants.DB_COLUMN_TYPE))) {
                     continue;
                 }
-
                 //排除自增列
                 String columnName = stringStringMap.get(DbConstants.DB_COLUMN_NAME);
                 if (!needCheckColumn.isEmpty() && needCheckColumn.containsValue(columnName)) {
+                    continue;
+                }
+                //跳过名为tah的列
+                if ("tah".equalsIgnoreCase(columnName)) {
                     continue;
                 }
                 into.append(columnName).append(",");
@@ -531,7 +534,10 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
                 if (!needCheckColumn.isEmpty() && needCheckColumn.containsValue(columnName)) {
                     continue;
                 }
-
+                //跳过名为tah的列
+                if ("tah".equalsIgnoreCase(columnName)) {
+                    continue;
+                }
                 update.append(columnName).append(",");
 
             }

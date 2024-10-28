@@ -385,9 +385,16 @@ public final class DBUtil {
         try {
             if (databaseType.equals(DbConstants.DB_TYPE_SQLSERVER)) {
                 String[] split = table.toLowerCase().split(":");
-                ps = conn.prepareStatement("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" + split[1] + "' AND TABLE_SCHEMA = '" + split[0] + "'  AND COLUMNPROPERTY(OBJECT_ID(TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1  OR COLUMNPROPERTY(OBJECT_ID(TABLE_NAME), COLUMN_NAME, 'IsComputed') = 1;");
+                ps = conn.prepareStatement("SELECT COLUMN_NAME FROM \n" +
+                        "INFORMATION_SCHEMA.COLUMNS \n" +
+                        "WHERE TABLE_NAME = ? \n" +
+                        "AND COLUMNPROPERTY(OBJECT_ID(?), \n" +
+                        "COLUMN_NAME, 'IsIdentity') = 1;");
+                ps.setString(1,split[1]);
+                ps.setString(2,split[1]);
                 rs = ps.executeQuery();
                 while (rs.next()) {
+                    log.info("自增列名：{}", rs.getString("COLUMN_NAME"));
                     map.put(DbConstants.DB_COLUMN_NAME, rs.getString("COLUMN_NAME"));
                 }
             }

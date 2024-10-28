@@ -14,7 +14,6 @@ import com.spms.dbhsm.stockDataProcess.domain.dto.TableDTO;
 import com.spms.dbhsm.stockDataProcess.service.OperateContext;
 import com.spms.dbhsm.stockDataProcess.service.StockDataOperateService;
 import com.spms.dbhsm.stockDataProcess.sqlExecute.SqlExecuteSPI;
-import com.spms.dbhsm.stockDataProcess.threadTask.UpdateZookeeperTask;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -176,15 +175,15 @@ public class StockDataOperateServiceImpl implements StockDataOperateService {
     //写入加密策略到zookeeper
     private void writeConfigToZookeeper(DatabaseDTO databaseDTO, boolean operateType) throws InterruptedException {
 
-        if ("Mysql57".equals(databaseDTO.getDatabaseType()) || "PostgresSQL".equals(databaseDTO.getDatabaseType())) {
-            //开一个线程 写加密策略到zk
-            Thread writeZkthread = new UpdateZookeeperTask(databaseDTO, operateType);
-            writeZkthread.start();
-            writeZkthread.join();
-        } else {
-            //其他数据库不需要写zk
-            log.info("当前数据库类型不支持zk配置，跳过zk配置");
-        }
+//        if ("Mysql57".equals(databaseDTO.getDatabaseType()) || "PostgresSQL".equals(databaseDTO.getDatabaseType())) {
+//            //开一个线程 写加密策略到zk
+//            Thread writeZkthread = new UpdateZookeeperTask(databaseDTO, operateType);
+//            writeZkthread.start();
+//            writeZkthread.join();
+//        } else {
+//            //其他数据库不需要写zk
+//            log.info("当前数据库类型不支持zk配置，跳过zk配置");
+//        }
     }
 
     /**
