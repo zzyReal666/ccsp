@@ -330,7 +330,7 @@ public class DbhsmTaskQueueServiceImpl implements DbhsmTaskQueueService {
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
-            log.error("创建解密函数失败：{}", e.getMessage());
+            log.error("创建解密函数失败：{}", e);
         } finally {
             try {
                 connection.close();
